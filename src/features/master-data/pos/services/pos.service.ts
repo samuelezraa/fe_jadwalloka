@@ -36,7 +36,7 @@ export const posService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([...mockPosList]);
-      }, 500);
+      }, 200);
     });
   },
 

@@ -11,6 +11,8 @@ import type { DataKaryawan } from '../types/data-karyawan.type';
 import { FormInput } from '../../../../components/ui/FormInput';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
+import { DatePicker } from '../../../../components/ui/DatePicker';
+
 
 interface DataKaryawanFormProps {
   initialData?: DataKaryawan | null;
@@ -246,20 +248,34 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
           )}
         />
 
-        {/* Tanggal Bergabung */}
-        <FormInput
-          label="Tanggal Bergabung"
-          type="date"
-          {...register('tanggal_bergabung')}
-          error={errors.tanggal_bergabung?.message}
+        {/* Tanggal Bergabung dengan DatePicker */}
+        <Controller
+          name="tanggal_bergabung"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              label="Tanggal Bergabung"
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih Tanggal"
+              error={errors.tanggal_bergabung?.message}
+            />
+          )}
         />
 
-        {/* Tanggal Lahir */}
-        <FormInput
-          label="Tanggal Lahir"
-          type="date"
-          {...register('tanggal_lahir')}
-          error={errors.tanggal_lahir?.message}
+        {/* Tanggal Lahir dengan DatePicker */}
+        <Controller
+          name="tanggal_lahir"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              label="Tanggal Lahir"
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih Tanggal"
+              error={errors.tanggal_lahir?.message}
+            />
+          )}
         />
       </div>
 

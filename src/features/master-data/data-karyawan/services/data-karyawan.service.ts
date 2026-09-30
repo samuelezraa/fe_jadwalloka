@@ -28,7 +28,7 @@ export const dataKaryawanService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([...mockKaryawanList]);
-      }, 500);
+      }, 200);
     });
   },
 

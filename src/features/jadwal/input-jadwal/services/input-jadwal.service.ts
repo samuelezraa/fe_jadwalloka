@@ -23,7 +23,7 @@ const dummyInputJadwalData: InputJadwalPeriode[] = [
 export const inputJadwalService = {
   getJadwalPeriodeList: async (): Promise<InputJadwalPeriode[]> => {
     return new Promise((resolve) => {
-      setTimeout(() => resolve([...dummyInputJadwalData]), 300);
+      setTimeout(() => resolve([...dummyInputJadwalData]), 100);
     });
   },
 
@@ -41,7 +41,7 @@ export const inputJadwalService = {
           };
         }
         resolve(dummyInputJadwalData[index]);
-      }, 300);
+      }, 100);
     });
   },
 };

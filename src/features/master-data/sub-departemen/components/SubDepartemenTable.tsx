@@ -17,6 +17,7 @@ import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 
 interface SubDepartemenTableProps {
   data: SubDepartemen[];
@@ -121,6 +122,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
           showFilterDropdown={showDeptDropdown}
           onToggleFilterDropdown={() => setShowDeptDropdown(!showDeptDropdown)}
           isFiltered={isFiltered}
+          
           filterDropdownContent={
             <TableFilterPopover
               isOpen={showDeptDropdown}
@@ -131,16 +133,23 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
                 {
                   key: 'departemen',
                   label: 'Departemen',
-                  value: selectedDeptFilter,
-                  onChange: setSelectedDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Departemen' },
-                    ...departemenList.map((d) => ({ value: d.id, label: d.departemen })),
-                  ],
+                  // Menggunakan properti render untuk menyisipkan FormSelectSearch.txt secara kustom
+                  render: () => (
+                    <FormSelectSearch
+                      value={selectedDeptFilter}
+                      onChange={(val) => setSelectedDeptFilter(val)}
+                      placeholder="Pilih Departemen"
+                      options={[
+                        { id: '', label: 'Semua Departemen' },
+                        ...departemenList.map((d) => ({ id: d.id, label: d.departemen })),
+                      ]}
+                    />
+                  ),
                 },
               ]}
             />
           }
+
           actionButtons={
             <AddButton onClick={onAdd} />
           }

@@ -1,69 +1,57 @@
-import { useState, useRef, useEffect } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
 import type { Table } from '@tanstack/react-table';
+import { SlidersHorizontal } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { Button } from './ui/button';
 
 interface ColumnVisibilityProps<TData> {
   table?: Table<TData>;
 }
 
 export function ColumnVisibility<TData>({ table }: ColumnVisibilityProps<TData>) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Proteksi jika objek table belum siap
   if (!table) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors shadow-sm"
-      >
-        <SlidersHorizontal className="w-4 h-4 text-gray-500" />
-        <span>Kolom</span>
-      </button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-semibold shadow-sm"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+          <span>Kolom</span>
+        </Button>
+      </PopoverTrigger>
 
-      {isOpen && (
-        <div className="absolute left-0 mt-2 w-60 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150">
-          <div className="max-h-64 overflow-y-auto space-y-1 py-1">
-            {table.getAllLeafColumns().map((column) => {
-              if (column.id === 'action') return null;
+      <PopoverContent align="start" className="w-60 p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <div className="max-h-64 overflow-y-auto space-y-0.5 py-1">
+          {table.getAllLeafColumns().map((column) => {
+            if (column.id === 'action') return null;
 
-              return (
-                <label
-                  key={column.id}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 cursor-pointer text-xs font-medium text-gray-700 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={column.getIsVisible()}
-                    onChange={column.getToggleVisibilityHandler()}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
-                  />
-                  <span className="capitalize">
-                    {typeof column.columnDef.header === 'string'
-                      ? column.columnDef.header
-                      : column.id === 'number'
-                      ? '#'
-                      : column.id}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+            return (
+              <label
+                key={column.id}
+                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 cursor-pointer text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={column.getIsVisible()}
+                  onChange={column.getToggleVisibilityHandler()}
+                  className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                />
+                <span className="capitalize truncate">
+                  {typeof column.columnDef.header === 'string'
+                    ? column.columnDef.header
+                    : column.id === 'number'
+                    ? '#'
+                    : column.id}
+                </span>
+              </label>
+            );
+          })}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

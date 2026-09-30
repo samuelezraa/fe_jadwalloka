@@ -28,7 +28,7 @@ export const skemaHariKerjaService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([...mockSkemaList]);
-      }, 500);
+      }, 200);
     });
   },
 

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   updateEventTahunanSchema,
@@ -9,6 +9,8 @@ import type { EventTahunan } from '../types/event-tahunan.type';
 
 // Reusable UI Components
 import { FormInput } from '../../../../components/ui/FormInput';
+import { FormSelect } from '../../../../components/ui/FormSelect';
+import { DatePicker } from '../../../../components/ui/DatePicker';
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
 
 interface EventTahunanFormProps {
@@ -26,6 +28,7 @@ export const EventTahunanForm: React.FC<EventTahunanFormProps> = ({
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -73,12 +76,18 @@ export const EventTahunanForm: React.FC<EventTahunanFormProps> = ({
         error={errors.id?.message}
       />
 
-      {/* Tanggal menggunakan FormInput dengan date picker bawaan */}
-      <FormInput
-        label="Tanggal"
-        type="date"
-        {...register('tanggal')}
-        error={errors.tanggal?.message}
+      <Controller
+        name="tanggal"
+        control={control}
+        render={({ field }) => (
+          <DatePicker
+            label="Tanggal"
+            value={field.value}
+            onChange={field.onChange}
+            error={errors.tanggal?.message}
+            placeholder="DD/MM/YYYY"
+          />
+        )}
       />
 
       <FormInput
@@ -103,17 +112,22 @@ export const EventTahunanForm: React.FC<EventTahunanFormProps> = ({
       />
 
       {isEditMode && (
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Status</label>
-          <select
-            {...register('status')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs focus:outline-none focus:border-gray-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 transition-colors"
-          >
-            <option value="Aktif" className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">Aktif</option>
-            <option value="Non Aktif" className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">Non Aktif</option>
-          </select>
-          {errors.status && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.status.message}</p>}
-        </div>
+        <Controller
+          name="status"
+          control={control}
+          render={({ field }) => (
+            <FormSelect
+              label="Status"
+              value={field.value}
+              onValueChange={field.onChange}
+              error={errors.status?.message}
+              options={[
+                { label: 'Aktif', value: 'Aktif' },
+                { label: 'Non Aktif', value: 'Non Aktif' },
+              ]}
+            />
+          )}
+        />
       )}
 
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">

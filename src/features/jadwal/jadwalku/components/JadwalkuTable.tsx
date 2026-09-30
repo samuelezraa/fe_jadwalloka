@@ -16,6 +16,8 @@ import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { ExportIconButton } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+
 
 interface JadwalkuTableProps {
   data: Jadwalku[];
@@ -208,7 +210,9 @@ export const JadwalkuTable: React.FC<JadwalkuTableProps> = ({
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
-          filterDropdownContent={
+
+    
+         filterDropdownContent={
             <TableFilterPopover
               isOpen={showFilterDropdown}
               onClose={() => setShowFilterDropdown(false)}
@@ -221,26 +225,37 @@ export const JadwalkuTable: React.FC<JadwalkuTableProps> = ({
                 {
                   key: 'periode',
                   label: 'Periode',
-                  value: periodeFilter,
-                  onChange: setPeriodeFilter,
-                  options: [
-                    { value: '', label: 'Semua Periode' },
-                    ...uniquePeriodeList.map((p) => ({ value: p, label: p })),
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={periodeFilter}
+                      onChange={setPeriodeFilter}
+                      placeholder="Semua Periode"
+                      options={[
+                        { id: '', label: 'Semua Periode' },
+                        ...uniquePeriodeList.map((p) => ({ id: p, label: p })),
+                      ]}
+                    />
+                  ),
                 },
                 {
                   key: 'sub_departemen',
                   label: 'Sub Departemen',
-                  value: subDeptFilter,
-                  onChange: setSubDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Sub Dept' },
-                    ...uniqueSubDeptList.map((sd) => ({ value: sd, label: sd })),
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={subDeptFilter}
+                      onChange={setSubDeptFilter}
+                      placeholder="Semua Sub Dept"
+                      options={[
+                        { id: '', label: 'Semua Sub Dept' },
+                        ...uniqueSubDeptList.map((sd) => ({ id: sd, label: sd })),
+                      ]}
+                    />
+                  ),
                 },
               ]}
             />
           }
+          
           actionButtons={
             <div className="hidden md:block">
               <ExportIconButton onClick={onExport || (() => alert('Export data...'))} />

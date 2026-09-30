@@ -8,11 +8,11 @@ import {
 } from '@tanstack/react-table';
 import type { Departemen } from '../types/departemen.type';
 import { DataPagination } from '../../../../components/DataPagination';
-import { Building2, Plus } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
-import { AddButton, EditActionButton } from '../../../../components/ui/ActionButtons';
+import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
 
 interface DepartemenTableProps {
@@ -94,7 +94,7 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
     <div className="relative">
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* 1. Header Toolbar Reusable (Hanya 1 buah di atas) */}
+        {/* 1. Header Toolbar Reusable (Desktop Add Button) */}
         <TableToolbar
           title="Master Departemen"
           subtitle="Daftar kelola induk departemen LokaHR"
@@ -146,17 +146,8 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
 
       </div>
 
-      {/* 5. FLOATING ACTION BUTTON (FAB) KHUSUS MOBILE (Posisi di atas tombol menu garis 3) */}
-      <div className="fixed bottom-24 right-6 z-50 block md:hidden">
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex items-center justify-center w-14 h-14 bg-emerald-600 dark:bg-emerald-500 text-white rounded-full shadow-2xl hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-transform active:scale-95 border-2 border-white dark:border-gray-900"
-          title="Tambah Departemen"
-        >
-          <Plus className="w-7 h-7" />
-        </button>
-      </div>
+      {/* 5. FLOATING ACTION BUTTON (FAB) KHUSUS MOBILE MENGGUNAKAN REUSABLE COMPONENT */}
+      <MobileAddFab onClick={onAdd} title="Tambah Departemen" />
     </div>
   );
 };

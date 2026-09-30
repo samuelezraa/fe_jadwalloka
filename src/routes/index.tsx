@@ -6,7 +6,7 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { DepartemenPage } from '@/features/master-data/departemen/pages/DepartemenPage';
 import { SubDepartemenPage } from '@/features/master-data/sub-departemen/pages/SubDepartemenPage';
 import { PosPage } from '@/features/master-data/pos/pages/PosPage'; 
-import { GradePage } from '@/features/master-data/grade/pages/GradePage'; // <-- Tambahkan ini
+import { GradePage } from '@/features/master-data/grade/pages/GradePage';
 import { SkemaHariKerjaPage } from '@/features/master-data/skema-hari-kerja/pages/SkemaHariKerjaPage';
 import { EventTahunanPage } from '@/features/master-data/event-tahunan/pages/EventTahunanPage';
 import { DataKaryawanPage } from '@/features/master-data/data-karyawan/pages/DataKaryawanPage';
@@ -15,6 +15,10 @@ import { DataKaryawanPage } from '@/features/master-data/data-karyawan/pages/Dat
 import { JamKerjaPage } from '@/features/jadwal/jam-kerja/pages/JamKerjaPage';
 import { InputJadwalPage } from '@/features/jadwal/input-jadwal/pages/InputJadwalPage';
 import { JadwalkuPage } from '@/features/jadwal/jadwalku/pages/JadwalkuPage';
+
+// 🌟 Import Laporan Pages
+import { PivotPage } from '@/features/laporan/pivot/pages/PivotPage';
+import { KomplimenPage } from '@/features/laporan/komplimen/pages/KomplimenPage'; // (Nanti di-uncomment jika halamannya sudah dibuat)
 
 export const router = createBrowserRouter([
   {
@@ -43,7 +47,7 @@ export const router = createBrowserRouter([
         element: <PosPage />,
       },
       {
-        path: 'master-data/grade', // <-- Tambahkan path route Grade di sini
+        path: 'master-data/grade',
         element: <GradePage />,
       },
       {
@@ -70,6 +74,15 @@ export const router = createBrowserRouter([
       {
         path: 'jadwal/jadwalku',
         element: <JadwalkuPage />,
+      },
+      // 🌟 Laporan Routes (Pivot & Komplimen)
+      {
+        path: 'laporan/pivot',
+        element: <PivotPage />,
+      },
+      {
+        path: 'laporan/komplimen',
+        element: <KomplimenPage />,
       },
     ],
   },

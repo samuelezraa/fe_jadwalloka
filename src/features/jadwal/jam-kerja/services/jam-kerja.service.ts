@@ -24,7 +24,7 @@ export const jamKerjaService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([...mockJamKerjaList]);
-      }, 500);
+      }, 200);
     });
   },
 

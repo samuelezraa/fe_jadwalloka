@@ -12,7 +12,8 @@ export function DataTable<TData>({ table, columnsLength, emptyMessage = "Tidak a
   const rows = table.getRowModel().rows
 
   return (
-    <div className="hidden md:block overflow-x-auto">
+    // 'rounded-b-2xl overflow-hidden' memotong sudut bawah sel agar melengkung rapi
+    <div className="hidden md:block overflow-hidden rounded-b-2xl">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

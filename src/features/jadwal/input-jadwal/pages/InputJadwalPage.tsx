@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { InputJadwalTable } from '../components/InputJadwalTable';
 import { InputJadwalDialog } from '../components/InputJadwalDialog';
-import { ImportJadwalDialog } from '../components/ImportJadwalDialog';
+// ✅ UBAH BARIS DI BAWAH INI: Arahkan ke folder ui/
+import { ImportJadwalDialog } from '@/components/ui/ImportJadwalDialog';
 import { SettingJamMingguanDialog } from '../components/SettingJamMingguanDialog';
 import { useInputJadwal } from '../hooks/useInputJadwal';
 
@@ -10,6 +11,7 @@ export const InputJadwalPage: React.FC = () => {
     data,
     selectedItem,
     isDialogOpen,
+    isLoading,
     handleEdit,
     handleCloseDialog,
     handleSubmitForm,
@@ -47,8 +49,17 @@ export const InputJadwalPage: React.FC = () => {
     alert('Pengaturan jadwal global untuk semua karyawan berhasil disimpan.');
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
+          Memuat data Jadwal...
+        </p>
+      </div>
+    );
+  }
+
   return (
-    /* Mengubah padding horizontal mobile menjadi px-2 agar sejajar dengan halaman Jam Kerja */
     <div className="px-0 py-4 md:p-6">
       <InputJadwalTable
         data={data}

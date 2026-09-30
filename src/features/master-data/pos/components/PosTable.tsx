@@ -12,6 +12,7 @@ import type { Departemen } from '../../departemen/types/departemen.type';
 import type { SubDepartemen } from '../../sub-departemen/types/sub-departemen.type';
 import { DataPagination } from '../../../../components/DataPagination';
 import { Building2 } from 'lucide-react';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
@@ -162,6 +163,7 @@ export const PosTable: React.FC<PosTableProps> = ({
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
+
           filterDropdownContent={
             <TableFilterPopover
               isOpen={showFilterDropdown}
@@ -176,39 +178,58 @@ export const PosTable: React.FC<PosTableProps> = ({
                 {
                   key: 'departemen',
                   label: 'Departemen',
-                  value: selectedDeptFilter,
-                  onChange: setSelectedDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Departemen' },
-                    ...departemenList.map((d) => ({ value: d.id, label: d.departemen })),
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={selectedDeptFilter}
+                      onChange={(val) => {
+                        setSelectedDeptFilter(val);
+                        setSelectedSubDeptFilter(''); // Reset sub departemen jika departemen berubah
+                      }}
+                      placeholder="Pilih Departemen"
+                      options={[
+                        { id: '', label: 'Semua Departemen' },
+                        ...departemenList.map((d) => ({ id: d.id, label: d.departemen })),
+                      ]}
+                    />
+                  ),
                 },
                 {
                   key: 'sub_departemen',
                   label: 'Sub Departemen',
-                  value: selectedSubDeptFilter,
-                  onChange: setSelectedSubDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Sub Departemen' },
-                    ...subDepartemenList
-                      .filter((sub) => !selectedDeptFilter || sub.departemen_id === selectedDeptFilter)
-                      .map((sub) => ({ value: sub.id, label: sub.sub_departemen })),
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={selectedSubDeptFilter}
+                      onChange={(val) => setSelectedSubDeptFilter(val)}
+                      placeholder="Pilih Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        ...subDepartemenList
+                          .filter((sub) => !selectedDeptFilter || sub.departemen_id === selectedDeptFilter)
+                          .map((sub) => ({ id: sub.id, label: sub.sub_departemen })),
+                      ]}
+                    />
+                  ),
                 },
                 {
                   key: 'status',
                   label: 'Status',
-                  value: selectedStatusFilter,
-                  onChange: setSelectedStatusFilter,
-                  options: [
-                    { value: '', label: 'Semua Status' },
-                    { value: 'Aktif', label: 'Aktif' },
-                    { value: 'Nonaktif', label: 'Nonaktif' },
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={selectedStatusFilter}
+                      onChange={(val) => setSelectedStatusFilter(val)}
+                      placeholder="Pilih Status"
+                      options={[
+                        { id: '', label: 'Semua Status' },
+                        { id: 'Aktif', label: 'Aktif' },
+                        { id: 'Nonaktif', label: 'Nonaktif' },
+                      ]}
+                    />
+                  ),
                 },
               ]}
             />
           }
+
           actionButtons={
             <AddButton onClick={onAdd} />
           }

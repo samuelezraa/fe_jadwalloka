@@ -24,7 +24,7 @@ export const eventTahunanService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([...mockEventList]);
-      }, 500);
+      }, 200);
     });
   },
 

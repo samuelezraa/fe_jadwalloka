@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,8 +14,17 @@ import { Users, KeyRound, Power } from 'lucide-react';
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
-import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { Badge } from '../../../../components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table';
 
 interface DataKaryawanTableProps {
   data: DataKaryawan[];
@@ -44,6 +53,31 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
+  // Ref untuk mendeteksi klik/touch di luar container filter
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Auto-close filter popover
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        filterWrapperRef.current &&
+        !filterWrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
   // Opsi unik secara dinamis dari data
   const uniqueDepartemen = useMemo(() => Array.from(new Set(data.map((item) => item.departemen))), [data]);
   const uniqueSubDepartemen = useMemo(() => Array.from(new Set(data.map((item) => item.sub_departemen))), [data]);
@@ -53,21 +87,11 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   // Filter Berdasarkan Semua Kriteria
   const filteredData = useMemo(() => {
     let result = data;
-    if (deptFilter) {
-      result = result.filter((item) => item.departemen === deptFilter);
-    }
-    if (subDeptFilter) {
-      result = result.filter((item) => item.sub_departemen === subDeptFilter);
-    }
-    if (posFilter) {
-      result = result.filter((item) => item.pos === posFilter);
-    }
-    if (gradeFilter) {
-      result = result.filter((item) => item.grade === gradeFilter);
-    }
-    if (statusFilter) {
-      result = result.filter((item) => item.status === statusFilter);
-    }
+    if (deptFilter) result = result.filter((item) => item.departemen === deptFilter);
+    if (subDeptFilter) result = result.filter((item) => item.sub_departemen === subDeptFilter);
+    if (posFilter) result = result.filter((item) => item.pos === posFilter);
+    if (gradeFilter) result = result.filter((item) => item.grade === gradeFilter);
+    if (statusFilter) result = result.filter((item) => item.status === statusFilter);
     return result;
   }, [data, deptFilter, subDeptFilter, posFilter, gradeFilter, statusFilter]);
 
@@ -92,15 +116,16 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
           const isAktif = val === 'Aktif';
           return (
             <div className="flex justify-center">
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                  isAktif
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                }`}
+              <Badge 
+                variant={isAktif ? 'outline' : 'destructive'} 
+                className={
+                  isAktif 
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                    : 'rounded-full'
+                }
               >
                 {val}
-              </span>
+              </Badge>
             </div>
           );
         },
@@ -213,99 +238,158 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="relative">
-      {/* Kontainer Utama dengan overflow-visible agar popover filter tidak terpotong */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
+    <div className="grid grid-cols-1 w-full relative">
+      <div 
+        ref={filterWrapperRef}
+        className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm mb-16 md:mb-0 flex flex-col"
+      >
         
-        {/* Header Toolbar dengan Reusable TableFilterPopover & AddButton */}
-        <TableToolbar
-          title="Data Karyawan"
-          subtitle="Daftar manajemen data karyawan LokaHR"
-          icon={<Users className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
-          showFilterDropdown={showFilterDropdown}
-          onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
-          isFiltered={isFiltered}
-          filterDropdownContent={
-            <TableFilterPopover
-              isOpen={showFilterDropdown}
-              onClose={() => setShowFilterDropdown(false)}
-              isFiltered={isFiltered}
-              onReset={() => {
-                setDeptFilter('');
-                setSubDeptFilter('');
-                setPosFilter('');
-                setGradeFilter('');
-                setStatusFilter('');
-              }}
-              fields={[
-                {
-                  key: 'departemen',
-                  label: 'Departemen',
-                  value: deptFilter,
-                  onChange: setDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Departemen' },
-                    ...uniqueDepartemen.map((d) => ({ value: d, label: d })),
-                  ],
-                },
-                {
-                  key: 'sub_departemen',
-                  label: 'Sub Departemen',
-                  value: subDeptFilter,
-                  onChange: setSubDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Sub Departemen' },
-                    ...uniqueSubDepartemen.map((sd) => ({ value: sd, label: sd })),
-                  ],
-                },
-                {
-                  key: 'pos',
-                  label: 'POS',
-                  value: posFilter,
-                  onChange: setPosFilter,
-                  options: [
-                    { value: '', label: 'Semua POS' },
-                    ...uniquePos.map((p) => ({ value: p, label: p })),
-                  ],
-                },
-                {
-                  key: 'grade',
-                  label: 'Grade',
-                  value: gradeFilter,
-                  onChange: setGradeFilter,
-                  options: [
-                    { value: '', label: 'Semua Grade' },
-                    ...uniqueGrade.map((g) => ({ value: g, label: g })),
-                  ],
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  value: statusFilter,
-                  onChange: setStatusFilter,
-                  options: [
-                    { value: '', label: 'Semua Status' },
-                    { value: 'Aktif', label: 'Aktif' },
-                    { value: 'Non Aktif', label: 'Non Aktif' },
-                  ],
-                },
-              ]}
-            />
-          }
-          actionButtons={
-            <AddButton onClick={onAdd} />
-          }
-        />
+        {/* HEADER TOOLBAR */}
+        <div className="w-full">
+          <TableToolbar
+            title="Data Karyawan"
+            subtitle="Daftar manajemen data karyawan LokaHR"
+            icon={<Users className="w-6 h-6" />}
+            searchValue={globalFilter ?? ''}
+            onSearchChange={setGlobalFilter}
+            showFilterDropdown={showFilterDropdown}
+            onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
+            isFiltered={isFiltered}
+            filterDropdownContent={
+              <TableFilterPopover
+                isOpen={showFilterDropdown}
+                onClose={() => setShowFilterDropdown(false)}
+                isFiltered={isFiltered}
+                onReset={() => {
+                  setDeptFilter(''); setSubDeptFilter(''); setPosFilter(''); setGradeFilter(''); setStatusFilter('');
+                }}
+                fields={[
+                  { 
+                    key: 'departemen', 
+                    label: 'Departemen', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={deptFilter}
+                        onChange={setDeptFilter}
+                        placeholder="Semua Departemen"
+                        options={[{ id: '', label: 'Semua Departemen' }, ...uniqueDepartemen.map(d => ({ id: d, label: d }))]}
+                      />
+                    ) 
+                  },
+                  { 
+                    key: 'sub_departemen', 
+                    label: 'Sub Departemen', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={subDeptFilter}
+                        onChange={setSubDeptFilter}
+                        placeholder="Semua Sub Departemen"
+                        options={[{ id: '', label: 'Semua Sub Departemen' }, ...uniqueSubDepartemen.map(sd => ({ id: sd, label: sd }))]}
+                      />
+                    ) 
+                  },
+                  { 
+                    key: 'pos', 
+                    label: 'POS', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={posFilter}
+                        onChange={setPosFilter}
+                        placeholder="Semua POS"
+                        options={[{ id: '', label: 'Semua POS' }, ...uniquePos.map(p => ({ id: p, label: p }))]}
+                      />
+                    ) 
+                  },
+                  { 
+                    key: 'grade', 
+                    label: 'Grade', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={gradeFilter}
+                        onChange={setGradeFilter}
+                        placeholder="Semua Grade"
+                        options={[{ id: '', label: 'Semua Grade' }, ...uniqueGrade.map(g => ({ id: g, label: g }))]}
+                      />
+                    ) 
+                  },
+                  { 
+                    key: 'status', 
+                    label: 'Status', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                        placeholder="Semua Status"
+                        options={[
+                          { id: '', label: 'Semua Status' },
+                          { id: 'Aktif', label: 'Aktif' },
+                          { id: 'Non Aktif', label: 'Non Aktif' }
+                        ]}
+                      />
+                    ) 
+                  },
+                ]}
+              />
+            }
+            actionButtons={<AddButton onClick={onAdd} />}
+          />
+        </div>
 
-        {/* Pagination modular */}
-        <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
+        {/* PAGINATION */}
+        <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 w-full">
           <DataPagination table={table} />
         </div>
 
-        {/* Tampilan Mobile: Berbentuk Card */}
-        <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
+        {/* TAMPILAN DESKTOP */}
+        <div 
+          className="hidden md:block w-full overflow-x-auto rounded-b-2xl"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          <style>{`
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+
+          <Table className="w-full min-w-[1200px]">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="whitespace-nowrap px-3 py-3">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {rows?.length ? (
+                rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="whitespace-nowrap px-3 py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center text-gray-400">
+                    Tidak ada data karyawan ditemukan.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* TAMPILAN MOBILE */}
+        <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50 rounded-b-2xl">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
@@ -316,22 +400,21 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                       ID Absen: {item.id_absen}
                     </span>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                        isAktif
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                          : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                      }`}
+                    <Badge 
+                      variant={isAktif ? 'outline' : 'destructive'} 
+                      className={
+                        isAktif 
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
+                          : 'rounded-full px-3 py-0.5'
+                      }
                     >
                       {item.status}
-                    </span>
+                    </Badge>
                   </div>
-
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.nama}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">NIK: {item.nik}</p>
                   </div>
-
                   <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-gray-100 dark:border-gray-800">
                     <div>
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 block uppercase">Departemen</span>
@@ -342,16 +425,13 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                       <span className="font-semibold text-gray-700 dark:text-gray-300">{item.pos}</span>
                     </div>
                   </div>
-
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
                     <EditActionButton onClick={() => onEdit(item)} />
                     <button
                       type="button"
                       onClick={() => onToggleStatus(item.id)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
-                        isAktif
-                          ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60'
-                          : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                        isAktif ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
                       }`}
                     >
                       <Power className="w-3.5 h-3.5" />
@@ -375,12 +455,9 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
             </div>
           )}
         </div>
-
-        {/* Tampilan Desktop: Menggunakan Reusable DataTable */}
-        <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data karyawan ditemukan." />
       </div>
 
-      {/* Floating Action Button (FAB) Mobile */}
+      {/* FLOATING ACTION BUTTON MOBILE */}
       <MobileAddFab onClick={onAdd} title="Tambah Karyawan" />
     </div>
   );

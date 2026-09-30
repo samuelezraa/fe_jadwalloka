@@ -26,7 +26,7 @@ export const gradeService = {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([...mockGradeList]);
-      }, 500);
+      }, 200);
     });
   },
 

@@ -22,6 +22,7 @@ import {
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
 import { ImportJadwalDialog } from '../../../../components/ui/ImportJadwalDialog';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 
 interface JamKerjaTableProps {
   data: JamKerjaKaryawan[];
@@ -148,6 +149,8 @@ export const JamKerjaTable: React.FC<JamKerjaTableProps> = ({
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
+
+
           filterDropdownContent={
             <TableFilterPopover
               isOpen={showFilterDropdown}
@@ -161,26 +164,38 @@ export const JamKerjaTable: React.FC<JamKerjaTableProps> = ({
                 {
                   key: 'sub_departemen',
                   label: 'Sub Departemen',
-                  value: subDeptFilter,
-                  onChange: setSubDeptFilter,
-                  options: [
-                    { value: '', label: 'Semua Sub Departemen' },
-                    ...uniqueSubDept.map((sd) => ({ value: sd, label: sd })),
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={subDeptFilter}
+                      onChange={setSubDeptFilter}
+                      placeholder="Semua Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        ...uniqueSubDept.map((sd) => ({ id: sd, label: sd })),
+                      ]}
+                    />
+                  ),
                 },
                 {
                   key: 'tipe_jam_kerja',
                   label: 'Tipe Jam Kerja',
-                  value: tipeFilter,
-                  onChange: setTipeFilter,
-                  options: [
-                    { value: '', label: 'Semua Tipe' },
-                    ...uniqueTipe.map((t) => ({ value: t, label: t })),
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={tipeFilter}
+                      onChange={setTipeFilter}
+                      placeholder="Semua Tipe"
+                      options={[
+                        { id: '', label: 'Semua Tipe' },
+                        ...uniqueTipe.map((t) => ({ id: t, label: t })),
+                      ]}
+                    />
+                  ),
                 },
               ]}
             />
           }
+
+
           actionButtons={
             /* Sembunyikan tombol desktop pada perangkat mobile (hidden md:flex) */
             <div className="hidden md:flex items-center gap-2">

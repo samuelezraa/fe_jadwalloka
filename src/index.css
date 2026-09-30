@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 
-/* Utilitas untuk menyembunyikan scrollbar tapi tetap bisa di-scroll */
 @layer utilities {
-  .scrollbar-hide::-webkit-scrollbar {
+  /* Sembunyikan scrollbar untuk Chrome, Safari, dan Opera */
+  .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  .scrollbar-hide {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+  /* Sembunyikan scrollbar untuk IE, Edge, dan Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE dan Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 }
