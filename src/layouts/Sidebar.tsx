@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Database, 
   CalendarDays, 
   FileText, // Icon untuk menu Laporan
+  History,  // Icon untuk Log History
   ChevronDown, 
-  ChevronRight
+  ChevronRight,
+  LogOut // Icon untuk Logout
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -21,11 +23,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
   const [openLaporan, setOpenLaporan] = useState(false); // State dropdown Laporan
   
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Mengecek apakah path saat ini berada di dalam grup Master Data, Jadwal, atau Laporan
   const isMasterActive = location.pathname.startsWith('/master-data');
   const isJadwalActive = location.pathname.startsWith('/jadwal');
   const isLaporanActive = location.pathname.startsWith('/laporan');
+
+  const handleLogout = () => {
+    onCloseMobile();
+    // Arahkan pengguna kembali ke halaman Login
+    navigate('/login');
+  };
 
   return (
     <>
@@ -215,6 +224,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/jadwal/jadwalku" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors border-l-4 ${isActive ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-medium' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                   <span>Jadwalku</span>
                 </NavLink>
+                <NavLink to="/jadwal/periode-jadwal" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors border-l-4 ${isActive ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-medium' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  <span>Periode Jadwal</span>
+                </NavLink>
               </div>
             )}
 
@@ -234,6 +246,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                     </NavLink>
                     <NavLink to="/jadwal/jadwalku" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium bg-amber-50 dark:bg-amber-950/40' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                       Jadwalku
+                    </NavLink>
+                    <NavLink to="/jadwal/periode-jadwal" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium bg-amber-50 dark:bg-amber-950/40' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                      Periode Jadwal
                     </NavLink>
                   </div>
                 </div>
@@ -269,6 +284,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             {/* Submenu Laporan (Expanded Mode) */}
             {openLaporan && (!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col py-1 bg-gray-50/50 dark:bg-gray-900/50">
+                <NavLink to="/laporan/absensi" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors border-l-4 ${isActive ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-medium' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                  <span>Absensi</span>
+                </NavLink>
+
                 <NavLink to="/laporan/pivot" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors border-l-4 ${isActive ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-medium' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                   <span>Pivot</span>
                 </NavLink>
@@ -286,6 +305,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                     Laporan
                   </div>
                   <div className="flex flex-col">
+                    <NavLink to="/laporan/absensi" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium bg-amber-50 dark:bg-amber-950/40' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                      Absensi
+                    </NavLink>
+
                     <NavLink to="/laporan/pivot" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium bg-amber-50 dark:bg-amber-950/40' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                       Pivot
                     </NavLink>
@@ -298,7 +321,41 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             )}
           </div>
 
+          {/* 🌟 Log History Standalone Menu */}
+          <NavLink
+            to="/log-history"
+            onClick={onCloseMobile}
+            className={({ isActive }) =>
+              `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
+                isActive 
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+              } ${
+                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
+              }`
+            }
+            title={isCollapsed && !isMobileOpen ? "Log History" : ""}
+          >
+            <History className="w-5 h-5 shrink-0" />
+            {(!isCollapsed || isMobileOpen) && <span>Log History</span>}
+          </NavLink>
+
         </nav>
+
+        {/* Footer Section: Tombol Logout */}
+        <div className="p-3 border-t border-gray-100 dark:border-gray-800">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`w-full flex items-center py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors ${
+              isCollapsed && !isMobileOpen ? 'justify-center px-0' : 'px-4 gap-3'
+            }`}
+            title={isCollapsed && !isMobileOpen ? "Logout" : ""}
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            {(!isCollapsed || isMobileOpen) && <span>Logout</span>}
+          </button>
+        </div>
       </aside>
     </>
   );

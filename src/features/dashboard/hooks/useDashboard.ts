@@ -1,26 +1,20 @@
 import { useState, useEffect } from 'react';
-import { dashboardService, type DashboardStats } from '../services/dashboard.service';
+import type { DashboardStats } from '../types/dashboard.type';
 
 export const useDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const data = await dashboardService.getStats();
-        setStats(data);
-      } catch (err) {
-        setError('Gagal memuat data dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
+    // Simulasi data dummy kehadiran
+    setStats({
+      masuk: 120,
+      terlambat: 5,
+      sakit: 2,
+      alfa: 1,
+    });
+    setLoading(false);
   }, []);
 
-  return { stats, loading, error };
+  return { stats, loading };
 };
