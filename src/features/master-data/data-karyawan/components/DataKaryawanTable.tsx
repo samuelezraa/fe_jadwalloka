@@ -9,11 +9,18 @@ import {
 } from '@tanstack/react-table';
 import type { DataKaryawan } from '../types/data-karyawan.type';
 import { DataPagination } from '../../../../components/DataPagination';
-import { Users, KeyRound, Power } from 'lucide-react';
+import { Users, Download, Upload, FileSpreadsheet } from 'lucide-react';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
-import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
+import {
+  AddButton,
+  EditActionButton,
+  MobileAddFab,
+  ResetPasswordButton,
+  PowerActionButton,
+  SettingDropdownTrigger,
+} from '../../../../components/ui/ActionButtons';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 import { Badge } from '../../../../components/ui/badge';
@@ -31,7 +38,10 @@ interface DataKaryawanTableProps {
   onEdit: (item: DataKaryawan) => void;
   onAdd: () => void;
   onToggleStatus: (id: string) => void;
-  onResetPassword: (id: string) => void;
+  onBulkResetPassword: (selectedIds: string[]) => void;
+  onDownloadSample?: () => void;
+  onImportData?: () => void;
+  onExportData?: () => void;
 }
 
 export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
@@ -39,24 +49,44 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   onEdit,
   onAdd,
   onToggleStatus,
-  onResetPassword,
+  onBulkResetPassword,
+  onDownloadSample,
+  onImportData,
+  onExportData,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
   
-  // State Filter Lengkap
+  // State Multiple Selection (Checkbox)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // State Dropdown Setting
+  const [showSettingDropdown, setShowSettingDropdown] = useState(false);
+  const settingDropdownRef = useRef<HTMLDivElement>(null);
+
+  // State Filter
   const [deptFilter, setDeptFilter] = useState('');
   const [subDeptFilter, setSubDeptFilter] = useState('');
   const [posFilter, setPosFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [skemaHariKerjaFilter, setSkemaHariKerjaFilter] = useState(''); // 🌟 State Filter Skema Hari Kerja
   
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
-  // Ref untuk mendeteksi klik/touch di luar container filter
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Auto-close filter popover
+  // Close dropdown setting ketika klik di luar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingDropdownRef.current && !settingDropdownRef.current.contains(event.target as Node)) {
+        setShowSettingDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (
@@ -78,11 +108,15 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // Opsi unik secara dinamis dari data
+  // Opsi unik dinamis
   const uniqueDepartemen = useMemo(() => Array.from(new Set(data.map((item) => item.departemen))), [data]);
   const uniqueSubDepartemen = useMemo(() => Array.from(new Set(data.map((item) => item.sub_departemen))), [data]);
   const uniquePos = useMemo(() => Array.from(new Set(data.map((item) => item.pos))), [data]);
   const uniqueGrade = useMemo(() => Array.from(new Set(data.map((item) => item.grade))), [data]);
+  const uniqueSkemaHariKerja = useMemo(
+    () => Array.from(new Set(data.map((item) => item.skema_hari_kerja).filter(Boolean))),
+    [data]
+  ); // 🌟 Opsi Unik Skema Hari Kerja
 
   // Filter Berdasarkan Semua Kriteria
   const filteredData = useMemo(() => {
@@ -92,25 +126,65 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
     if (posFilter) result = result.filter((item) => item.pos === posFilter);
     if (gradeFilter) result = result.filter((item) => item.grade === gradeFilter);
     if (statusFilter) result = result.filter((item) => item.status === statusFilter);
+    if (skemaHariKerjaFilter) result = result.filter((item) => item.skema_hari_kerja === skemaHariKerjaFilter); // 🌟 Logika Filter
     return result;
-  }, [data, deptFilter, subDeptFilter, posFilter, gradeFilter, statusFilter]);
+  }, [data, deptFilter, subDeptFilter, posFilter, gradeFilter, statusFilter, skemaHariKerjaFilter]);
 
-  const isFiltered = Boolean(deptFilter || subDeptFilter || posFilter || gradeFilter || statusFilter);
+  const isFiltered = Boolean(
+    deptFilter || subDeptFilter || posFilter || gradeFilter || statusFilter || skemaHariKerjaFilter
+  );
+
+  // Logika Checkbox Select All & Individual
+  const isAllSelected = useMemo(() => {
+    if (filteredData.length === 0) return false;
+    return filteredData.every((item) => selectedIds.includes(item.id));
+  }, [filteredData, selectedIds]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredData.map((item) => item.id);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds((prev) => [...prev, id]);
+    } else {
+      setSelectedIds((prev) => prev.filter((item) => item !== id));
+    }
+  };
 
   const columns = useMemo<ColumnDef<DataKaryawan>[]>(
     () => [
       {
-        id: 'number',
-        header: '#',
-        cell: (info) => (
-          <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
-          </span>
+        id: 'select',
+        header: () => (
+          <div className="flex justify-center items-center">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={(e) => handleSelectAll(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex justify-center items-center">
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(row.original.id)}
+              onChange={(e) => handleSelectRow(row.original.id, e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+          </div>
         ),
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: 'STATUS',
         cell: (info) => {
           const val = String(info.getValue());
           const isAktif = val === 'Aktif';
@@ -120,8 +194,8 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                 variant={isAktif ? 'outline' : 'destructive'} 
                 className={
                   isAktif 
-                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
-                    : 'rounded-full'
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-2.5 py-0.5 text-[11px]' 
+                    : 'rounded-full px-2.5 py-0.5 text-[11px]'
                 }
               >
                 {val}
@@ -132,12 +206,12 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
       },
       {
         accessorKey: 'departemen',
-        header: 'Departemen',
+        header: 'DEPARTEMEN',
         cell: (info) => <span className="font-semibold text-gray-800 dark:text-gray-100">{String(info.getValue())}</span>,
       },
       {
         accessorKey: 'sub_departemen',
-        header: 'Sub Departemen',
+        header: () => <span className="block leading-tight">SUB<br/>DEPARTEMEN</span>,
         cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
       },
       {
@@ -147,14 +221,14 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
       },
       {
         accessorKey: 'grade',
-        header: 'Grade',
+        header: 'GRADE',
         cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
       },
       {
         accessorKey: 'id_absen',
-        header: 'ID Absen / Username',
+        header: () => <span className="block leading-tight">ID ABSEN /<br/>USERNAME</span>,
         cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-[11px]">
             {String(info.getValue())}
           </span>
         ),
@@ -166,59 +240,43 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
       },
       {
         accessorKey: 'nama',
-        header: 'Nama',
+        header: 'NAMA',
         cell: (info) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(info.getValue())}</span>,
       },
       {
         accessorKey: 'skema_hari_kerja',
-        header: 'Skema Hari Kerja',
+        header: () => <span className="block leading-tight">SKEMA HARI<br/>KERJA</span>,
         cell: (info) => <span className="text-gray-700 dark:text-gray-300 font-mono text-xs">{String(info.getValue())}</span>,
       },
       {
         accessorKey: 'tanggal_bergabung',
-        header: 'Tanggal Bergabung',
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300 text-xs">{String(info.getValue())}</span>,
+        header: () => <span className="block leading-tight">TANGGAL<br/>BERGABUNG</span>,
+        cell: (info) => <span className="text-gray-700 dark:text-gray-300 text-xs whitespace-nowrap">{String(info.getValue())}</span>,
       },
       {
         accessorKey: 'tanggal_lahir',
-        header: 'Tanggal Lahir',
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300 text-xs">{String(info.getValue())}</span>,
+        header: () => <span className="block leading-tight">TANGGAL<br/>LAHIR</span>,
+        cell: (info) => <span className="text-gray-700 dark:text-gray-300 text-xs whitespace-nowrap">{String(info.getValue())}</span>,
       },
       {
         id: 'action',
-        header: 'Action',
+        header: 'ACTION',
         cell: ({ row }) => {
           const item = row.original;
           const isAktif = item.status === 'Aktif';
           return (
-            <div className="flex items-center justify-center gap-1.5">
+            <div className="flex items-center justify-center gap-1">
               <EditActionButton onClick={() => onEdit(item)} />
-              <button
-                type="button"
+              <PowerActionButton
+                isAktif={isAktif}
                 onClick={() => onToggleStatus(item.id)}
-                className={`p-1.5 rounded-md transition-colors ${
-                  isAktif
-                    ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60'
-                    : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
-                }`}
-                title={isAktif ? 'Disable Karyawan' : 'Enable Karyawan'}
-              >
-                <Power className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onResetPassword(item.id)}
-                className="p-1.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-md transition-colors"
-                title="Reset Password"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-              </button>
+              />
             </div>
           );
         },
       },
     ],
-    [onEdit, onToggleStatus, onResetPassword]
+    [onEdit, onToggleStatus, selectedIds, isAllSelected, filteredData]
   );
 
   const table = useReactTable({
@@ -243,7 +301,6 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
         ref={filterWrapperRef}
         className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm mb-16 md:mb-0 flex flex-col"
       >
-        
         {/* HEADER TOOLBAR */}
         <div className="w-full">
           <TableToolbar
@@ -261,7 +318,12 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                 onClose={() => setShowFilterDropdown(false)}
                 isFiltered={isFiltered}
                 onReset={() => {
-                  setDeptFilter(''); setSubDeptFilter(''); setPosFilter(''); setGradeFilter(''); setStatusFilter('');
+                  setDeptFilter('');
+                  setSubDeptFilter('');
+                  setPosFilter('');
+                  setGradeFilter('');
+                  setStatusFilter('');
+                  setSkemaHariKerjaFilter(''); // 🌟 Reset filter skema
                 }}
                 fields={[
                   { 
@@ -313,6 +375,21 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                     ) 
                   },
                   { 
+                    key: 'skema_hari_kerja', 
+                    label: 'Skema Hari Kerja', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={skemaHariKerjaFilter}
+                        onChange={setSkemaHariKerjaFilter}
+                        placeholder="Semua Skema"
+                        options={[
+                          { id: '', label: 'Semua Skema' },
+                          ...uniqueSkemaHariKerja.map(s => ({ id: s, label: s }))
+                        ]}
+                      />
+                    ) 
+                  },
+                  { 
                     key: 'status', 
                     label: 'Status', 
                     render: () => (
@@ -331,7 +408,65 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                 ]}
               />
             }
-            actionButtons={<AddButton onClick={onAdd} />}
+            actionButtons={
+              <div className="flex items-center gap-2">
+                {/* 1. Tombol Tambah */}
+                <AddButton onClick={onAdd} />
+
+                {/* 2. Tombol Reset Password Kolektif Reusable */}
+                <ResetPasswordButton
+                  selectedCount={selectedIds.length}
+                  onClick={() => onBulkResetPassword(selectedIds)}
+                />
+
+                {/* 3. Dropdown Setting Reusable Trigger */}
+                <div className="relative inline-block text-left" ref={settingDropdownRef}>
+                  <SettingDropdownTrigger
+                    onClick={() => setShowSettingDropdown(!showSettingDropdown)}
+                  />
+
+                  {showSettingDropdown && (
+                    <div className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDownloadSample?.();
+                          setShowSettingDropdown(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-2.5 transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Download Sample</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onExportData?.();
+                          setShowSettingDropdown(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-2.5 transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Export Data</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onImportData?.();
+                          setShowSettingDropdown(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-2.5 transition-colors"
+                      >
+                        <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Import Data</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            }
           />
         </div>
 
@@ -340,26 +475,17 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        {/* TAMPILAN DESKTOP */}
-        <div 
-          className="hidden md:block w-full overflow-x-auto rounded-b-2xl"
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-          }}
-        >
-          <style>{`
-            div::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-
-          <Table className="w-full min-w-[1200px]">
+        {/* TAMPILAN DESKTOP (NO HORIZONTAL SCROLL) */}
+        <div className="hidden md:block w-full rounded-b-2xl overflow-hidden">
+          <Table className="w-full table-fixed text-[11px]">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="whitespace-nowrap px-3 py-3">
+                    <TableHead 
+                      key={header.id} 
+                      className="px-2 py-2.5 text-center align-middle font-bold text-gray-700 dark:text-gray-300 text-[10px] tracking-tight uppercase whitespace-normal break-words"
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
@@ -371,7 +497,7 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                 rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="whitespace-nowrap px-3 py-3">
+                      <TableCell key={cell.id} className="px-2 py-2 text-center align-middle whitespace-normal break-words">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -394,12 +520,21 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
             rows.map((row) => {
               const item = row.original;
               const isAktif = item.status === 'Aktif';
+              const isSelected = selectedIds.includes(item.id);
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      ID Absen: {item.id_absen}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => handleSelectRow(item.id, e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                        ID Absen: {item.id_absen}
+                      </span>
+                    </div>
                     <Badge 
                       variant={isAktif ? 'outline' : 'destructive'} 
                       className={
@@ -427,24 +562,10 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
                     <EditActionButton onClick={() => onEdit(item)} />
-                    <button
-                      type="button"
+                    <PowerActionButton
+                      isAktif={isAktif}
                       onClick={() => onToggleStatus(item.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
-                        isAktif ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
-                      }`}
-                    >
-                      <Power className="w-3.5 h-3.5" />
-                      <span>{isAktif ? 'Disable' : 'Enable'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onResetPassword(item.id)}
-                      className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Reset</span>
-                    </button>
+                    />
                   </div>
                 </div>
               );
@@ -457,7 +578,6 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
         </div>
       </div>
 
-      {/* FLOATING ACTION BUTTON MOBILE */}
       <MobileAddFab onClick={onAdd} title="Tambah Karyawan" />
     </div>
   );

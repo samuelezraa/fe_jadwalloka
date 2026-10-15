@@ -13,7 +13,6 @@ import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
 import { DatePicker } from '../../../../components/ui/DatePicker';
 
-
 interface DataKaryawanFormProps {
   initialData?: DataKaryawan | null;
   onSubmit: (data: DataKaryawanFormValues) => void;
@@ -117,7 +116,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Departemen dengan FormSelectSearch */}
+        {/* Departemen */}
         <Controller
           name="departemen_id"
           control={control}
@@ -136,7 +135,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
           )}
         />
 
-        {/* Sub Departemen dengan FormSelectSearch */}
+        {/* Sub Departemen */}
         <Controller
           name="sub_departemen_id"
           control={control}
@@ -157,7 +156,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* POS dengan FormSelectSearch */}
+        {/* POS */}
         <Controller
           name="pos_id"
           control={control}
@@ -176,7 +175,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
           )}
         />
 
-        {/* Grade dengan FormSelectSearch */}
+        {/* Grade */}
         <Controller
           name="grade_id"
           control={control}
@@ -197,7 +196,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Nomor Telephone: Angka Saja & Maks 13 digit */}
+        {/* Nomor Telephone */}
         <Controller
           name="nomor_telephone"
           control={control}
@@ -217,7 +216,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
           )}
         />
 
-        {/* Email dengan Validasi Format */}
+        {/* Email */}
         <FormInput
           label="Email"
           type="email"
@@ -228,7 +227,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Skema Hari Kerja dengan FormSelectSearch */}
+        {/* Skema Hari Kerja */}
         <Controller
           name="skema_hari_kerja"
           control={control}
@@ -248,7 +247,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
           )}
         />
 
-        {/* Tanggal Bergabung dengan DatePicker */}
+        {/* Tanggal Bergabung */}
         <Controller
           name="tanggal_bergabung"
           control={control}
@@ -263,7 +262,7 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
           )}
         />
 
-        {/* Tanggal Lahir dengan DatePicker */}
+        {/* Tanggal Lahir */}
         <Controller
           name="tanggal_lahir"
           control={control}
@@ -279,17 +278,25 @@ export const DataKaryawanForm: React.FC<DataKaryawanFormProps> = ({
         />
       </div>
 
+      {/* Status Karyawan dalam Mode Edit Menggunakan FormSelectSearch */}
       {isEditMode && (
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Status Karyawan</label>
-          <select
-            {...register('status')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:border-gray-400 transition-colors"
-          >
-            <option value="Aktif" className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">Aktif</option>
-            <option value="Non Aktif" className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">Non Aktif</option>
-          </select>
-        </div>
+        <Controller
+          name="status"
+          control={control}
+          render={({ field }) => (
+            <FormSelectSearch
+              label="Status Karyawan"
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih Status"
+              options={[
+                { id: 'Aktif', label: 'Aktif' },
+                { id: 'Non Aktif', label: 'Non Aktif' },
+              ]}
+              error={errors.status?.message}
+            />
+          )}
+        />
       )}
 
       {/* Tombol Aksi Reusable */}

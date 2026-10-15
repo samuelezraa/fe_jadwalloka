@@ -9,6 +9,8 @@ export interface DashboardStats {
   totalSubDepartemen?: number;
   kehadiranAktual?: number;
   kehadiranPotensial?: number;
+  karyawanAktif?: number;     // <-- Tambahkan ini
+  karyawanNonAktif?: number;  
 }
 
 export interface DashboardFilter {

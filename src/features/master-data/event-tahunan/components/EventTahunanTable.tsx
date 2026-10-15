@@ -14,7 +14,7 @@ import { Calendar } from 'lucide-react';
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
-import { DatePicker } from '../../../../components/ui/DatePicker';
+import { DateRangePicker } from '../../../../components/ui/DateRangePicker'; // Import DateRangePicker
 import { TableFilterPopover, type FilterField } from '../../../../components/ui/TableFilterPopover';
 import { Badge } from '../../../../components/ui/badge';
 
@@ -67,27 +67,20 @@ export const EventTahunanTable: React.FC<EventTahunanTableProps> = ({
 
   const isFiltered = Boolean(statusFilter || startDateFilter || endDateFilter);
 
-  // Konfigurasi Field Filter untuk TableFilterPopover Reusable
+  // Konfigurasi Field Filter menggunakan DateRangePicker
   const filterFields: FilterField[] = [
     {
-      key: 'startDate',
-      label: 'Dari Tanggal',
+      key: 'dateRange',
+      label: 'Rentang Tanggal',
       render: () => (
-        <DatePicker
-          value={startDateFilter}
-          onChange={setStartDateFilter}
-          placeholder="Pilih Tanggal Mulai..."
-        />
-      ),
-    },
-    {
-      key: 'endDate',
-      label: 'Sampai Tanggal',
-      render: () => (
-        <DatePicker
-          value={endDateFilter}
-          onChange={setEndDateFilter}
-          placeholder="Pilih Tanggal Selesai..."
+        <DateRangePicker
+          startDate={startDateFilter}
+          endDate={endDateFilter}
+          onChange={(start, end) => {
+            setStartDateFilter(start);
+            setEndDateFilter(end);
+          }}
+          placeholder="Pilih Rentang Tanggal..."
         />
       ),
     },
@@ -159,27 +152,27 @@ export const EventTahunanTable: React.FC<EventTahunanTableProps> = ({
         ),
       },
       {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: (info) => {
-          const val = String(info.getValue());
-          const isAktif = val === 'Aktif';
-          return (
-            <div className="flex justify-center">
-              <Badge 
-                variant={isAktif ? 'outline' : 'destructive'} 
-                className={
-                  isAktif 
-                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
-                    : 'rounded-full'
-                }
-              >
-                {val}
-              </Badge>
-            </div>
-          );
-        },
+      accessorKey: 'status',
+      header: 'Status',
+      cell: (info) => {
+        const val = String(info.getValue());
+        const isAktif = val === 'Aktif';
+        return (
+          <div className="flex justify-center">
+            <Badge 
+              variant="outline"
+              className={
+                isAktif 
+                  ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5 text-[11px]' 
+                  : 'rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 font-semibold px-3 py-0.5 text-[11px]'
+              }
+            >
+              {val}
+            </Badge>
+          </div>
+        );
       },
+    },
       {
         id: 'action',
         header: 'Action',
@@ -211,7 +204,7 @@ export const EventTahunanTable: React.FC<EventTahunanTableProps> = ({
 
   return (
     <div className="relative">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl  shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
         <TableToolbar
           title="Event Tahunan"
@@ -255,11 +248,15 @@ export const EventTahunanTable: React.FC<EventTahunanTableProps> = ({
                       {item.id}
                     </span>
                    <Badge 
-                      variant={isAktif ? 'default' : 'destructive'}
-                      className={isAktif ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : ''}
+                      variant="outline"
+                      className={
+                        isAktif 
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5 text-[11px]' 
+                          : 'rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 font-semibold px-3 py-0.5 text-[11px]'
+                      }
                     >
                       {item.status}
-                    </Badge>
+                  </Badge>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Event & Tanggal</p>

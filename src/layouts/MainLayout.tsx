@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MenuIconButton } from '../components/ui/ActionButtons';
+import { Toaster } from 'react-hot-toast'; // ✅ Sudah ter-import
 
 export const MainLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -13,14 +14,24 @@ export const MainLayout: React.FC = () => {
   };
 
   const toggleMobileSidebar = () => {
-    // Saat sidebar mobile dibuka/ditutup, kita bisa reset state atau biarkan backdrop bekerja
     setIsMobileOpen((prev) => !prev);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex transition-colors duration-200 relative overflow-x-hidden">
       
-      {/* Backdrop Mobile: Ketika sidebar terbuka, lapisan hitam transparan ini akan menutupi seluruh konten */}
+      {/* 🌟 Tambahkan Toaster di sini agar notifikasi toast dapat tampil melayang di layar */}
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          duration: 3000,
+          style: {
+            fontSize: '12px',
+          },
+        }} 
+      />
+
+      {/* Backdrop Mobile */}
       {isMobileOpen && (
         <div 
           onClick={() => setIsMobileOpen(false)}
@@ -28,7 +39,7 @@ export const MainLayout: React.FC = () => {
         />
       )}
 
-      {/* Sidebar Utama (Pastikan z-index nya di atas backdrop, misal z-[100]) */}
+      {/* Sidebar Utama */}
       <div className="relative z-[100]">
         <Sidebar 
           isCollapsed={isCollapsed} 

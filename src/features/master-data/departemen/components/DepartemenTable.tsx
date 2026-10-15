@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,6 +13,9 @@ import { Building2 } from 'lucide-react';
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
+import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { Badge } from '../../../../components/ui/badge';
 import { DataTable } from '../../../../components/ui/data-table';
 
 interface DepartemenTableProps {
@@ -27,7 +30,41 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
   onAdd,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
+
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Auto-close filter dropdown saat mengklik area di luar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        filterWrapperRef.current &&
+        !filterWrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
+  // Filter Data berdasarkan Status
+  const filteredData = useMemo(() => {
+    if (!statusFilter) return data;
+    return data.filter((item: any) => (item.status || 'Aktif') === statusFilter);
+  }, [data, statusFilter]);
+
+  const isFiltered = Boolean(statusFilter);
 
   const columns = useMemo<ColumnDef<Departemen>[]>(
     () => [
@@ -42,6 +79,28 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
                 info.table.getState().pagination.pageSize}
           </span>
         ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: (info) => {
+          const val = String(info.getValue() || 'Aktif');
+          const isAktif = val === 'Aktif';
+          return (
+            <div className="flex justify-center">
+              <Badge 
+                variant={isAktif ? 'outline' : 'destructive'} 
+                className={
+                  isAktif 
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                    : 'rounded-full px-3'
+                }
+              >
+                {val}
+              </Badge>
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'id',
@@ -75,7 +134,7 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
   );
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     state: {
       globalFilter,
@@ -91,38 +150,78 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={filterWrapperRef}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* 1. Header Toolbar Reusable (Desktop Add Button) */}
+        {/* Header Toolbar */}
         <TableToolbar
           title="Master Departemen"
           subtitle="Daftar kelola induk departemen LokaHR"
           icon={<Building2 className="w-6 h-6" />}
           searchValue={globalFilter ?? ''}
           onSearchChange={setGlobalFilter}
+          showFilterDropdown={showFilterDropdown}
+          onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
+          isFiltered={isFiltered}
+          filterDropdownContent={
+            <TableFilterPopover
+              isOpen={showFilterDropdown}
+              onClose={() => setShowFilterDropdown(false)}
+              isFiltered={isFiltered}
+              onReset={() => setStatusFilter('')}
+              fields={[
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: () => (
+                    <FormSelectSearch
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      placeholder="Semua Status"
+                      options={[
+                        { id: '', label: 'Semua Status' },
+                        { id: 'Aktif', label: 'Aktif' },
+                        { id: 'Non Aktif', label: 'Non Aktif' },
+                      ]}
+                    />
+                  ),
+                },
+              ]}
+            />
+          }
           actionButtons={
             <AddButton onClick={onAdd} />
           }
         />
 
-        {/* 2. Pagination */}
+        {/* Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
           <DataPagination table={table} />
         </div>
 
-        {/* 3. TAMPILAN MOBILE: Card */}
+        {/* TAMPILAN MOBILE: Card */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
+              const statusVal = (item as any).status || 'Aktif';
+              const isAktif = statusVal === 'Aktif';
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                       {item.id}
                     </span>
-                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500">No. {row.index + 1}</span>
+                    <Badge 
+                      variant={isAktif ? 'outline' : 'destructive'} 
+                      className={
+                        isAktif 
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
+                          : 'rounded-full px-3 py-0.5'
+                      }
+                    >
+                      {statusVal}
+                    </Badge>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Departemen</p>
@@ -141,12 +240,11 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           )}
         </div>
 
-        {/* 4. TAMPILAN DESKTOP: Menggunakan Reusable DataTable */}
+        {/* TAMPILAN DESKTOP */}
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data departemen ditemukan." />
 
       </div>
 
-      {/* 5. FLOATING ACTION BUTTON (FAB) KHUSUS MOBILE MENGGUNAKAN REUSABLE COMPONENT */}
       <MobileAddFab onClick={onAdd} title="Tambah Departemen" />
     </div>
   );

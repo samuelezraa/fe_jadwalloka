@@ -123,7 +123,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
 
   return (
     <div className="relative">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl  shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
         {/* 1. Header Toolbar Reusable dengan TableFilterPopover */}
         <TableToolbar

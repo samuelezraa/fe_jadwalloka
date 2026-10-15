@@ -3,6 +3,7 @@ export interface SubDepartemen {
   departemen_id: string;  // ID Departemen relasi, ex: DP001
   departemen_nama: string;// Nama Departemen, ex: IT
   sub_departemen: string; // Nama Sub Departemen, ex: Aplikasi & System
+  status?: 'Aktif' | 'Non Aktif';
   created_at?: string;
   updated_at?: string;
 }

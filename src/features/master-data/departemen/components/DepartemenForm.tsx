@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { departemenSchema, type DepartemenFormValues } from '../schemas/departemen.schema';
 import type { Departemen } from '../types/departemen.type';
 
 // Reusable UI Components
-// Reusable UI Components
 import { FormInput } from '../../../../components/ui/FormInput';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
 
 interface DepartemenFormProps {
@@ -20,9 +20,12 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const isEditMode = !!initialData;
+
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<DepartemenFormValues>({
@@ -30,6 +33,7 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
     defaultValues: {
       id: '',
       departemen: '',
+      status: 'Aktif',
     },
   });
 
@@ -38,16 +42,16 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
       reset({
         id: initialData.id,
         departemen: initialData.departemen,
+        status: (initialData as any).status || 'Aktif',
       });
     } else {
       reset({
         id: '',
         departemen: '',
+        status: 'Aktif',
       });
     }
   }, [initialData, reset]);
-
-  const isEditMode = !!initialData;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -74,6 +78,27 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
         placeholder="Contoh: IT, HRD, Operasional"
         error={errors.departemen?.message}
       />
+
+      {/* Field Status Departemen dalam Mode Edit */}
+      {isEditMode && (
+        <Controller
+          name="status"
+          control={control}
+          render={({ field }) => (
+            <FormSelectSearch
+              label="Status Departemen"
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih Status"
+              options={[
+                { id: 'Aktif', label: 'Aktif' },
+                { id: 'Non Aktif', label: 'Non Aktif' },
+              ]}
+              error={errors.status?.message}
+            />
+          )}
+        />
+      )}
 
       {/* Aksi Tombol Form */}
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">

@@ -4,6 +4,7 @@ import { Button } from "./button"
 import { Pencil, Plus, Filter, Download, Upload, Menu, Settings, X, SlidersHorizontal } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Table } from "@tanstack/react-table";
+import { KeyRound, Power, ChevronDown } from 'lucide-react';
 
 // 1. Tombol Utama / Konfirmasi (Background Hijau Emerald Solid)
 export const PrimaryButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -148,39 +149,44 @@ FilterButton.displayName = "FilterButton"
 
 
 
-// 9. Tombol Import Ikon (Disamakan dengan Mobile - Warna Hijau)
+
+
+// 9. Tombol Import Ikon & Teks (Mobile: Ikon Saja, Desktop: Ikon + Teks)
 export const ImportIconButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = "", ...props }, ref) => (
-    <Button 
-      type="button" 
-      variant="default" 
-      className={`rounded-full h-9 w-9 p-0 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-sm transition-colors ${className}`}
-      ref={ref} 
+    <Button
+      type="button"
+      variant="default"
+      className={`rounded-full h-9 px-3 md:px-4 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-sm transition-colors text-xs font-semibold flex items-center gap-2 ${className}`}
+      ref={ref}
       title="Import"
       {...props}
     >
-      <Upload className="w-4 h-4" />
+      <Upload className="w-4 h-4 shrink-0" />
+      <span className="hidden md:inline">Import</span>
     </Button>
   )
 );
 ImportIconButton.displayName = "ImportIconButton";
 
-// 10. Tombol Export Ikon (Disamakan dengan Mobile - Warna Oranye/Kuning)
+// 10. Tombol Export Ikon & Teks (Mobile: Ikon Saja, Desktop: Ikon + Teks)
 export const ExportIconButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = "", ...props }, ref) => (
-    <Button 
-      type="button" 
-      variant="default" 
-     className={`rounded-full h-9 w-9 p-0 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-sm ${className}`}
-      ref={ref} 
+    <Button
+      type="button"
+      variant="default"
+      className={`rounded-full h-9 px-3 md:px-4 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-sm transition-colors text-xs font-semibold flex items-center gap-2 ${className}`}
+      ref={ref}
       title="Export"
       {...props}
     >
-      <Download className="w-4 h-4" />
+      <Download className="w-4 h-4 shrink-0" />
+      <span className="hidden md:inline">Export</span>
     </Button>
   )
 );
 ExportIconButton.displayName = "ExportIconButton";
+
 
 
 // 11. Tombol Hamburger / Menu Mobile
@@ -365,3 +371,68 @@ export function RowsPerPageSelector<T>({
     </div>
   );
 }
+
+
+
+// 1. Tombol Reset Password
+interface ResetPasswordButtonProps extends ButtonProps {
+  selectedCount?: number;
+}
+export const ResetPasswordButton = React.forwardRef<HTMLButtonElement, ResetPasswordButtonProps>(
+  ({ selectedCount = 0, className = '', ...props }, ref) => (
+    <Button
+      type="button"
+      variant="default"
+      disabled={selectedCount === 0}
+      className={`h-8 px-3 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 text-white disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
+      ref={ref}
+      {...props}
+    >
+      <KeyRound className="w-3.5 h-3.5" />
+      <span>Reset ({selectedCount})</span>
+    </Button>
+  )
+);
+ResetPasswordButton.displayName = 'ResetPasswordButton';
+
+// 2. Tombol Toggle Status (Enable/Disable)
+interface PowerActionButtonProps extends ButtonProps {
+  isAktif: boolean;
+}
+export const PowerActionButton = React.forwardRef<HTMLButtonElement, PowerActionButtonProps>(
+  ({ isAktif, className = '', ...props }, ref) => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className={`h-7 w-7 p-1 rounded-md transition-colors ${
+        isAktif
+          ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60'
+          : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+      } ${className}`}
+      title={isAktif ? 'Disable Karyawan' : 'Enable Karyawan'}
+      ref={ref}
+      {...props}
+    >
+      <Power className="w-3.5 h-3.5" />
+    </Button>
+  )
+);
+PowerActionButton.displayName = 'PowerActionButton';
+
+// 3. Tombol Setting Dropdown Trigger
+export const SettingDropdownTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className = '', children = 'Setting', ...props }, ref) => (
+    <Button
+      type="button"
+      variant="default"
+      className={`h-8 px-3 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
+      ref={ref}
+      {...props}
+    >
+      <span>{children}</span>
+      <ChevronDown className="w-3.5 h-3.5" />
+    </Button>
+  )
+);
+SettingDropdownTrigger.displayName = 'SettingDropdownTrigger';

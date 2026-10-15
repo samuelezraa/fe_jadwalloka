@@ -23,7 +23,7 @@ export const PeriodeJadwalPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Section Form Tambah */}
       {isFormOpen && (
         <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all">

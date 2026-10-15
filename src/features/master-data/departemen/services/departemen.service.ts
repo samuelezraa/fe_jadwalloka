@@ -1,12 +1,10 @@
 import type { Departemen } from '../types/departemen.type';
 
-// ... sisa kode di bawahnya tetap sama
-
-// Mock initial data sesuai spesifikasi gambar
+// Mock initial data dengan field status
 let mockDepartemenList: Departemen[] = [
-  { id: 'DP001', departemen: 'IT' },
-  { id: 'DP002', departemen: 'HRD' },
-  { id: 'DP003', departemen: 'Operasional' },
+  { id: 'DP001', departemen: 'IT', status: 'Aktif' },
+  { id: 'DP002', departemen: 'HRD', status: 'Aktif' },
+  { id: 'DP003', departemen: 'Operasional', status: 'Aktif' },
 ];
 
 export const departemenService = {
@@ -15,8 +13,12 @@ export const departemenService = {
   },
 
   create: async (data: Departemen): Promise<Departemen> => {
-    mockDepartemenList.push(data);
-    return Promise.resolve(data);
+    const newItem = {
+      ...data,
+      status: data.status || 'Aktif',
+    };
+    mockDepartemenList.push(newItem);
+    return Promise.resolve(newItem);
   },
 
   update: async (id: string, data: Partial<Departemen>): Promise<Departemen> => {

@@ -1,13 +1,14 @@
 import React from 'react';
+import { CustomDialog } from '@/components/ui/CustomDialog';
 import { SkemaHariKerjaForm } from './SkemaHariKerjaForm';
-import { AppDialog } from '../../../../components/ui/AppDialog';
 import type { SkemaHariKerja } from '../types/skema-hari-kerja.type';
+import type { SkemaHariKerjaFormValues } from '../schemas/skema-hari-kerja.schema';
 
 interface SkemaHariKerjaDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: SkemaHariKerja | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: SkemaHariKerjaFormValues) => void;
 }
 
 export const SkemaHariKerjaDialog: React.FC<SkemaHariKerjaDialogProps> = ({
@@ -16,20 +17,19 @@ export const SkemaHariKerjaDialog: React.FC<SkemaHariKerjaDialogProps> = ({
   initialData,
   onSubmit,
 }) => {
-  const isEditMode = !!initialData;
+  const isEdit = !!initialData;
 
   return (
-    <AppDialog
+    <CustomDialog
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Edit Skema Hari Kerja' : 'Tambah Skema Hari Kerja Baru'}
-      maxWidth="md"
+      title={isEdit ? 'Edit Skema Hari Kerja' : 'Tambah Skema Hari Kerja Baru'}
     >
       <SkemaHariKerjaForm
         initialData={initialData}
         onSubmit={onSubmit}
         onCancel={onClose}
       />
-    </AppDialog>
+    </CustomDialog>
   );
 };

@@ -1,57 +1,76 @@
 import React, { useState, useEffect } from 'react';
-import { Info } from 'lucide-react';
 import { CustomDialog } from '../../../../components/ui/CustomDialog';
 import { FormInput } from '../../../../components/ui/FormInput';
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
 
+interface JamMingguanData {
+  senin: string;
+  selasa: string;
+  rabu: string;
+  kamis: string;
+  jumat: string;
+  sabtu: string;
+  minggu: string;
+}
+
 interface SettingJamMingguanDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (formData: {
-    id_periode: string;
-    skema_kerja: string;
-    total_hari: number;
-    masuk: number;
-    libur: number;
-    ph: number;
-    cuti: number;
-  }) => void;
+  onSave?: (formData: JamMingguanData) => void;
 }
+
+const DEFAULT_JAM: JamMingguanData = {
+  senin: '00:00:00',
+  selasa: '00:00:00',
+  rabu: '00:00:00',
+  kamis: '00:00:00',
+  jumat: '00:00:00',
+  sabtu: '00:00:00',
+  minggu: '00:00:00',
+};
+
+const HARI_LIST: { key: keyof JamMingguanData; label: string }[] = [
+  { key: 'senin', label: 'Senin' },
+  { key: 'selasa', label: 'Selasa' },
+  { key: 'rabu', label: 'Rabu' },
+  { key: 'kamis', label: 'Kamis' },
+  { key: 'jumat', label: 'Jumat' },
+  { key: 'sabtu', label: 'Sabtu' },
+  { key: 'minggu', label: 'Minggu' },
+];
 
 export const SettingJamMingguanDialog: React.FC<SettingJamMingguanDialogProps> = ({
   isOpen,
   onClose,
   onSave,
 }) => {
-  const [formData, setFormData] = useState({
-    id_periode: 'PER01',
-    skema_kerja: '5-2',
-    total_hari: 22,
-    masuk: 20,
-    libur: 8,
-    ph: 2,
-    cuti: 2,
-  });
+  const [formData, setFormData] = useState<JamMingguanData>(DEFAULT_JAM);
 
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        id_periode: 'PER01',
-        skema_kerja: '5-2',
-        total_hari: 22,
-        masuk: 20,
-        libur: 8,
-        ph: 2,
-        cuti: 2,
-      });
+      setFormData(DEFAULT_JAM);
     }
   }, [isOpen]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  // Fungsi formatter & validasi input jam otomatis
+  const handleTimeInput = (key: keyof JamMingguanData, rawValue: string) => {
+    // 1. Hapus semua karakter yang bukan angka
+    const digitsOnly = rawValue.replace(/\D/g, '');
+
+    // 2. Batasi maksimal 6 digit angka (HHMMSS)
+    const truncated = digitsOnly.slice(0, 6);
+
+    // 3. Format otomatis menjadi HH:MM:SS
+    let formatted = truncated;
+    if (truncated.length >= 5) {
+      formatted = `${truncated.slice(0, 2)}:${truncated.slice(2, 4)}:${truncated.slice(4, 6)}`;
+    } else if (truncated.length >= 3) {
+      formatted = `${truncated.slice(0, 2)}:${truncated.slice(2, 4)}`;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'id_periode' || name === 'skema_kerja' ? value : Number(value),
+      [key]: formatted,
     }));
   };
 
@@ -60,8 +79,7 @@ export const SettingJamMingguanDialog: React.FC<SettingJamMingguanDialogProps> =
     if (onSave) {
       onSave(formData);
     } else {
-      console.log('Global Setting Disimpan:', formData);
-      alert('Pengaturan jadwal global untuk semua karyawan berhasil disimpan.');
+      console.log('Jam Mingguan Disimpan:', formData);
     }
     onClose();
   };
@@ -70,83 +88,37 @@ export const SettingJamMingguanDialog: React.FC<SettingJamMingguanDialogProps> =
     <CustomDialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Setting Jam Mingguan (Global)"
-      maxWidth="max-w-lg"
+      title="Set Jam Mingguan"
+      maxWidth="max-w-md"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Box Informasi */}
-        <div className="flex gap-2.5 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/60 rounded-lg">
-          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-          <div className="text-[11px] text-blue-800 dark:text-blue-300 leading-snug">
-            <span className="font-semibold block mb-0.5">Informasi Sistem</span>
-            Nilai yang diatur di sini akan memperbarui parameter jadwal secara massal untuk <strong>semua karyawan</strong>.
-          </div>
-        </div>
-
-        {/* Baris 1: ID Periode & Skema Kerja */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FormInput
-            label="ID Periode"
-            name="id_periode"
-            value={formData.id_periode}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            label="Skema Kerja"
-            name="skema_kerja"
-            value={formData.skema_kerja}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        {/* Baris 2: Grid Angka (Total Hari, Masuk, Libur, PH, Cuti) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-          <FormInput
-            label="Total Hari"
-            type="number"
-            name="total_hari"
-            value={formData.total_hari}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            label="Masuk"
-            type="number"
-            name="masuk"
-            value={formData.masuk}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            label="Libur"
-            type="number"
-            name="libur"
-            value={formData.libur}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            label="PH"
-            type="number"
-            name="ph"
-            value={formData.ph}
-            onChange={handleChange}
-            required
-          />
-          <FormInput
-            label="Cuti"
-            type="number"
-            name="cuti"
-            value={formData.cuti}
-            onChange={handleChange}
-            required
-          />
+      <form onSubmit={handleSubmit} className="space-y-4 py-2">
+        {/* List Input Jam dari Senin - Minggu */}
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto px-1 pr-2">
+          {HARI_LIST.map(({ key, label }) => (
+            <div
+              key={key}
+              className="grid grid-cols-12 items-center gap-4"
+            >
+              <label className="col-span-4 text-xs font-bold text-gray-800 dark:text-gray-200">
+                {label}
+              </label>
+              <div className="col-span-8">
+                <FormInput
+                  type="text"
+                  maxLength={8} // 🌟 Membatasi panjang maksimal 8 karakter (HH:MM:SS)
+                  value={formData[key]}
+                  onChange={(e) => handleTimeInput(key, e.target.value)}
+                  placeholder="00:00:00"
+                  className="font-mono text-center text-xs tracking-wider"
+                  required
+                />
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Footer Tombol Aksi */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800 mt-6">
           <CancelButton onClick={onClose} />
           <SaveButton />
         </div>

@@ -1,8 +1,9 @@
 export interface SkemaHariKerja {
-  id: string;               // ID Skema (contoh: SK001)
-  skema: string;            // Nama Skema (contoh: 5-2)
-  jumlah_hari_kerja: number;// (contoh: 21)
-  jumlah_hari_libur: number;// (contoh: 8)
-  created_at?: string;
-  updated_at?: string;
+  id: string;
+  skema: string;
+  jumlah_hari_kerja: number;
+  jam_kerja_per_hari: number;
+  total_jam_per_minggu: number;
+  total_jam_per_bulan: number;
+  status: 'Aktif' | 'Non Aktif';
 }

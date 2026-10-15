@@ -9,12 +9,13 @@ import {
 } from '@tanstack/react-table';
 import type { PivotData } from '../types/pivot.type';
 import { DataPagination } from '../../../../components/DataPagination';
-import { FileText, Download } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { ExportIconButton } from '../../../../components/ui/ActionButtons';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
+import { DateRangePicker } from '../../../../components/ui/DateRangePicker'; // 🌟 Import DateRangePicker
 import {
   Table,
   TableBody,
@@ -33,9 +34,10 @@ interface PivotTableProps {
 export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
   const [globalFilter, setGlobalFilter] = useState('');
   
-  // State Filter (Periode / Date Range)
+  // State Filter (Periode & Tanggal Range)
   const [periodeFilter, setPeriodeFilter] = useState('');
-  const [dateRangeFilter, setDateRangeFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState(''); // 🌟 State Tanggal Mulai
+  const [endDateFilter, setEndDateFilter] = useState('');     // 🌟 State Tanggal Selesai
   
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -70,10 +72,11 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
     if (periodeFilter) {
       // Logic filter periode jika ada
     }
+    // Logic filter range tanggal bisa diterapkan di sini jika data memiliki kriteria tanggal
     return result;
-  }, [data, periodeFilter]);
+  }, [data, periodeFilter, startDateFilter, endDateFilter]);
 
-  const isFiltered = Boolean(periodeFilter || dateRangeFilter);
+  const isFiltered = Boolean(periodeFilter || startDateFilter || endDateFilter);
 
   const columns = useMemo<ColumnDef<PivotData>[]>(
     () => [
@@ -191,34 +194,49 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
             isFiltered={isFiltered}
 
             filterDropdownContent={
-            <TableFilterPopover
-              isOpen={showFilterDropdown}
-              onClose={() => setShowFilterDropdown(false)}
-              isFiltered={isFiltered}
-              onReset={() => {
-                setPeriodeFilter('');
-                setDateRangeFilter('');
-              }}
-              fields={[
-                {
-                  key: 'periode',
-                  label: 'Periode',
-                  render: () => (
-                    <FormSelectSearch
-                      value={periodeFilter}
-                      onChange={setPeriodeFilter}
-                      placeholder="Semua Periode"
-                      options={[
-                        { id: '', label: 'Semua Periode' },
-                        { id: '2026-01', label: 'Januari 2026' },
-                        { id: '2026-02', label: 'Februari 2026' },
-                      ]}
-                    />
-                  ),
-                },
-              ]}
-            />
-          }
+              <TableFilterPopover
+                isOpen={showFilterDropdown}
+                onClose={() => setShowFilterDropdown(false)}
+                isFiltered={isFiltered}
+                onReset={() => {
+                  setPeriodeFilter('');
+                  setStartDateFilter('');
+                  setEndDateFilter('');
+                }}
+                fields={[
+                  {
+                    key: 'periode',
+                    label: 'Periode',
+                    render: () => (
+                      <FormSelectSearch
+                        value={periodeFilter}
+                        onChange={setPeriodeFilter}
+                        placeholder="Semua Periode"
+                        options={[
+                          { id: '', label: 'Semua Periode' },
+                          { id: '2026-01', label: 'Januari 2026' },
+                          { id: '2026-02', label: 'Februari 2026' },
+                        ]}
+                      />
+                    ),
+                  },
+                  {
+                    key: 'tanggal_range',
+                    label: 'Tanggal (Range)',
+                    render: () => (
+                      <DateRangePicker
+                        startDate={startDateFilter}
+                        endDate={endDateFilter}
+                        onChange={(start, end) => {
+                          setStartDateFilter(start);
+                          setEndDateFilter(end);
+                        }}
+                      />
+                    ),
+                  },
+                ]}
+              />
+            }
           
             actionButtons={
               <ExportIconButton onClick={onExport} title="Export Pivot" />
@@ -235,11 +253,10 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
         <div 
             className="hidden md:block w-full overflow-x-auto rounded-b-2xl"
             style={{
-              scrollbarWidth: 'none',  // Untuk Firefox
-              msOverflowStyle: 'none',   // Untuk Internet Explorer & Edge
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
             }}
           >
-            {/* Tambahkan style tag internal kecil khusus webkit (Chrome, Safari, Edge berbasis Chromium) */}
             <style>{`
               div::-webkit-scrollbar {
                 display: none;

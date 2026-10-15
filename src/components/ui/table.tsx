@@ -1,15 +1,12 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
 
-
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(({ className, ...props }, ref) => (
-
   <div className="relative w-full min-w-0 overflow-x-auto">
     <table ref={ref} className={cn("w-full caption-bottom text-sm text-center border-collapse", className)} {...props} />
   </div>
 ))
 Table.displayName = "Table"
-
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(({ className, ...props }, ref) => (
   <thead ref={ref} className={cn("bg-gray-50/80 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-800", className)} {...props} />
@@ -33,8 +30,13 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
 ))
 TableRow.displayName = "TableRow"
 
+// 🌟 UBAH KELAS 'uppercase' MENJADI 'capitalize' ATAU HAPUS AGAR SESUAI TITLE CASE
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(({ className, ...props }, ref) => (
-  <th ref={ref} className={cn("px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-800 last:border-r-0 align-middle", className)} {...props} />
+  <th 
+    ref={ref} 
+    className={cn("px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 capitalize tracking-wider border-r border-gray-200 dark:border-gray-800 last:border-r-0 align-middle", className)} 
+    {...props} 
+  />
 ))
 TableHead.displayName = "TableHead"
 

@@ -34,9 +34,9 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   className = '',
 }) => {
   return (
-    <div className="w-full space-y-1">
+    <div className="w-full space-y-0.5" onClick={(e) => e.stopPropagation()}>
       {label && (
-        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+        <label className="block text-[10px] font-semibold text-gray-700 dark:text-gray-300">
           {label}
         </label>
       )}
@@ -46,22 +46,21 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         disabled={disabled}
       >
         <SelectTrigger
-          // PERBAIKAN: Memastikan 'w-full' dan 'h-8' diterapkan pada trigger
-          className={`w-full h-8 text-xs ${
+          className={`w-full h-8 text-[11px] px-2.5 ${
             error ? 'border-red-500 aria-invalid:border-red-500' : ''
           } ${className}`}
         >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[9999]">
           {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
+            <SelectItem key={opt.value} value={opt.value} className="text-xs py-1">
               {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      {error && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{error}</p>}
+      {error && <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">{error}</p>}
     </div>
   );
 };

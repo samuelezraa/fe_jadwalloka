@@ -23,6 +23,8 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const isEditMode = !!initialData;
+
   const {
     register,
     handleSubmit,
@@ -35,10 +37,9 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
       departemen_id: '',
       id: '',
       sub_departemen: '',
+      status: 'Aktif',
     },
   });
-
-  const isEditMode = !!initialData;
 
   useEffect(() => {
     if (initialData) {
@@ -46,12 +47,14 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
         departemen_id: initialData.departemen_id,
         id: initialData.id,
         sub_departemen: initialData.sub_departemen,
+        status: (initialData as any).status || 'Aktif',
       });
     } else {
       reset({
         departemen_id: '',
         id: '',
         sub_departemen: '',
+        status: 'Aktif',
       });
     }
   }, [initialData, reset]);
@@ -64,7 +67,6 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
     });
   };
 
-  // Format data untuk FormSelectSearch
   const departemenOptions = departemenList.map((d) => ({
     id: d.id,
     label: `${d.departemen} (${d.id})`,
@@ -72,7 +74,7 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-      {/* Pilih Departemen menggunakan Search Dropdowns Reusable */}
+      {/* Departemen */}
       <Controller
         name="departemen_id"
         control={control}
@@ -94,7 +96,7 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
           label="ID Sub Departemen"
           {...register('id')}
           disabled={isEditMode}
-          placeholder="Contoh: DS072"
+          placeholder="Contoh: DS072(IT)"
           error={errors.id?.message}
         />
         {isEditMode && (
@@ -109,6 +111,27 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
         placeholder="Contoh: Aplikasi & System"
         error={errors.sub_departemen?.message}
       />
+
+      {/* Status dalam Mode Edit */}
+      {isEditMode && (
+        <Controller
+          name="status"
+          control={control}
+          render={({ field }) => (
+            <FormSelectSearch
+              label="Status Sub Departemen"
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih Status"
+              options={[
+                { id: 'Aktif', label: 'Aktif' },
+                { id: 'Non Aktif', label: 'Non Aktif' },
+              ]}
+              error={(errors as any).status?.message}
+            />
+          )}
+        />
+      )}
 
       {/* Tombol Aksi */}
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">

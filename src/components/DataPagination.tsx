@@ -56,7 +56,7 @@ export function DataPagination<T>({ table }: DataPaginationProps<T>) {
             type="button"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+            className="p-1.5 rounded-lg border border-gray-a0 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

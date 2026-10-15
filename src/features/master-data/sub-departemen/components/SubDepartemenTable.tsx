@@ -1,16 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
-  flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { SubDepartemen } from '../types/sub-departemen.type';
 import type { Departemen } from '../../departemen/types/departemen.type';
 import { DataPagination } from '../../../../components/DataPagination';
-import { Building2, Plus } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
@@ -18,6 +17,7 @@ import { AddButton, EditActionButton, MobileAddFab } from '../../../../component
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { Badge } from '../../../../components/ui/badge';
 
 interface SubDepartemenTableProps {
   data: SubDepartemen[];
@@ -34,15 +34,47 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('');
-  const [showDeptDropdown, setShowDeptDropdown] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
-  const filteredData = useMemo(() => {
-    if (!selectedDeptFilter) return data;
-    return data.filter((item) => item.departemen_id === selectedDeptFilter);
-  }, [data, selectedDeptFilter]);
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  const isFiltered = Boolean(selectedDeptFilter);
+  // Auto-close filter popover saat mengklik di luar area filter
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        filterWrapperRef.current &&
+        !filterWrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
+  // Filter Data berdasarkan Departemen & Status
+  const filteredData = useMemo(() => {
+    let result = data;
+    if (selectedDeptFilter) {
+      result = result.filter((item) => item.departemen_id === selectedDeptFilter);
+    }
+    if (statusFilter) {
+      result = result.filter((item: any) => (item.status || 'Aktif') === statusFilter);
+    }
+    return result;
+  }, [data, selectedDeptFilter, statusFilter]);
+
+  const isFiltered = Boolean(selectedDeptFilter || statusFilter);
 
   const columns = useMemo<ColumnDef<SubDepartemen>[]>(
     () => [
@@ -54,6 +86,28 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
             {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
           </span>
         ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: (info) => {
+          const val = String(info.getValue() || 'Aktif');
+          const isAktif = val === 'Aktif';
+          return (
+            <div className="flex justify-center">
+              <Badge 
+                variant={isAktif ? 'outline' : 'destructive'} 
+                className={
+                  isAktif 
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                    : 'rounded-full px-3'
+                }
+              >
+                {val}
+              </Badge>
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'departemen_nama',
@@ -108,40 +162,57 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="relative">
-      {/* Menggunakan overflow-visible agar popover filter tidak terpotong ke bawah */}
+    <div className="relative" ref={filterWrapperRef}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* 1. Header Toolbar Reusable dengan TableFilterPopover */}
+        {/* Header Toolbar */}
         <TableToolbar
           title="Sub Departemen"
           subtitle="Daftar kelola sub departemen LokaHR"
           icon={<Building2 className="w-6 h-6" />}
           searchValue={globalFilter ?? ''}
           onSearchChange={setGlobalFilter}
-          showFilterDropdown={showDeptDropdown}
-          onToggleFilterDropdown={() => setShowDeptDropdown(!showDeptDropdown)}
+          showFilterDropdown={showFilterDropdown}
+          onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
           
           filterDropdownContent={
             <TableFilterPopover
-              isOpen={showDeptDropdown}
-              onClose={() => setShowDeptDropdown(false)}
+              isOpen={showFilterDropdown}
+              onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
-              onReset={() => setSelectedDeptFilter('')}
+              onReset={() => {
+                setSelectedDeptFilter('');
+                setStatusFilter('');
+              }}
               fields={[
                 {
                   key: 'departemen',
                   label: 'Departemen',
-                  // Menggunakan properti render untuk menyisipkan FormSelectSearch.txt secara kustom
                   render: () => (
                     <FormSelectSearch
                       value={selectedDeptFilter}
                       onChange={(val) => setSelectedDeptFilter(val)}
-                      placeholder="Pilih Departemen"
+                      placeholder="Semua Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
                         ...departemenList.map((d) => ({ id: d.id, label: d.departemen })),
+                      ]}
+                    />
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: () => (
+                    <FormSelectSearch
+                      value={statusFilter}
+                      onChange={(val) => setStatusFilter(val)}
+                      placeholder="Semua Status"
+                      options={[
+                        { id: '', label: 'Semua Status' },
+                        { id: 'Aktif', label: 'Aktif' },
+                        { id: 'Non Aktif', label: 'Non Aktif' },
                       ]}
                     />
                   ),
@@ -155,23 +226,34 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
           }
         />
 
-        {/* 2. Pagination */}
+        {/* Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
           <DataPagination table={table} />
         </div>
 
-        {/* 3. TAMPILAN MOBILE: Card */}
+        {/* TAMPILAN MOBILE: Card */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
+              const statusVal = (item as any).status || 'Aktif';
+              const isAktif = statusVal === 'Aktif';
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                       {item.id}
                     </span>
-                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500">No. {row.index + 1}</span>
+                    <Badge 
+                      variant={isAktif ? 'outline' : 'destructive'} 
+                      className={
+                        isAktif 
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
+                          : 'rounded-full px-3 py-0.5'
+                      }
+                    >
+                      {statusVal}
+                    </Badge>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Departemen</p>
@@ -194,12 +276,11 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
           )}
         </div>
 
-        {/* 4. TAMPILAN DESKTOP: Menggunakan Reusable DataTable */}
+        {/* TAMPILAN DESKTOP */}
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data sub departemen ditemukan." />
 
       </div>
 
-      {/* 5. FLOATING ACTION BUTTON (FAB) Mobile (Berada di atas tombol menu hamburger) */}
       <MobileAddFab onClick={onAdd} title="Tambah Sub Departemen" />
 
     </div>

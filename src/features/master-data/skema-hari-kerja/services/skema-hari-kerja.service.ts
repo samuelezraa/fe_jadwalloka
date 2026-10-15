@@ -1,29 +1,38 @@
 import type { SkemaHariKerja } from '../types/skema-hari-kerja.type';
 
-// Mock data awal sesuai referensi gambar spesifikasi
+// Mock data awal disesuaikan dengan atribut terbaru
 let mockSkemaList: SkemaHariKerja[] = [
   {
     id: 'SK001',
     skema: '5-2',
-    jumlah_hari_kerja: 21,
-    jumlah_hari_libur: 8,
+    jumlah_hari_kerja: 5,
+    jam_kerja_per_hari: 8,
+    total_jam_per_minggu: 40,
+    total_jam_per_bulan: 160,
+    status: 'Aktif',
   },
   {
     id: 'SK002',
     skema: '5-1',
-    jumlah_hari_kerja: 25,
-    jumlah_hari_libur: 8,
+    jumlah_hari_kerja: 5,
+    jam_kerja_per_hari: 7,
+    total_jam_per_minggu: 35,
+    total_jam_per_bulan: 140,
+    status: 'Aktif',
   },
   {
     id: 'SK003',
     skema: '6-1',
-    jumlah_hari_kerja: 25,
-    jumlah_hari_libur: 5,
+    jumlah_hari_kerja: 6,
+    jam_kerja_per_hari: 7,
+    total_jam_per_minggu: 42,
+    total_jam_per_bulan: 168,
+    status: 'Aktif',
   },
 ];
 
 export const skemaHariKerjaService = {
-  // Mengambil semua data (dengan simulasi delay jaringan 500ms untuk loading state)
+  // Mengambil semua data
   getAll: async (): Promise<SkemaHariKerja[]> => {
     return new Promise((resolve) => {
       setTimeout(() => {

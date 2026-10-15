@@ -25,7 +25,7 @@ export const JadwalkuPage: React.FC = () => {
   }
   return (
     /* Mengubah padding agar menyesuaikan perangkat mobile dan desktop dengan presisi */
-    <div className="px-0 py-4 md:p-6">
+    <div className="space-y-6">
       <JadwalkuTable data={data} onExport={handleExport} />
     </div>
   );

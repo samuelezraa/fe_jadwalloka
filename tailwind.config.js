@@ -1,12 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class', // <--- BARIS INI WAJIB ADA & SANGAT PENTING!
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"Poppins"', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }

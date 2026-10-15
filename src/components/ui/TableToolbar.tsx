@@ -29,12 +29,11 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
 }) => {
   const filterRef = useRef<HTMLDivElement>(null);
 
-  // Efek otomatis menutup filter jika pengguna mengklik di luar area filter (termasuk saat membuka sidebar)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
         if (showFilterDropdown && onToggleFilterDropdown) {
-          onToggleFilterDropdown(); // Tutup dropdown
+          onToggleFilterDropdown();
         }
       }
     };
@@ -84,10 +83,10 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
             </div>
           )}
 
-          {/* Dropdown Menu Filter */}
+          {/* Kontainer Popover Filter */}
           {/* Dropdown Menu Filter */}
           {showFilterDropdown && filterDropdownContent && (
-            <div className="absolute right-0 top-full mt-2 z-30 w-72 sm:w-80 p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-visible">
+            <div className="absolute right-0 top-full mt-2 z-30 w-auto p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-visible">
               {filterDropdownContent}
             </div>
           )}

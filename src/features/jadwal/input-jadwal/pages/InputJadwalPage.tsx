@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { InputJadwalTable } from '../components/InputJadwalTable';
-import { InputJadwalDialog } from '../components/InputJadwalDialog';
-// ✅ UBAH BARIS DI BAWAH INI: Arahkan ke folder ui/
 import { ImportJadwalDialog } from '@/components/ui/ImportJadwalDialog';
 import { SettingJamMingguanDialog } from '../components/SettingJamMingguanDialog';
 import { useInputJadwal } from '../hooks/useInputJadwal';
+import type { InputJadwalPeriode } from '../types/input-jadwal.type';
+import toast from 'react-hot-toast';
 
 export const InputJadwalPage: React.FC = () => {
+  const navigate = useNavigate();
   const {
     data,
-    selectedItem,
-    isDialogOpen,
     isLoading,
-    handleEdit,
-    handleCloseDialog,
-    handleSubmitForm,
   } = useInputJadwal();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
+
+  // 🌟 Pindah ke Halaman Baru saat Edit diklik
+  const handleNavigateEdit = (item: InputJadwalPeriode) => {
+    navigate(`/jadwal/input-jadwal/edit/${item.id_periode}`);
+  };
 
   const handleSettingGlobal = () => {
     setIsSettingOpen(true);
@@ -30,10 +32,12 @@ export const InputJadwalPage: React.FC = () => {
 
   const handleExecuteImport = (file: File) => {
     console.log('File diimport:', file);
+    toast.success('Data jadwal berhasil diimport!');
+    setIsImportOpen(false);
   };
 
   const handleExport = () => {
-    alert('Mengunduh data jadwal...');
+    toast.success('Unduhan data jadwal dimulai...');
   };
 
   const handleSaveSetting = (formData: {
@@ -46,7 +50,8 @@ export const InputJadwalPage: React.FC = () => {
     cuti: number;
   }) => {
     console.log('Menyimpan setting jam mingguan global:', formData);
-    alert('Pengaturan jadwal global untuk semua karyawan berhasil disimpan.');
+    toast.success('Pengaturan jadwal global untuk semua karyawan berhasil disimpan.');
+    setIsSettingOpen(false);
   };
 
   if (isLoading) {
@@ -60,21 +65,14 @@ export const InputJadwalPage: React.FC = () => {
   }
 
   return (
-    <div className="px-0 py-4 md:p-6">
+    /* 🌟 Disamakan persis dengan DataKaryawanPage.tsx menggunakan space-y-6 */
+    <div className="space-y-6">
       <InputJadwalTable
         data={data}
-        onEdit={handleEdit}
+        onEdit={handleNavigateEdit}
         onSettingGlobal={handleSettingGlobal}
         onImport={handleOpenImport}
         onExport={handleExport}
-      />
-
-      {/* Modal Dialog Edit Jadwal */}
-      <InputJadwalDialog
-        isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
-        initialData={selectedItem}
-        onSubmit={handleSubmitForm}
       />
 
       {/* Modal Dialog Import */}
