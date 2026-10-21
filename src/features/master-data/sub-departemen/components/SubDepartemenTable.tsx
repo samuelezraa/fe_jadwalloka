@@ -88,28 +88,6 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         ),
       },
       {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: (info) => {
-          const val = String(info.getValue() || 'Aktif');
-          const isAktif = val === 'Aktif';
-          return (
-            <div className="flex justify-center">
-              <Badge 
-                variant={isAktif ? 'outline' : 'destructive'} 
-                className={
-                  isAktif 
-                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
-                    : 'rounded-full px-3'
-                }
-              >
-                {val}
-              </Badge>
-            </div>
-          );
-        },
-      },
-      {
         accessorKey: 'departemen_nama',
         header: 'Departemen',
         cell: (info) => (
@@ -131,6 +109,28 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         cell: (info) => (
           <span className="text-gray-700 dark:text-gray-300 font-medium">{String(info.getValue())}</span>
         ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: (info) => {
+          const val = String(info.getValue() || 'Aktif');
+          const isAktif = val === 'Aktif';
+          return (
+            <div className="flex justify-center">
+              <Badge 
+                variant={isAktif ? 'outline' : 'destructive'} 
+                className={
+                  isAktif 
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                    : 'rounded-full px-3'
+                }
+              >
+                {val}
+              </Badge>
+            </div>
+          );
+        },
       },
       {
         id: 'action',

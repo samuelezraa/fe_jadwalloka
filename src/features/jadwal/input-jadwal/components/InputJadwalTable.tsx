@@ -212,7 +212,7 @@ export const InputJadwalTable: React.FC<InputJadwalTableProps> = ({
 
   return (
     <div className="relative space-y-4">
-      {/* 🌟 FILTER PERIODE DI LUAR (Terpisah di samping Title) */}
+      {/* FILTER PERIODE DI LUAR (Terpisah di samping Title) */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -323,7 +323,74 @@ export const InputJadwalTable: React.FC<InputJadwalTableProps> = ({
             <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
               <DataPagination table={table} />
             </div>
-            <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data jadwal periode ditemukan." />
+
+            {/* TAMPILAN DESKTOP: Menggunakan DataTable */}
+            <div className="hidden md:block">
+              <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data jadwal periode ditemukan." />
+            </div>
+
+            {/* TAMPILAN MOBILE: Card List Vertikal Rapi */}
+            <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50 rounded-b-2xl">
+              {filteredData.length === 0 ? (
+                <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-xs">
+                  Tidak ada data jadwal periode ditemukan.
+                </div>
+              ) : (
+                filteredData.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-xs space-y-3"
+                  >
+                    {/* Header Card: Nama & Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.nama}</h3>
+                        <p className="font-mono text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                          NIP: {item.nip} • {item.sub_dept}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          item.status === 'Aktif'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                            : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+
+                    {/* Ringkasan Hari & Cuti/Libur */}
+                    <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 text-center text-xs">
+                      <div className="bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Masuk</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{item.masuk}</span>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Libur</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-400">{item.total_libur}</span>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">PH</span>
+                        <span className="font-bold text-purple-600 dark:text-purple-400">{item.ph}</span>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <span className="text-[10px] text-gray-400 block">Cuti</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400">{item.cuti}</span>
+                      </div>
+                    </div>
+
+                    {/* Footer Card: Tombol Action */}
+                    <div className="pt-2 flex items-center justify-between border-t border-gray-100 dark:border-gray-800 text-xs">
+                      <span className="text-[11px] font-mono text-gray-400">
+                        Skema: {item.skema_kerja}
+                      </span>
+                      <EditActionButton onClick={() => checkPeriodeSelected(() => onEdit && onEdit(item))} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </>
         )}
       </div>

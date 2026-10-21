@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { initialPeriodeJadwalData } from '../services/periodeJadwal.service';
 import type { PeriodeJadwal, PeriodeJadwalFormData } from '../types/periodeJadwal.type';
-import { PeriodeJadwalForm } from '../components/PeriodeJadwalForm';
 import { PeriodeJadwalTable } from '../components/PeriodeJadwalTable';
+import { PeriodeJadwalDialog } from '../components/PeriodeJadwalDialog';
 
 export const PeriodeJadwalPage: React.FC = () => {
   const [data, setData] = useState<PeriodeJadwal[]>(initialPeriodeJadwalData);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleCreate = (formData: PeriodeJadwalFormData) => {
     const newEntry: PeriodeJadwal = {
@@ -19,26 +19,23 @@ export const PeriodeJadwalPage: React.FC = () => {
     };
 
     setData([...data, newEntry]);
-    setIsFormOpen(false);
+    setIsDialogOpen(false);
   };
 
   return (
     <div className="space-y-6">
-      {/* Section Form Tambah */}
-      {isFormOpen && (
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm transition-all">
-          <h2 className="text-base font-bold mb-4 text-gray-800 dark:text-gray-200">
-            Form Tambah Periode Jadwal
-          </h2>
-          <PeriodeJadwalForm onSubmit={handleCreate} onCancel={() => setIsFormOpen(false)} />
-        </div>
-      )}
-
       {/* Section Tabel Data */}
       <PeriodeJadwalTable 
         data={data} 
-        onAddClick={() => setIsFormOpen(!isFormOpen)} 
-        isFormOpen={isFormOpen} 
+        onAddClick={() => setIsDialogOpen(true)} 
+        isFormOpen={isDialogOpen} 
+      />
+
+      {/* Pop-up Dialog Modal Form Tambah */}
+      <PeriodeJadwalDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSubmit={handleCreate}
       />
     </div>
   );

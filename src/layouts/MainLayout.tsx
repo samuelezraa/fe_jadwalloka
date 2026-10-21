@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MenuIconButton } from '../components/ui/ActionButtons';
-import { Toaster } from 'react-hot-toast'; // ✅ Sudah ter-import
+import { Toaster } from 'react-hot-toast';
 
 export const MainLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -18,9 +18,10 @@ export const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex transition-colors duration-200 relative overflow-x-hidden">
+    /* 🌟 HAPUS 'overflow-x-hidden' DI SINI AGAR SCROLL HORIZONTAL MOBILE TIDAK TERKUNCI */
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 flex transition-colors duration-200 relative">
       
-      {/* 🌟 Tambahkan Toaster di sini agar notifikasi toast dapat tampil melayang di layar */}
+      {/* Toaster Notifikasi */}
       <Toaster 
         position="top-right" 
         toastOptions={{
@@ -49,7 +50,7 @@ export const MainLayout: React.FC = () => {
       </div>
 
       <div 
-        className={`flex-1 flex flex-col transition-all duration-300 ml-0 ${
+        className={`flex-1 flex flex-col transition-all duration-300 ml-0 min-w-0 ${
           isCollapsed ? 'md:ml-24' : 'md:ml-64'
         }`}
       >
@@ -57,7 +58,8 @@ export const MainLayout: React.FC = () => {
           onToggleSidebar={toggleSidebar} 
         />
 
-        <main className="flex-1 p-4 md:p-6 overflow-x-auto bg-gray-50 dark:bg-gray-950">
+        {/* 🌟 TAMBAHKAN 'min-w-0' DI SINI AGAR CONTAINER FLEX MENGIZINKAN CHILD OVERFLOW-X */}
+        <main className="flex-1 p-4 md:p-6 overflow-x-auto min-w-0 bg-gray-50 dark:bg-gray-950">
           <Outlet />
         </main>
       </div>

@@ -23,7 +23,7 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
   const totalValue = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between transition-colors duration-200">
+    <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-colors duration-200">
       <div>
         <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
           {title}
@@ -55,7 +55,6 @@ export const PieChartCard: React.FC<PieChartCardProps> = ({
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#1f2937',
-                  borderColor: '#374151',
                   borderRadius: '0.5rem',
                   color: '#fff',
                   fontSize: '12px',

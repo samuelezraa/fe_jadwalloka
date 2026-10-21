@@ -2,9 +2,11 @@ import * as React from "react"
 import { cn } from "../../lib/utils"
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(({ className, ...props }, ref) => (
-  <div className="relative w-full min-w-0 overflow-x-auto">
-    <table ref={ref} className={cn("w-full caption-bottom text-sm text-center border-collapse", className)} {...props} />
-  </div>
+  <table 
+    ref={ref} 
+    className={cn("w-full min-w-max caption-bottom text-sm text-center border-collapse", className)} 
+    {...props} 
+  />
 ))
 Table.displayName = "Table"
 
@@ -30,11 +32,14 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
 ))
 TableRow.displayName = "TableRow"
 
-// 🌟 UBAH KELAS 'uppercase' MENJADI 'capitalize' ATAU HAPUS AGAR SESUAI TITLE CASE
+// 🌟 UBAH `text-gray-600` MENJADI `text-black` (atau `text-gray-900`)
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(({ className, ...props }, ref) => (
   <th 
     ref={ref} 
-    className={cn("px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-300 capitalize tracking-wider border-r border-gray-200 dark:border-gray-800 last:border-r-0 align-middle", className)} 
+    className={cn(
+      "px-4 py-3 text-xs font-bold text-black dark:text-white capitalize tracking-wider border-r border-gray-200 dark:border-gray-800 last:border-r-0 align-middle whitespace-nowrap", 
+      className
+    )} 
     {...props} 
   />
 ))

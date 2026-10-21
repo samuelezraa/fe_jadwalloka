@@ -12,7 +12,7 @@ import { CalendarRange } from 'lucide-react';
 
 // Reusable UI Components
 import { TableToolbar } from '@/components/ui/TableToolbar';
-import { AddButton } from '@/components/ui/ActionButtons';
+import { AddButton, MobileAddFab } from '@/components/ui/ActionButtons';
 import { DataTable } from '@/components/ui/data-table';
 
 interface PeriodeJadwalTableProps {
@@ -58,14 +58,13 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
         ),
       },
       {
-        accessorKey: 'tanggalAwal',
-        header: 'Tanggal Awal',
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'tanggalAkhir',
-        header: 'Tanggal Akhir',
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
+        id: 'rentangTanggal',
+        header: 'Rentang Tanggal Absensi',
+        cell: ({ row }) => (
+          <span className="text-gray-700 dark:text-gray-300 font-medium">
+            {row.original.tanggalAwal} <span className="text-gray-400 dark:text-gray-500 mx-1">~</span> {row.original.tanggalAkhir}
+          </span>
+        ),
       },
       {
         accessorKey: 'keterangan',
@@ -95,7 +94,7 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden transition-colors duration-200">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden transition-colors duration-200 relative">
       
       {/* Header Toolbar */}
       <TableToolbar
@@ -106,7 +105,7 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
         onSearchChange={setGlobalFilter}
         actionButtons={
           <AddButton onClick={onAddClick}>
-            {isFormOpen ? 'Tutup Form' : 'Tambah Periode'}
+            Tambah
           </AddButton>
         }
       />
@@ -134,7 +133,7 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
                 <div>
                   <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.periode}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {item.tanggalAwal} s/d {item.tanggalAkhir}
+                    {item.tanggalAwal} ~ {item.tanggalAkhir}
                   </p>
                 </div>
               </div>
@@ -149,6 +148,9 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
 
       {/* Tampilan Desktop DataTable */}
       <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data periode jadwal ditemukan." />
+
+      {/* 🌟 Floating Action Button (FAB) Tambah Khusus Mobile */}
+      <MobileAddFab onClick={onAddClick} title="Tambah Periode Jadwal" />
     </div>
   );
 };

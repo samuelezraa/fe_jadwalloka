@@ -1,10 +1,23 @@
 import React from "react"
 import type { ButtonProps } from "./button"
 import { Button } from "./button"
-import { Pencil, Plus, Filter, Download, Upload, Menu, Settings, X, SlidersHorizontal } from "lucide-react";
+import { 
+  Pencil, 
+  Plus, 
+  Filter, 
+  Download, 
+  Upload, 
+  Menu, 
+  Settings, 
+  X, 
+  SlidersHorizontal, 
+  KeyRound, 
+  Power, 
+  ChevronDown, 
+  FileSpreadsheet 
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Table } from "@tanstack/react-table";
-import { KeyRound, Power, ChevronDown } from 'lucide-react';
 
 // 1. Tombol Utama / Konfirmasi (Background Hijau Emerald Solid)
 export const PrimaryButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -52,18 +65,19 @@ export const CancelButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 CancelButton.displayName = "CancelButton"
 
-// 4. Tombol Tambah Data Desktop
+// 4. Tombol Tambah Data Desktop (Rounded diubah ke rounded-full menyesuaikan tombol Setting)
 export const AddButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children = "Tambah", className = "", ...props }, ref) => (
-    <PrimaryButton 
-      type="button" 
-      className={`hidden md:flex items-center gap-2 ${className}`}
+    <Button
+      type="button"
+      variant="default"
+      className={`hidden md:flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 font-semibold rounded-full text-xs px-4 py-2 disabled:opacity-50 transition-colors shadow-sm ${className}`}
       ref={ref} 
       {...props}
     >
       <Plus className="w-4 h-4" />
       <span>{children}</span>
-    </PrimaryButton>
+    </Button>
   )
 )
 AddButton.displayName = "AddButton"
@@ -85,13 +99,13 @@ export const OutlineActionButton = React.forwardRef<HTMLButtonElement, ButtonPro
 )
 OutlineActionButton.displayName = "OutlineActionButton"
 
-// 6. Tombol Floating Action Button (FAB) Tambah Khusus Mobile
+// 6. Tombol Floating Action Button (FAB) Tambah Khusus Mobile (Hijau di paling bawah)
 interface MobileAddFabProps {
   onClick: () => void;
   title?: string;
 }
 export const MobileAddFab: React.FC<MobileAddFabProps> = ({ onClick, title = "Tambah" }) => (
-  <div className="fixed bottom-24 right-6 z-50 block md:hidden">
+  <div className="fixed bottom-24 right-6 z-40 block md:hidden">
     <button
       type="button"
       onClick={onClick}
@@ -101,7 +115,7 @@ export const MobileAddFab: React.FC<MobileAddFabProps> = ({ onClick, title = "Ta
       <Plus className="w-5 h-5" />
     </button>
   </div>
-)
+);
 
 // 7. Tombol Aksi Tabel: Edit (Hanya Ikon)
 export const EditActionButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -128,17 +142,15 @@ export const FilterButton = React.forwardRef<HTMLButtonElement, FilterButtonProp
         type="button" 
         variant={isActive ? "amber" : "default"} 
         size="icon" 
-        // 👇 Ubah h-9 w-9 menjadi h-8 w-8
         className={`rounded-full h-8 w-8 ${className}`} 
         title="Filter" 
         ref= {ref} 
         {...props}
       >
-        {/* 👇 Ubah ukuran ikon dari w-4 h-4 menjadi w-3.5 h-3.5 */}
         <Filter className="w-3.5 h-3.5" />
       </Button>
 
-      {/* Indikator Titik Merah Aktif (disesuaikan posisinya dengan ukuran baru) */}
+      {/* Indikator Titik Merah Aktif */}
       {isFiltered && (
         <span className="absolute -top-0.5 -right-0.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" />
       )}
@@ -204,7 +216,6 @@ export const MenuIconButton = React.forwardRef<HTMLButtonElement, MenuIconButton
       title={isOpen ? "Tutup Menu" : "Menu"}
       {...props}
     >
-      {/* 🔴 PASTIKAN BAGIAN INI ADA: Mengecek state isOpen untuk menampilkan X atau Menu */}
       {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
     </Button>
   )
@@ -279,78 +290,103 @@ export function ColumnVisibilityDropdown<T>({ table }: ColumnVisibilityDropdownP
   );
 }
 
-// 13. Group FAB Mobile
+
+// 13. Group FAB Mobile (Standar Global LokaHR)
 interface MobileActionFabGroupProps {
   onSetting?: () => void;
+  onDownloadSample?: () => void;
   onImport?: () => void;
   onExport?: () => void;
 }
+
 export const MobileActionFabGroup: React.FC<MobileActionFabGroupProps> = ({
   onSetting,
+  onDownloadSample,
   onImport,
   onExport,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 block md:hidden flex flex-col items-end gap-2">
-      {isOpen && (
-        <div className="flex flex-col items-end gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
-          {onSetting && (
-            <button
-              type="button"
-              onClick={() => { onSetting(); setIsOpen(false); }}
-              className="flex items-center justify-center w-11 h-11 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-transform active:scale-95 border-2 border-white dark:border-gray-900"
-              title="Setting"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          )}
+    <div className="fixed bottom-24 right-6 z-[9999] block md:hidden">
+      <div className="flex flex-col-reverse items-end gap-2.5">
+        {/* Tombol Pemicu Hitam Utama */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-gray-800 text-white rounded-full shadow-2xl hover:bg-black active:scale-95 border-2 border-white dark:border-gray-900 shrink-0"
+          title="Menu Aksi"
+        >
+          {isOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+        </button>
 
-          {onImport && (
-            <button
-              type="button"
-              onClick={() => { onImport(); setIsOpen(false); }}
-              className="flex items-center justify-center w-11 h-11 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-transform active:scale-95 border-2 border-white dark:border-gray-900"
-              title="Import"
-            >
-              <Upload className="w-5 h-5" />
-            </button>
-          )}
+        {/* Tombol-Tombol Melayang Mekar ke Atas */}
+        {isOpen && (
+          <div className="flex flex-col-reverse items-end gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            {/* Export Data (Amber) */}
+            {onExport && (
+              <button
+                type="button"
+                onClick={() => { onExport(); setIsOpen(false); }}
+                className="flex items-center justify-center w-11 h-11 bg-amber-500 text-white rounded-full shadow-2xl hover:bg-amber-600 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Export Data"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+            )}
 
-          {onExport && (
-            <button
-              type="button"
-              onClick={() => { onExport(); setIsOpen(false); }}
-              className="flex items-center justify-center w-11 h-11 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-transform active:scale-95 border-2 border-white dark:border-gray-900"
-              title="Export"
-            >
-              <Download className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      )}
+            {/* Import Data (Emerald) */}
+            {onImport && (
+              <button
+                type="button"
+                onClick={() => { onImport(); setIsOpen(false); }}
+                className="flex items-center justify-center w-11 h-11 bg-emerald-600 text-white rounded-full shadow-2xl hover:bg-emerald-700 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Import Data"
+              >
+                <Upload className="w-5 h-5" />
+              </button>
+            )}
 
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center w-12 h-12 bg-gray-800 dark:bg-gray-700 text-white rounded-full shadow-2xl hover:bg-gray-900 transition-transform active:scale-95 border-2 border-white dark:border-gray-900"
-        title="Menu Aksi"
-      >
-        {isOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-      </button>
+            {/* Download Sample (Teal) */}
+            {onDownloadSample && (
+              <button
+                type="button"
+                onClick={() => { onDownloadSample(); setIsOpen(false); }}
+                className="flex items-center justify-center w-11 h-11 bg-teal-600 text-white rounded-full shadow-2xl hover:bg-teal-700 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Download Sample"
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Setting (Biru) jika ada */}
+            {onSetting && (
+              <button
+                type="button"
+                onClick={() => { onSetting(); setIsOpen(false); }}
+                className="flex items-center justify-center w-11 h-11 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Setting"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
 
 // 14. Rows Per Page Selector
 interface RowsPerPageSelectorProps<T> {
   table: Table<T>;
   options?: number[];
 }
+
 export function RowsPerPageSelector<T>({ 
   table, 
-  options = [25, 50, 75, 100, 125] 
+  options = [25, 50, 75, 100] 
 }: RowsPerPageSelectorProps<T>) {
   const pageSize = table.getState().pagination.pageSize;
 
@@ -372,9 +408,7 @@ export function RowsPerPageSelector<T>({
   );
 }
 
-
-
-// 1. Tombol Reset Password
+// 1. Tombol Reset Password (Rounded diubah ke rounded-full menyesuaikan tombol Setting)
 interface ResetPasswordButtonProps extends ButtonProps {
   selectedCount?: number;
 }
@@ -384,7 +418,7 @@ export const ResetPasswordButton = React.forwardRef<HTMLButtonElement, ResetPass
       type="button"
       variant="default"
       disabled={selectedCount === 0}
-      className={`h-8 px-3 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 text-white disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
+      className={`h-9 px-3 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 text-white disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
       ref={ref}
       {...props}
     >
@@ -420,13 +454,13 @@ export const PowerActionButton = React.forwardRef<HTMLButtonElement, PowerAction
 );
 PowerActionButton.displayName = 'PowerActionButton';
 
-// 3. Tombol Setting Dropdown Trigger
+// 3. Tombol Setting Dropdown Trigger (Diperbesar ukurannya dari h-8 px-3 menjadi h-9 px-4)
 export const SettingDropdownTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', children = 'Setting', ...props }, ref) => (
     <Button
       type="button"
       variant="default"
-      className={`h-8 px-3 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
+      className={`h-9 px-4 rounded-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
       ref={ref}
       {...props}
     >
@@ -436,3 +470,27 @@ export const SettingDropdownTrigger = React.forwardRef<HTMLButtonElement, Button
   )
 );
 SettingDropdownTrigger.displayName = 'SettingDropdownTrigger';
+
+
+
+
+// Tombol Ubah Status (Enable/Disable) Massal / Kolektif (Warna Merah)
+interface BulkStatusButtonProps extends ButtonProps {
+  selectedCount?: number;
+}
+export const BulkStatusButton = React.forwardRef<HTMLButtonElement, BulkStatusButtonProps>(
+  ({ selectedCount = 0, className = '', ...props }, ref) => (
+    <Button
+      type="button"
+      variant="default"
+      disabled={selectedCount === 0}
+      className={`h-9 px-4 rounded-full text-xs font-semibold bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 text-white disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors shadow-xs flex items-center gap-1.5 ${className}`}
+      ref={ref}
+      {...props}
+    >
+      <Power className="w-3.5 h-3.5" />
+      <span>Status({selectedCount})</span>
+    </Button>
+  )
+);
+BulkStatusButton.displayName = 'BulkStatusButton';

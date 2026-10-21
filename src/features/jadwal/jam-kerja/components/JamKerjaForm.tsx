@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { jamKerjaSchema, type JamKerjaFormValues } from '../schemas/jam-kerja.schema';
 import type { JamKerjaKaryawan } from '../types/jam-kerja.type';
-import { CalendarCheck } from 'lucide-react';
 
 // Reusable UI Components
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
+import { WorkStatusToggleButton } from '../../../../components/ui/WorkStatusToggleButton';
 
 interface JamKerjaFormProps {
   initialData?: JamKerjaKaryawan | null;
@@ -34,6 +34,7 @@ export const JamKerjaForm: React.FC<JamKerjaFormProps> = ({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { isSubmitting },
   } = useForm<JamKerjaFormValues>({
     resolver: zodResolver(jamKerjaSchema),
@@ -55,58 +56,70 @@ export const JamKerjaForm: React.FC<JamKerjaFormProps> = ({
   }, [initialData, reset]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[75vh] overflow-y-auto px-1">
-      <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-        <CalendarCheck className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-        <span>Mengatur jam masuk dan jam pulang karyawan berdasarkan hari kerja (Status Berangkat / Libur).</span>
-      </div>
-
-      <div className="space-y-3">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 w-full">
+      {/* Container dengan Scroll Vertical & Responsive Layout */}
+      <div className="max-h-[60vh] sm:max-h-none overflow-y-auto sm:overflow-visible pr-1 space-y-2.5 sm:space-y-1.5">
         {DAYS.map((day) => {
           const statusValue = watch(`${day.key}.status`);
-          const isLibur = statusValue === 'Libur';
+          const isBerangkat = statusValue === 'Berangkat';
+
+          const toggleStatus = () => {
+            const nextStatus = isBerangkat ? 'Libur' : 'Berangkat';
+            setValue(`${day.key}.status`, nextStatus, { shouldValidate: true });
+            if (nextStatus === 'Libur') {
+              setValue(`${day.key}.jam_masuk`, '00:00:00');
+              setValue(`${day.key}.jam_pulang`, '00:00:00');
+            }
+          };
 
           return (
-            <div key={day.key} className="p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase">{day.label}</span>
-                <select
-                  {...register(`${day.key}.status`)}
-                  className="px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-semibold text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="Berangkat">Berangkat</option>
-                  <option value="Libur">Libur</option>
-                </select>
+            <div
+              key={day.key}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 p-2 sm:p-1 bg-gray-50/60 sm:bg-transparent dark:bg-gray-800/40 sm:dark:bg-transparent rounded-xl sm:rounded-none border border-gray-100 sm:border-none dark:border-gray-800"
+            >
+              {/* Baris Atas pada Mobile: Nama Hari & Tombol Status */}
+              <div className="flex items-center justify-between gap-2 sm:contents">
+                <div className="w-20 shrink-0">
+                  <span className="text-xs font-bold sm:font-semibold text-gray-800 dark:text-gray-200">
+                    {day.label}
+                  </span>
+                </div>
+
+                <div className="w-28 sm:w-28 md:w-32 shrink-0 flex justify-end sm:justify-center">
+                  <WorkStatusToggleButton
+                    status={statusValue as 'Berangkat' | 'Libur'}
+                    onToggle={toggleStatus}
+                  />
+                </div>
               </div>
 
-              {!isLibur && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Jam Masuk</label>
-                    <input
-                      type="time"
-                      step="1"
-                      {...register(`${day.key}.jam_masuk`)}
-                      className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Jam Pulang</label>
-                    <input
-                      type="time"
-                      step="1"
-                      {...register(`${day.key}.jam_pulang`)}
-                      className="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
-                    />
-                  </div>
+              {/* Baris Bawah pada Mobile / Kolom Kanan pada Desktop: Input Jam */}
+              <div className="flex-1 grid grid-cols-2 gap-2 sm:gap-3 items-center">
+                <div>
+                  <input
+                    type="time"
+                    step="1"
+                    disabled={!isBerangkat}
+                    {...register(`${day.key}.jam_masuk`)}
+                    className="w-full px-2 sm:px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs bg-white sm:bg-gray-50/50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-center [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  />
                 </div>
-              )}
+                <div>
+                  <input
+                    type="time"
+                    step="1"
+                    disabled={!isBerangkat}
+                    {...register(`${day.key}.jam_pulang`)}
+                    className="w-full px-2 sm:px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs bg-white sm:bg-gray-50/50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-center [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  />
+                </div>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Reusable Action Buttons */}
+      {/* Tombol Aksi Utama */}
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
         <CancelButton onClick={onCancel} />
         <SaveButton isLoading={isSubmitting} />

@@ -9,20 +9,20 @@ import {
 } from '@tanstack/react-table';
 import type { DataKaryawan } from '../types/data-karyawan.type';
 import { DataPagination } from '../../../../components/DataPagination';
-import { Users, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { Users, Download, Upload, FileSpreadsheet, Settings, Plus, X } from 'lucide-react';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import {
   AddButton,
   EditActionButton,
-  MobileAddFab,
   ResetPasswordButton,
-  PowerActionButton,
+  BulkStatusButton,
   SettingDropdownTrigger,
 } from '../../../../components/ui/ActionButtons';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { ConfirmAlertDialog } from '../../../../components/ui/ConfirmAlertDialog';
 import { Badge } from '../../../../components/ui/badge';
 import {
   Table,
@@ -37,7 +37,7 @@ interface DataKaryawanTableProps {
   data: DataKaryawan[];
   onEdit: (item: DataKaryawan) => void;
   onAdd: () => void;
-  onToggleStatus: (id: string) => void;
+  onToggleStatus: (ids: string[]) => void;
   onBulkResetPassword: (selectedIds: string[]) => void;
   onDownloadSample?: () => void;
   onImportData?: () => void;
@@ -55,13 +55,18 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   onExportData,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
-  
-  // State Multiple Selection (Checkbox)
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // State Dropdown Setting
+  // State Confirmation Dialog
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+
+  // State Dropdown Setting Desktop
   const [showSettingDropdown, setShowSettingDropdown] = useState(false);
   const settingDropdownRef = useRef<HTMLDivElement>(null);
+
+  // State FAB Floating Mobile
+  const [isFabOpen, setIsFabOpen] = useState(false);
 
   // State Filter
   const [deptFilter, setDeptFilter] = useState('');
@@ -69,14 +74,13 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   const [posFilter, setPosFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [skemaHariKerjaFilter, setSkemaHariKerjaFilter] = useState(''); // 🌟 State Filter Skema Hari Kerja
+  const [skemaHariKerjaFilter, setSkemaHariKerjaFilter] = useState('');
   
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown setting ketika klik di luar
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (settingDropdownRef.current && !settingDropdownRef.current.contains(event.target as Node)) {
@@ -108,7 +112,6 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // Opsi unik dinamis
   const uniqueDepartemen = useMemo(() => Array.from(new Set(data.map((item) => item.departemen))), [data]);
   const uniqueSubDepartemen = useMemo(() => Array.from(new Set(data.map((item) => item.sub_departemen))), [data]);
   const uniquePos = useMemo(() => Array.from(new Set(data.map((item) => item.pos))), [data]);
@@ -116,9 +119,8 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
   const uniqueSkemaHariKerja = useMemo(
     () => Array.from(new Set(data.map((item) => item.skema_hari_kerja).filter(Boolean))),
     [data]
-  ); // 🌟 Opsi Unik Skema Hari Kerja
+  );
 
-  // Filter Berdasarkan Semua Kriteria
   const filteredData = useMemo(() => {
     let result = data;
     if (deptFilter) result = result.filter((item) => item.departemen === deptFilter);
@@ -126,7 +128,7 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
     if (posFilter) result = result.filter((item) => item.pos === posFilter);
     if (gradeFilter) result = result.filter((item) => item.grade === gradeFilter);
     if (statusFilter) result = result.filter((item) => item.status === statusFilter);
-    if (skemaHariKerjaFilter) result = result.filter((item) => item.skema_hari_kerja === skemaHariKerjaFilter); // 🌟 Logika Filter
+    if (skemaHariKerjaFilter) result = result.filter((item) => item.skema_hari_kerja === skemaHariKerjaFilter);
     return result;
   }, [data, deptFilter, subDeptFilter, posFilter, gradeFilter, statusFilter, skemaHariKerjaFilter]);
 
@@ -134,7 +136,6 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
     deptFilter || subDeptFilter || posFilter || gradeFilter || statusFilter || skemaHariKerjaFilter
   );
 
-  // Logika Checkbox Select All & Individual
   const isAllSelected = useMemo(() => {
     if (filteredData.length === 0) return false;
     return filteredData.every((item) => selectedIds.includes(item.id));
@@ -263,20 +264,15 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
         header: 'ACTION',
         cell: ({ row }) => {
           const item = row.original;
-          const isAktif = item.status === 'Aktif';
           return (
-            <div className="flex items-center justify-center gap-1">
+            <div className="flex items-center justify-center">
               <EditActionButton onClick={() => onEdit(item)} />
-              <PowerActionButton
-                isAktif={isAktif}
-                onClick={() => onToggleStatus(item.id)}
-              />
             </div>
           );
         },
       },
     ],
-    [onEdit, onToggleStatus, selectedIds, isAllSelected, filteredData]
+    [onEdit, selectedIds, isAllSelected, filteredData]
   );
 
   const table = useReactTable({
@@ -323,7 +319,7 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                   setPosFilter('');
                   setGradeFilter('');
                   setStatusFilter('');
-                  setSkemaHariKerjaFilter(''); // 🌟 Reset filter skema
+                  setSkemaHariKerjaFilter('');
                 }}
                 fields={[
                   { 
@@ -409,17 +405,21 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
               />
             }
             actionButtons={
-              <div className="flex items-center gap-2">
-                {/* 1. Tombol Tambah */}
+              <div className="hidden md:flex items-center gap-2">
                 <AddButton onClick={onAdd} />
-
-                {/* 2. Tombol Reset Password Kolektif Reusable */}
+                
+                {/* Tombol Reset Password Kolektif */}
                 <ResetPasswordButton
                   selectedCount={selectedIds.length}
-                  onClick={() => onBulkResetPassword(selectedIds)}
+                  onClick={() => setShowResetConfirm(true)}
                 />
 
-                {/* 3. Dropdown Setting Reusable Trigger */}
+                {/* Tombol Status Kolektif (Di Samping Kanan Tombol Reset) */}
+                <BulkStatusButton
+                  selectedCount={selectedIds.length}
+                  onClick={() => setShowStatusConfirm(true)}
+                />
+
                 <div className="relative inline-block text-left" ref={settingDropdownRef}>
                   <SettingDropdownTrigger
                     onClick={() => setShowSettingDropdown(!showSettingDropdown)}
@@ -468,6 +468,20 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
               </div>
             }
           />
+
+          {/* BARIS TOMBOL KOLEKTIF MOBILE (DI BAWAH SEARCH FULL) */}
+          <div className="block md:hidden px-4 pb-3 flex items-center gap-2">
+            <ResetPasswordButton
+              selectedCount={selectedIds.length}
+              onClick={() => setShowResetConfirm(true)}
+              className="w-1/2 justify-center"
+            />
+            <BulkStatusButton
+              selectedCount={selectedIds.length}
+              onClick={() => setShowStatusConfirm(true)}
+              className="w-1/2 justify-center"
+            />
+          </div>
         </div>
 
         {/* PAGINATION */}
@@ -475,7 +489,7 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        {/* TAMPILAN DESKTOP (NO HORIZONTAL SCROLL) */}
+        {/* TAMPILAN DESKTOP */}
         <div className="hidden md:block w-full rounded-b-2xl overflow-hidden">
           <Table className="w-full table-fixed text-[11px]">
             <TableHeader>
@@ -560,12 +574,8 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
                       <span className="font-semibold text-gray-700 dark:text-gray-300">{item.pos}</span>
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2">
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />
-                    <PowerActionButton
-                      isAktif={isAktif}
-                      onClick={() => onToggleStatus(item.id)}
-                    />
                   </div>
                 </div>
               );
@@ -578,7 +588,96 @@ export const DataKaryawanTable: React.FC<DataKaryawanTableProps> = ({
         </div>
       </div>
 
-      <MobileAddFab onClick={onAdd} title="Tambah Karyawan" />
+      {/* 🌟 FAB FLOATING MOBILE */}
+      <div className="fixed bottom-24 right-6 z-40 block md:hidden">
+        <div className="flex flex-col-reverse items-end gap-3">
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex items-center justify-center w-12 h-12 bg-emerald-600 dark:bg-emerald-500 text-white rounded-full shadow-2xl hover:bg-emerald-700 active:scale-95 border-2 border-white dark:border-gray-900 shrink-0"
+            title="Tambah Karyawan"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFabOpen(!isFabOpen)}
+            className="flex items-center justify-center w-12 h-12 bg-gray-900 dark:bg-gray-800 text-white rounded-full shadow-2xl hover:bg-black active:scale-95 border-2 border-white dark:border-gray-900 shrink-0"
+            title="Menu Setting"
+          >
+            {isFabOpen ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+          </button>
+
+          {isFabOpen && (
+            <div className="flex flex-col-reverse items-end gap-3 mb-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <button
+                type="button"
+                onClick={() => {
+                  onExportData?.();
+                  setIsFabOpen(false);
+                }}
+                className="flex items-center justify-center w-11 h-11 bg-amber-500 text-white rounded-full shadow-2xl hover:bg-amber-600 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Export Data"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onImportData?.();
+                  setIsFabOpen(false);
+                }}
+                className="flex items-center justify-center w-11 h-11 bg-emerald-600 text-white rounded-full shadow-2xl hover:bg-emerald-700 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Import Data"
+              >
+                <Upload className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onDownloadSample?.();
+                  setIsFabOpen(false);
+                }}
+                className="flex items-center justify-center w-11 h-11 bg-teal-600 text-white rounded-full shadow-2xl hover:bg-teal-700 active:scale-95 border-2 border-white dark:border-gray-900"
+                title="Download Sample"
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* POP-UP CONFIRMATION ALERT: RESET PASSWORD */}
+      <ConfirmAlertDialog
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={() => {
+          onBulkResetPassword(selectedIds);
+          setSelectedIds([]);
+        }}
+        title="Reset Password Karyawan?"
+        description={``}
+        confirmText="Ya"
+        variant="primary"
+      />
+
+      {/* POP-UP CONFIRMATION ALERT: UBAH STATUS (ENABLE/DISABLE) */}
+      <ConfirmAlertDialog
+        isOpen={showStatusConfirm}
+        onClose={() => setShowStatusConfirm(false)}
+        onConfirm={() => {
+          onToggleStatus(selectedIds);
+          setSelectedIds([]);
+        }}
+        title="Ubah Status Karyawan?"
+        description={``}
+        confirmText="Ya"
+        variant="warning"
+      />
     </div>
   );
 };

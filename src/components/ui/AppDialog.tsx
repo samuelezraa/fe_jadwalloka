@@ -30,9 +30,9 @@ export const AppDialog: React.FC<AppDialogProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[9999] w-screen h-screen bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div
-        className={`bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full ${maxWidthClasses[maxWidth]} overflow-hidden animate-in fade-in zoom-in duration-200 my-auto border border-transparent dark:border-gray-800 transition-colors duration-200`}
+        className={`bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full ${maxWidthClasses[maxWidth]} overflow-visible animate-in fade-in zoom-in duration-200 my-auto border border-transparent dark:border-gray-800 transition-colors duration-200 relative`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-t-2xl">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h3>
           <button
             type="button"

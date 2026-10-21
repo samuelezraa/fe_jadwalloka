@@ -2,21 +2,21 @@ import type { SubDepartemen } from '../types/sub-departemen.type';
 
 let mockSubDepartemenList: SubDepartemen[] = [
   {
-    id: 'DS072(IT)',
+    id: 'DS072',
     departemen_id: 'DP001',
     departemen_nama: 'IT',
     sub_departemen: 'Aplikasi & System',
     status: 'Aktif',
   },
   {
-    id: 'DS0739(IT)',
+    id: 'DS0739',
     departemen_id: 'DP001',
     departemen_nama: 'IT',
     sub_departemen: 'Infrastructure & Network',
     status: 'Aktif',
   },
   {
-    id: 'DS074(HRD)',
+    id: 'DS074',
     departemen_id: 'DP002',
     departemen_nama: 'HRD',
     sub_departemen: 'Recruitment & Talent',

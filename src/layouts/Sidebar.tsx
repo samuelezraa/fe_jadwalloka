@@ -6,6 +6,7 @@ import {
   CalendarDays, 
   FileText,
   History,
+  Users,
   ChevronDown, 
   ChevronRight,
   LogOut 
@@ -122,7 +123,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
               )}
             </div>
 
-            {/* Submenu Master Data (Teks Sahaja yang Berwarna Oren) */}
             {openMaster && (!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
                 <NavLink to="/master-data/departemen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
@@ -146,40 +146,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/master-data/data-karyawan" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Data Karyawan</span>
                 </NavLink>
-              </div>
-            )}
-
-            {/* Submenu Pop-up saat Sidebar Collapsed */}
-            {isCollapsed && !isMobileOpen && (
-              <div className="absolute left-full top-0 pl-2 w-56 z-50 hidden group-hover:block">
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl py-2">
-                  <div className="px-4 py-2 font-bold text-xs uppercase tracking-wider text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 mb-1">
-                    Master Data
-                  </div>
-                  <div className="flex flex-col">
-                    <NavLink to="/master-data/departemen" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Departemen
-                    </NavLink>
-                    <NavLink to="/master-data/sub-departemen" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Sub Departemen
-                    </NavLink>
-                    <NavLink to="/master-data/pos" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      POS
-                    </NavLink>
-                    <NavLink to="/master-data/grade" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Grade
-                    </NavLink>
-                    <NavLink to="/master-data/skema-hari-kerja" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Skema Hari Kerja
-                    </NavLink>
-                    <NavLink to="/master-data/event-tahunan" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Event Tahunan
-                    </NavLink>
-                    <NavLink to="/master-data/data-karyawan" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Data Karyawan
-                    </NavLink>
-                  </div>
-                </div>
+                <NavLink to="/master-data/custom-jam-kerja" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                  <span>Custom Jam Kerja</span>
+                </NavLink>
               </div>
             )}
           </div>
@@ -209,7 +178,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
               )}
             </div>
 
-            {/* Submenu Jadwal */}
             {openJadwal && (!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
                 <NavLink to="/jadwal/jam-kerja" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
@@ -224,31 +192,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/jadwal/periode-jadwal" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Periode Jadwal</span>
                 </NavLink>
-              </div>
-            )}
-
-            {/* Submenu Pop-up saat Sidebar Collapsed */}
-            {isCollapsed && !isMobileOpen && (
-              <div className="absolute left-full top-0 pl-2 w-56 z-50 hidden group-hover:block">
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl py-2">
-                  <div className="px-4 py-2 font-bold text-xs uppercase tracking-wider text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 mb-1">
-                    Jadwal
-                  </div>
-                  <div className="flex flex-col">
-                    <NavLink to="/jadwal/jam-kerja" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Jam Kerja (Skema 52)
-                    </NavLink>
-                    <NavLink to="/jadwal/input-jadwal" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Input Jadwal
-                    </NavLink>
-                    <NavLink to="/jadwal/jadwalku" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Jadwalku
-                    </NavLink>
-                    <NavLink to="/jadwal/periode-jadwal" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Periode Jadwal
-                    </NavLink>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -278,7 +221,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
               )}
             </div>
 
-            {/* Submenu Laporan */}
             {openLaporan && (!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
                 <NavLink to="/laporan/absensi" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
@@ -290,31 +232,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/laporan/komplimen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Komplimen</span>
                 </NavLink>
-              </div>
-            )}
-
-            {/* Submenu Pop-up saat Sidebar Collapsed */}
-            {isCollapsed && !isMobileOpen && (
-              <div className="absolute left-full top-0 pl-2 w-56 z-50 hidden group-hover:block">
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl py-2">
-                  <div className="px-4 py-2 font-bold text-xs uppercase tracking-wider text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 mb-1">
-                    Laporan
-                  </div>
-                  <div className="flex flex-col">
-                    <NavLink to="/laporan/absensi" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Absensi
-                    </NavLink>
-                    <NavLink to="/laporan/pivot" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Pivot
-                    </NavLink>
-                    <NavLink to="/laporan/komplimen" className={({ isActive }) => `px-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                      Komplimen
-                    </NavLink>
-                  </div>
-                </div>
+                {/* 🌟 Sub-menu baru untuk Kehadiran Karyawan */}
+                <NavLink to="/laporan/kehadiran-karyawan" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                  <span>Kehadiran Karyawan</span>
+                </NavLink>
               </div>
             )}
           </div>
+
+          {/* HR Management Menu */}
+          <NavLink
+            to="/hr-management"
+            onClick={onCloseMobile}
+            className={({ isActive }) =>
+              `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
+                isActive 
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+              } ${
+                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
+              }`
+            }
+            title={isCollapsed && !isMobileOpen ? "HR Management" : ""}
+          >
+            <Users className="w-5 h-5 shrink-0" />
+            {(!isCollapsed || isMobileOpen) && <span>HR Management</span>}
+          </NavLink>
 
           {/* Log History */}
           <NavLink

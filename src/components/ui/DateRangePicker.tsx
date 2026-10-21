@@ -105,7 +105,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   return (
     <div className="relative w-full text-left" ref={popoverRef}>
-      {/* Input Trigger dikecilkan padding & font-nya agar proporsional */}
+      {/* Input Trigger */}
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-between w-full px-2.5 py-1.5 text-xs bg-white dark:bg-gray-800 rounded-lg cursor-pointer transition-colors border ${
@@ -118,9 +118,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         <CalendarIcon className="w-3.5 h-3.5 text-gray-400 shrink-0 ml-2" />
       </div>
 
-      {/* Popover Kotak Kalender */}
+      {/* Popover Kotak Kalender (z-[99999] agar menimpa seluruh dialog) */}
       {isOpen && (
-        <div className="absolute left-0 top-full z-[9999] p-2.5 mt-1 bg-white border border-gray-200 shadow-xl dark:bg-gray-900 dark:border-gray-800 rounded-xl w-[240px] animate-in fade-in zoom-in-95">
+        <div className="absolute left-0 top-full z-[99999] p-2.5 mt-1 bg-white border border-gray-200 shadow-2xl dark:bg-gray-900 dark:border-gray-800 rounded-xl w-[240px] animate-in fade-in zoom-in-95">
           <div className="absolute top-[-5px] left-5 w-2.5 h-2.5 bg-white dark:bg-gray-900 border-t border-l border-gray-200 dark:border-gray-800 rotate-45" />
 
           <div className="flex items-center justify-between mb-2 border border-gray-200 dark:border-gray-700 rounded-md px-1 py-1">

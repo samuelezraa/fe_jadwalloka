@@ -67,9 +67,10 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
     });
   };
 
+  // 🌟 Penulisan diubah menjadi: ID (Nama Departemen) -> contoh: DP001 (IT)
   const departemenOptions = departemenList.map((d) => ({
     id: d.id,
-    label: `${d.departemen} (${d.id})`,
+    label: `${d.id} (${d.departemen})`,
   }));
 
   return (
@@ -96,7 +97,7 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
           label="ID Sub Departemen"
           {...register('id')}
           disabled={isEditMode}
-          placeholder="Contoh: DS072(IT)"
+          placeholder="Contoh: DS072"
           error={errors.id?.message}
         />
         {isEditMode && (

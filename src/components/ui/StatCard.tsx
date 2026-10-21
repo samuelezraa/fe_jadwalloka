@@ -17,7 +17,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   iconColor = 'text-emerald-600 dark:text-emerald-400',
 }) => {
   return (
-    <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-between transition-colors duration-200">
+    <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm flex items-center justify-between transition-colors duration-200">
       <div>
         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
           {title}

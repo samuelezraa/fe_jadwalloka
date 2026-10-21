@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useDataKaryawan } from '../hooks/useDataKaryawan';
 import { DataKaryawanTable } from '../components/DataKaryawanTable';
-import { DataKaryawanDialog } from '../components/DataKaryawanDialog';
+import { DataKaryawanDialog, ImportDataKaryawanDialog } from '../components/DataKaryawanDialog';
 import type { DataKaryawan } from '../types/data-karyawan.type';
 import type { DataKaryawanFormValues } from '../schemas/data-karyawan.schema';
+import toast from 'react-hot-toast';
 
 export const DataKaryawanPage: React.FC = () => {
   const {
@@ -15,8 +16,12 @@ export const DataKaryawanPage: React.FC = () => {
     resetPasswordKaryawan,
   } = useDataKaryawan();
 
+  // State Dialog Form Karyawan (Tambah / Edit)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DataKaryawan | null>(null);
+
+  // State Dialog Import File
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const handleOpenAdd = () => {
     setSelectedItem(null);
@@ -37,6 +42,23 @@ export const DataKaryawanPage: React.FC = () => {
     setIsDialogOpen(false);
   };
 
+  // Handler Aksi Import, Export & Download Sample
+  const handleImportFile = (file: File) => {
+    console.log('File diunggah:', file);
+    toast.success(`File "${file.name}" berhasil diunggah.`);
+    // TODO: Panggil API / service import data karyawan di sini
+  };
+
+  const handleExportData = () => {
+    toast.success('Mulai mengunduh data karyawan...');
+    // TODO: Panggil service export Excel/CSV di sini
+  };
+
+  const handleDownloadSample = () => {
+    toast.success('Mengunduh sampel format spreadsheet...');
+    // TODO: Jalankan proses unduh file template sampel Excel/CSV di sini
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -52,14 +74,25 @@ export const DataKaryawanPage: React.FC = () => {
         onAdd={handleOpenAdd}
         onEdit={handleOpenEdit}
         onToggleStatus={toggleStatusKaryawan}
-        onResetPassword={resetPasswordKaryawan}
+        onBulkResetPassword={resetPasswordKaryawan}
+        onDownloadSample={handleDownloadSample}
+        onExportData={handleExportData}
+        onImportData={() => setIsImportModalOpen(true)}
       />
 
+      {/* Modal Dialog Form Tambah / Edit Karyawan */}
       <DataKaryawanDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         initialData={selectedItem}
         onSubmit={handleSubmitForm}
+      />
+
+      {/* Modal Dialog Import Data Spreadsheet */}
+      <ImportDataKaryawanDialog
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleImportFile}
       />
     </div>
   );
