@@ -7,12 +7,12 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table';
 
-import { DataTable } from '../../../components/ui/data-table';
-import { SaveButton, CancelButton } from '../../../components/ui/ActionButtons';
-import { FormSelect } from '../../../components/ui/FormSelect';
-import { FormTimeInput } from '../../../components/ui/FormTimeInput';
-import { Input } from '../../../components/ui/input'; // 🌟 Menggunakan komponen Input bawaan
-import { ConfirmAlertDialog } from '../../../components/ui/ConfirmAlertDialog';
+import { DataTable } from '@/components/ui/data-table';
+import { SaveButton, CancelButton } from '@/components/ui/ActionButtons';
+import { FormSelect } from '@/components/ui/FormSelect';
+import { FormTimeInput } from '@/components/ui/FormTimeInput';
+import { Input } from '@/components/ui/input';
+import { ConfirmAlertDialog } from '@/components/ui/ConfirmAlertDialog';
 import toast from 'react-hot-toast';
 
 interface DetailKehadiranHarian {
@@ -30,7 +30,6 @@ interface DetailKehadiranHarian {
   ref: string;
 }
 
-// 🌟 Sub-komponen kecil dengan local state untuk Keterangan agar pengetikan mulus
 interface KeteranganCellProps {
   value: string;
   onChange: (val: string) => void;
@@ -56,7 +55,7 @@ const KeteranganCell: React.FC<KeteranganCellProps> = ({ value, onChange }) => {
   );
 };
 
-export const EditHrManagementPage: React.FC = () => {
+export const EditAbsensiKaryawanPage: React.FC = () => {
   const navigate = useNavigate();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -85,8 +84,8 @@ export const EditHrManagementPage: React.FC = () => {
 
   const handleExecuteSave = () => {
     setIsConfirmOpen(false);
-    toast.success('Data HR Management berhasil disimpan!');
-    navigate('/hr-management');
+    toast.success('Data Absensi Karyawan berhasil disimpan!');
+    navigate('/hr-management/absensi-karyawan');
   };
 
   const columns: ColumnDef<DetailKehadiranHarian>[] = [
@@ -184,7 +183,7 @@ export const EditHrManagementPage: React.FC = () => {
         </button>
         <div>
           <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            Edit HR Management
+            Edit Absensi Karyawan
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Kelola rincian status kehadiran dan jam kerja harian karyawan
@@ -263,9 +262,11 @@ export const EditHrManagementPage: React.FC = () => {
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={handleExecuteSave}
-        title="Simpan Perubahan HR Management?"
+        title="Simpan Perubahan Absensi Karyawan?"
         confirmText="Ya"
       />
     </div>
   );
 };
+
+export default EditAbsensiKaryawanPage;

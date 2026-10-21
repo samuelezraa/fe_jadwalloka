@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { HrManagementTable } from '../components/HrManagementTable';
-import type { HrManagementItem } from '../types/hr-management.type';
+import { AbsensiKaryawanTable } from '../components/AbsensiKaryawanTable';
+import type { HrManagementItem } from '../types/absensi-karyawan.type';
 
-export const HrManagementPage: React.FC = () => {
+export const AbsensiKaryawanPage: React.FC = () => {
   const [data] = useState<HrManagementItem[]>([
     {
       id: '1',
@@ -28,9 +28,9 @@ export const HrManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <HrManagementTable data={data} />
+      <AbsensiKaryawanTable data={data} />
     </div>
   );
 };
 
-export default HrManagementPage;
+export default AbsensiKaryawanPage;

@@ -7,19 +7,19 @@ import {
   type ColumnDef,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { Users, Calendar, AlertCircle, Briefcase, ChevronRight } from 'lucide-react';
+import { Users, Calendar, AlertCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-import type { HrManagementItem } from '../types/hr-management.type';
-import { DataPagination } from '../../../components/DataPagination';
-import { TableToolbar } from '../../../components/ui/TableToolbar';
-import { TableFilterPopover } from '../../../components/ui/TableFilterPopover';
-import { EditActionButton } from '../../../components/ui/ActionButtons';
-import { DataTable } from '../../../components/ui/data-table';
-import { FormSelectSearch } from '../../../components/ui/FormSelectSearch';
+import type { HrManagementItem } from '../types/absensi-karyawan.type';
+import { DataPagination } from '@/components/DataPagination';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { TableFilterPopover } from '@/components/ui/TableFilterPopover';
+import { EditActionButton } from '@/components/ui/ActionButtons';
+import { DataTable } from '@/components/ui/data-table';
+import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
 
-interface HrManagementTableProps {
+interface AbsensiKaryawanTableProps {
   data: HrManagementItem[];
 }
 
@@ -28,7 +28,7 @@ const PERIODE_OPTIONS = [
   { id: '2026-11', label: 'November 2026 (2026-11-01 — 2026-11-30)' },
 ];
 
-export const HrManagementTable: React.FC<HrManagementTableProps> = ({ data }) => {
+export const AbsensiKaryawanTable: React.FC<AbsensiKaryawanTableProps> = ({ data }) => {
   const navigate = useNavigate();
 
   const [selectedPeriode, setSelectedPeriode] = useState<string>('');
@@ -101,7 +101,7 @@ export const HrManagementTable: React.FC<HrManagementTableProps> = ({ data }) =>
         header: 'Action',
         cell: ({ row }) => (
           <div className="flex justify-center">
-            <EditActionButton onClick={() => navigate(`/hr-management/edit/${row.original.id}`)} />
+            <EditActionButton onClick={() => navigate(`/hr-management/absensi-karyawan/edit/${row.original.id}`)} />
           </div>
         ),
       },
@@ -151,7 +151,7 @@ export const HrManagementTable: React.FC<HrManagementTableProps> = ({ data }) =>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible">
         <TableToolbar
-          title="HR Management"
+          title="Absensi Karyawan"
           subtitle="Kelola rincian data kehadiran & jadwal HR LokaHR"
           icon={<Users className="w-6 h-6" />}
           searchValue={globalFilter ?? ''}
@@ -186,15 +186,15 @@ export const HrManagementTable: React.FC<HrManagementTableProps> = ({ data }) =>
               <DataPagination table={table} />
             </div>
 
-            {/* 🌟 TAMPILAN DESKTOP: Menggunakan DataTable */}
+            {/* TAMPILAN DESKTOP */}
             <div className="hidden md:block">
-              <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data HR Management ditemukan." />
+              <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data Absensi Karyawan ditemukan." />
             </div>
 
-            {/* 🌟 TAMPILAN MOBILE: Menggunakan Card List Vertikal yang Rapi */}
+            {/* TAMPILAN MOBILE */}
             <div className="block md:hidden p-4 space-y-3">
               {filteredData.length === 0 ? (
-                <p className="text-center text-xs text-gray-500 py-6">Tidak ada data HR Management ditemukan.</p>
+                <p className="text-center text-xs text-gray-500 py-6">Tidak ada data Absensi Karyawan ditemukan.</p>
               ) : (
                 filteredData.map((item) => (
                   <div
@@ -225,7 +225,7 @@ export const HrManagementTable: React.FC<HrManagementTableProps> = ({ data }) =>
                     <div className="pt-2 flex items-center justify-end border-t border-gray-100 dark:border-gray-700">
                       <button
                         type="button"
-                        onClick={() => navigate(`/hr-management/edit/${item.id}`)}
+                        onClick={() => navigate(`/hr-management/absensi-karyawan/edit/${item.id}`)}
                         className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline py-1 px-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200/60 dark:border-amber-900/60"
                       >
                         <span>Edit Rincian</span>

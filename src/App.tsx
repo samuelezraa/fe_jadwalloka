@@ -30,13 +30,13 @@ import { JamKerjaPage } from './features/jadwal/jam-kerja/pages/JamKerjaPage';
 import { InputJadwalPage } from './features/jadwal/input-jadwal/pages/InputJadwalPage';
 import { EditJadwalKaryawanPage } from './features/jadwal/input-jadwal/pages/EditJadwalKaryawanPage';
 import { JadwalkuPage } from './features/jadwal/jadwalku/pages/JadwalkuPage';
-import { PeriodeJadwalPage } from './features/jadwal/periode-jadwal/pages/PeriodeJadwalPage';
 
 // ==========================================
 // 5. HR MANAGEMENT 🌟
 // ==========================================
-import { HrManagementPage } from './features/hr-management/pages/HrManagementPage';
-import { EditHrManagementPage } from './features/hr-management/pages/EditHrManagementPage';
+import { PeriodeJadwalPage } from './features/hr-management/periode/pages/PeriodeJadwalPage';
+import { AbsensiKaryawanPage } from './features/hr-management/absensi-karyawan/pages/AbsensiKaryawanPage';
+import { EditAbsensiKaryawanPage } from './features/hr-management/absensi-karyawan/pages/EditAbsensiKaryawanPage';
 
 // ==========================================
 // 6. LAPORAN
@@ -44,8 +44,7 @@ import { EditHrManagementPage } from './features/hr-management/pages/EditHrManag
 import { AbsensiPage } from './features/laporan/absensi/pages/AbsensiPage';
 import { PivotPage } from './features/laporan/pivot/pages/PivotPage';
 import { KomplimenPage } from './features/laporan/komplimen/pages/KomplimenPage';
-
-import { KehadiranKaryawanPage } from './features/laporan/kehadiran-karyawan/pages/KehadiranKaryawanPage';// 🌟 Import Halaman Baru
+import { KehadiranKaryawanPage } from './features/laporan/kehadiran-karyawan/pages/KehadiranKaryawanPage';
 
 // ==========================================
 // 7. LOG HISTORY
@@ -81,17 +80,17 @@ export default function App() {
           <Route path="/jadwal/input-jadwal" element={<InputJadwalPage />} />
           <Route path="/jadwal/input-jadwal/edit/:id" element={<EditJadwalKaryawanPage />} />
           <Route path="/jadwal/jadwalku" element={<JadwalkuPage />} />
-          <Route path="/jadwal/periode-jadwal" element={<PeriodeJadwalPage />} />
 
           {/* HR MANAGEMENT 🌟 */}
-          <Route path="/hr-management" element={<HrManagementPage />} />
-          <Route path="/hr-management/edit/:id" element={<EditHrManagementPage />} />
+          <Route path="/hr-management/periode" element={<PeriodeJadwalPage />} />
+          <Route path="/hr-management/absensi-karyawan" element={<AbsensiKaryawanPage />} />
+          <Route path="/hr-management/absensi-karyawan/edit/:id" element={<EditAbsensiKaryawanPage />} />
 
           {/* LAPORAN */}
           <Route path="/laporan/absensi" element={<AbsensiPage />} />
           <Route path="/laporan/pivot" element={<PivotPage />} />
           <Route path="/laporan/komplimen" element={<KomplimenPage />} />
-          <Route path="/laporan/kehadiran-karyawan" element={<KehadiranKaryawanPage />} /> {/* 🌟 Route Baru */}
+          <Route path="/laporan/kehadiran-karyawan" element={<KehadiranKaryawanPage />} />
 
           {/* LOG HISTORY */}
           <Route path="/log-history" element={<LogHistoryPage />} />

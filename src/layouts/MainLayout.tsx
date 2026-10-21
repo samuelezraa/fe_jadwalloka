@@ -59,7 +59,7 @@ export const MainLayout: React.FC = () => {
         />
 
         {/* 🌟 TAMBAHKAN 'min-w-0' DI SINI AGAR CONTAINER FLEX MENGIZINKAN CHILD OVERFLOW-X */}
-        <main className="flex-1 p-4 md:p-6 overflow-x-auto min-w-0 bg-gray-50 dark:bg-gray-950">
+        <main className="flex-1 p-4 md:p-6 overflow-x-auto min-w-0 bg-slate-100 dark:bg-gray-950">
           <Outlet />
         </main>
       </div>
