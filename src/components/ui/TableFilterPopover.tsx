@@ -169,7 +169,7 @@ export const TableFilterPopover: React.FC<TableFilterPopoverProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs font-medium bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg transition-colors"
+          className="text-xs font-medium text-emerald-600 px-4 py-1.5 rounded-lg transition-colors"
         >
           Terapkan
         </button>

@@ -80,6 +80,26 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           </span>
         ),
       },
+      
+      {
+        accessorKey: 'id',
+        header: 'ID Departemen',
+        cell: (info) => (
+          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+            {String(info.getValue())}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'departemen',
+        header: 'Departemen',
+        cell: (info) => (
+          <span className="font-semibold text-gray-800 dark:text-gray-100">
+            {String(info.getValue())}
+          </span>
+        ),
+      },
+
       {
         accessorKey: 'status',
         header: 'Status',
@@ -102,24 +122,7 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           );
         },
       },
-      {
-        accessorKey: 'id',
-        header: 'ID Departemen',
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue())}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'departemen',
-        header: 'Departemen',
-        cell: (info) => (
-          <span className="font-semibold text-gray-800 dark:text-gray-100">
-            {String(info.getValue())}
-          </span>
-        ),
-      },
+      
       {
         id: 'action',
         header: 'Action',

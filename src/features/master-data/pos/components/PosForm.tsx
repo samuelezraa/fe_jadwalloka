@@ -74,17 +74,19 @@ export const PosForm: React.FC<PosFormProps> = ({
   // Format options untuk FormSelectSearch
   const departemenOptions = departemenList.map((d) => ({
     id: d.id,
-    label: `${d.departemen} (${d.id})`,
+    label: `${d.id} (${d.departemen})`,
   }));
 
+ 
   const filteredSubDeptList = subDepartemenList.filter(
-    (sub) => !selectedDeptId || sub.departemen_id === selectedDeptId
+  (sub) => !selectedDeptId || sub.departemen_id === selectedDeptId
   );
 
   const subDepartemenOptions = filteredSubDeptList.map((sub) => ({
     id: sub.id,
-    label: `${sub.sub_departemen} (${sub.id})`,
+    label: `${sub.id} (${sub.sub_departemen})`,
   }));
+
 
   const handleFormSubmit = (values: UpdatePosFormValues) => {
     const selectedDept = departemenList.find((d) => d.id === values.departemen_id);
