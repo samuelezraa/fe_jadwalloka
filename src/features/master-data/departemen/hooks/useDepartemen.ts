@@ -1,56 +1,64 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Departemen } from '../types/departemen.type';
+import type { DepartemenFormValues } from '../schemas/departemen.schema';
 import { departemenService } from '../services/departemen.service';
 
-// ... sisa kode di bawahnya tetap sama
-
 export const useDepartemen = () => {
-  const [data, setData] = useState<Departemen[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [departemens, setDepartemens] = useState<Departemen[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDepartemen = useCallback(async () => {
-  try {
-    setLoading(true);
-    // Tambahkan jeda buatan 500ms untuk tes
-    await new Promise((resolve) => setTimeout(resolve, 200)); 
-    
-    const result = await departemenService.getAll();
-    setData(result);
+  const fetchDepartemens = useCallback(async (forceRefresh = false) => {
+    setIsLoading(true);
     setError(null);
-  } catch (err) {
-    setError('Gagal memuat data departemen');
-  } finally {
-    setLoading(false);
-  }
-}, []);
+    try {
+      const data = await departemenService.getAll(forceRefresh);
+      setDepartemens(data);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Gagal mengambil data departemen');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchDepartemen();
-  }, [fetchDepartemen]);
+    fetchDepartemens();
+  }, [fetchDepartemens]);
 
-  const addDepartemen = async (newData: Departemen) => {
-    await departemenService.create(newData);
-    await fetchDepartemen();
-  };
+ // src/features/master-data/departemen/hooks/useDepartemen.ts
 
-  const editDepartemen = async (id: string, updatedData: Partial<Departemen>) => {
-    await departemenService.update(id, updatedData);
-    await fetchDepartemen();
-  };
+const addDepartemen = async (values: DepartemenFormValues) => {
+  // Response API membawa data baru
+  const newDepartment = await departemenService.create(values);
+  // Langsung update state lokal tanpa HTTP GET ulang
+  setDepartemens((prev) => [newDepartment, ...prev]);
+};
 
-  const removeDepartemen = async (id: string) => {
-    await departemenService.delete(id);
-    await fetchDepartemen();
+const editDepartemen = async (id: number, values: DepartemenFormValues) => {
+  // Response API membawa data ter-update
+  const updatedDepartment = await departemenService.update(id, values);
+  // Langsung update state lokal tanpa HTTP GET ulang
+  setDepartemens((prev) =>
+    prev.map((item) => (item.id === id ? updatedDepartment : item))
+  );
+};
+
+  const deleteDepartemen = async (id: number) => {
+    try {
+      await departemenService.delete(id);
+      await fetchDepartemens(true);
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Gagal menghapus departemen');
+    }
   };
 
   return {
-    data,
-    loading,
+    departemens,
+    isLoading,
     error,
+    refetch: () => fetchDepartemens(true),
     addDepartemen,
     editDepartemen,
-    removeDepartemen,
-    refetch: fetchDepartemen,
+    deleteDepartemen,
   };
 };

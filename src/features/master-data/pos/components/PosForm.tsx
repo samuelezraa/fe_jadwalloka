@@ -1,10 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  updatePosSchema,
-  type UpdatePosFormValues,
-} from '../schemas/pos.schema';
+import { posSchema, type PosFormValues } from '../schemas/pos.schema';
 import type { Pos } from '../types/pos.type';
 import type { Departemen } from '../../departemen/types/departemen.type';
 import type { SubDepartemen } from '../../sub-departemen/types/sub-departemen.type';
@@ -16,16 +13,16 @@ import { SaveButton, CancelButton } from '../../../../components/ui/ActionButton
 
 interface PosFormProps {
   initialData?: Pos | null;
-  departemenList: Departemen[];
-  subDepartemenList: SubDepartemen[];
-  onSubmit: (data: any) => void;
+  departemenList?: Departemen[];
+  subDepartemenList?: SubDepartemen[];
+  onSubmit: (data: PosFormValues) => void;
   onCancel: () => void;
 }
 
 export const PosForm: React.FC<PosFormProps> = ({
   initialData,
-  departemenList,
-  subDepartemenList,
+  departemenList = [],
+  subDepartemenList = [],
   onSubmit,
   onCancel,
 }) => {
@@ -37,142 +34,168 @@ export const PosForm: React.FC<PosFormProps> = ({
     reset,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<UpdatePosFormValues>({
-    resolver: zodResolver(updatePosSchema),
+  } = useForm<PosFormValues>({
+    resolver: zodResolver(posSchema),
     defaultValues: {
-      departemen_id: '',
-      sub_departemen_id: '',
-      id: '',
-      pos: '',
-      status: 'Aktif',
+      department_code: '',
+      sub_department_code: '',
+      code: '',
+      title: '',
+      is_active: true,
     },
   });
 
-  const selectedDeptId = watch('departemen_id');
+  const selectedDepartmentCode = watch('department_code');
 
   useEffect(() => {
     if (initialData) {
+      const rawActive = (initialData as any).is_active ?? (initialData as any).status;
+      const isActiveBoolean = Boolean(
+        rawActive === true || rawActive === 1 || rawActive === 'Aktif'
+      );
+
       reset({
-        departemen_id: initialData.departemen_id,
-        sub_departemen_id: initialData.sub_departemen_id,
-        id: initialData.id,
-        pos: initialData.pos,
-        status: initialData.status,
+        department_code: initialData.department_code || (initialData as any).departemen_id || '',
+        sub_department_code: initialData.sub_department_code || (initialData as any).sub_departemen_id || '',
+        code: initialData.code || (initialData as any).id || '',
+        title: initialData.title || (initialData as any).pos || '',
+        is_active: isActiveBoolean,
       });
     } else {
       reset({
-        departemen_id: '',
-        sub_departemen_id: '',
-        id: '',
-        pos: '',
-        status: 'Aktif',
+        department_code: '',
+        sub_department_code: '',
+        code: '',
+        title: '',
+        is_active: true,
       });
     }
   }, [initialData, reset]);
 
-  // Format options untuk FormSelectSearch
-  const departemenOptions = departemenList.map((d) => ({
-    id: d.id,
-    label: `${d.id} (${d.departemen})`,
-  }));
+  // Options Departemen dengan format ID(Departemen) -> DP001(IT)
+  const departmentOptions = useMemo(() => {
+    if (!Array.isArray(departemenList)) return [];
 
- 
-  const filteredSubDeptList = subDepartemenList.filter(
-  (sub) => !selectedDeptId || sub.departemen_id === selectedDeptId
-  );
+    return departemenList
+      .map((d) => {
+        const codeVal = d.code || String(d.id || '');
+        const nameVal = d.name || (d as any).departemen || '';
+        return {
+          id: codeVal,
+          label: codeVal && nameVal ? `${codeVal}(${nameVal})` : nameVal || codeVal,
+        };
+      })
+      .filter((opt) => opt.id !== '');
+  }, [departemenList]);
 
-  const subDepartemenOptions = filteredSubDeptList.map((sub) => ({
-    id: sub.id,
-    label: `${sub.id} (${sub.sub_departemen})`,
-  }));
-
-
-  const handleFormSubmit = (values: UpdatePosFormValues) => {
-    const selectedDept = departemenList.find((d) => d.id === values.departemen_id);
-    const selectedSubDept = subDepartemenList.find(
-      (s) => s.id === values.sub_departemen_id
-    );
-
-    onSubmit({
-      ...values,
-      departemen_nama: selectedDept ? selectedDept.departemen : '',
-      sub_departemen_nama: selectedSubDept ? selectedSubDept.sub_departemen : '',
+  // Filter Sub Departemen Berdasarkan Departemen yang Terpilih
+  const filteredSubDepartmentList = useMemo(() => {
+    if (!selectedDepartmentCode) return subDepartemenList;
+    return subDepartemenList.filter((sub) => {
+      const parentCode = sub.department_code || (sub as any).departemen_id;
+      return String(parentCode) === String(selectedDepartmentCode);
     });
-  };
+  }, [subDepartemenList, selectedDepartmentCode]);
+
+  // Options Sub Departemen dengan format ID(Sub Departemen) -> SUB001(Aplikasi & System)
+  const subDepartmentOptions = useMemo(() => {
+    if (!Array.isArray(filteredSubDepartmentList)) return [];
+
+    return filteredSubDepartmentList
+      .map((sub) => {
+        const codeVal = sub.code || String(sub.id || '');
+        const nameVal = sub.name || (sub as any).sub_departemen || '';
+        return {
+          id: codeVal,
+          label: codeVal && nameVal ? `${codeVal}(${nameVal})` : nameVal || codeVal,
+        };
+      })
+      .filter((opt) => opt.id !== '');
+  }, [filteredSubDepartmentList]);
 
   return (
-    <form onSubmit={handleSubmit((data) => handleFormSubmit(data))} className="space-y-4">
-      {/* 1. Select Departemen dengan Search */}
+    <form onSubmit={handleSubmit((values) => onSubmit(values))} className="space-y-4">
+      {/* 1. Select Departemen */}
       <Controller
-        name="departemen_id"
+        name="department_code"
         control={control}
         render={({ field }) => (
           <FormSelectSearch
             label="Departemen"
-            options={departemenOptions}
             value={field.value}
-            onChange={field.onChange}
+            onChange={(val) => {
+              field.onChange(val);
+              setValue('sub_department_code', '');
+            }}
             placeholder="-- Pilih Departemen --"
-            error={errors.departemen_id?.message}
+            options={departmentOptions}
+            error={errors.department_code?.message}
           />
         )}
       />
 
-      {/* 2. Select Sub Departemen dengan Search */}
+      {/* 2. Select Sub Departemen */}
       <Controller
-        name="sub_departemen_id"
+        name="sub_department_code"
         control={control}
         render={({ field }) => (
           <FormSelectSearch
             label="Sub Departemen"
-            options={subDepartemenOptions}
             value={field.value}
             onChange={field.onChange}
             placeholder="-- Pilih Sub Departemen --"
-            error={errors.sub_departemen_id?.message}
+            options={subDepartmentOptions}
+            error={errors.sub_department_code?.message}
           />
         )}
       />
 
-      {/* 3. ID POS */}
+      {/* 3. Field ID POS */}
       <div>
         <FormInput
           label="ID POS"
-          {...register('id')}
+          {...register('code')}
           disabled={isEditMode}
           placeholder="Contoh: POS01"
-          error={errors.id?.message}
+          error={errors.code?.message}
         />
+        {isEditMode && (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+            ID POS tidak dapat diubah.
+          </p>
+        )}
       </div>
 
-      {/* 4. Nama POS */}
+      {/* 4. Field Pos */}
       <FormInput
-        label="POS"
-        {...register('pos')}
+        label="Pos"
+        {...register('title')}
         placeholder="Contoh: Programmer Officer"
-        error={errors.pos?.message}
+        error={errors.title?.message}
       />
 
-      {/* 5. Status (Hanya Tampil Saat Edit Mode) */}
+      {/* 5. Status (Hanya Tampil Pada Form Edit Pos) */}
       {isEditMode && (
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-            Status
-          </label>
-          <select
-            {...register('status')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 transition-colors"
-          >
-            <option value="Aktif">Aktif</option>
-            <option value="Nonaktif">Nonaktif</option>
-          </select>
-          {errors.status && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-              {errors.status.message}
-            </p>
+        <Controller
+          name="is_active"
+          control={control}
+          render={({ field }) => (
+            <FormSelectSearch
+              label="Status"
+              value={field.value ? 'true' : 'false'}
+              onChange={(val) => field.onChange(val === 'true')}
+              placeholder="Pilih Status"
+              showSearch={false}
+              options={[
+                { id: 'true', label: 'Aktif' },
+                { id: 'false', label: 'Non aktif' },
+              ]}
+              error={errors.is_active?.message}
+            />
           )}
-        </div>
+        />
       )}
 
       {/* Tombol Aksi */}

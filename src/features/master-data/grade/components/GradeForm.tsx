@@ -1,19 +1,17 @@
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  updateGradeSchema,
-  type UpdateGradeFormValues,
-} from '../schemas/grade.schema';
+import { gradeSchema, type GradeFormValues } from '../schemas/grade.schema';
 import type { Grade } from '../types/grade.type';
 
 // Reusable UI Components
 import { FormInput } from '../../../../components/ui/FormInput';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
 
 interface GradeFormProps {
   initialData?: Grade | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: GradeFormValues) => void;
   onCancel: () => void;
 }
 
@@ -28,28 +26,34 @@ export const GradeForm: React.FC<GradeFormProps> = ({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
-  } = useForm<UpdateGradeFormValues>({
-    resolver: zodResolver(updateGradeSchema),
+  } = useForm<GradeFormValues>({
+    resolver: zodResolver(gradeSchema),
     defaultValues: {
-      id: '',
-      grade: '',
-      status: 'Aktif',
+      code: '',
+      name: '',
+      is_active: true,
     },
   });
 
   useEffect(() => {
     if (initialData) {
+      const rawActive = (initialData as any).is_active ?? (initialData as any).status;
+      const isActiveBoolean = Boolean(
+        rawActive === true || rawActive === 1 || rawActive === 'Aktif'
+      );
+
       reset({
-        id: initialData.id,
-        grade: initialData.grade,
-        status: initialData.status,
+        code: initialData.code || (initialData as any).id || (initialData as any).kode_grade || '',
+        name: initialData.name || (initialData as any).grade || (initialData as any).nama_grade || '',
+        is_active: isActiveBoolean,
       });
     } else {
       reset({
-        id: '',
-        grade: '',
-        status: 'Aktif',
+        code: '',
+        name: '',
+        is_active: true,
       });
     }
   }, [initialData, reset]);
@@ -60,42 +64,46 @@ export const GradeForm: React.FC<GradeFormProps> = ({
       <div>
         <FormInput
           label="ID Grade"
-          {...register('id')}
+          {...register('code')}
           disabled={isEditMode}
-          placeholder="Contoh: LV-001"
-          error={errors.id?.message}
+          placeholder="Contoh: GR001"
+          error={errors.code?.message}
         />
+        {isEditMode && (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+            ID Grade tidak dapat diubah.
+          </p>
+        )}
       </div>
 
       {/* 2. Nama Grade */}
       <FormInput
         label="Nama Grade"
-        {...register('grade')}
-        placeholder="Contoh: General Manager"
-        error={errors.grade?.message}
+        {...register('name')}
+        placeholder="Contoh: Staff / Junior"
+        error={errors.name?.message}
       />
 
       {/* 3. Status (Hanya Tampil Saat Edit Mode) */}
       {isEditMode && (
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-            Status
-          </label>
-          <select
-            {...register('status')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs focus:outline-none focus:border-gray-400 focus:bg-gray-50 dark:focus:bg-gray-800/80 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 transition-colors"
-          >
-            <option value="Aktif" className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-              Aktif
-            </option>
-            <option value="Nonaktif" className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-              Non Aktif
-            </option>
-          </select>
-          {errors.status && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.status.message}</p>
+        <Controller
+          name="is_active"
+          control={control}
+          render={({ field }) => (
+            <FormSelectSearch
+              label="Status Grade"
+              value={field.value ? 'true' : 'false'}
+              onChange={(val) => field.onChange(val === 'true')}
+              placeholder="Pilih Status"
+              showSearch={false}
+              options={[
+                { id: 'true', label: 'Aktif' },
+                { id: 'false', label: 'Non Aktif' },
+              ]}
+              error={errors.is_active?.message}
+            />
           )}
-        </div>
+        />
       )}
 
       {/* Tombol Aksi */}

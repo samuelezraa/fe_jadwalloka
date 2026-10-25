@@ -39,14 +39,14 @@ PrimaryButton.displayName = "PrimaryButton"
 interface SaveButtonProps extends ButtonProps {
   isLoading?: boolean;
 }
+
 export const SaveButton = React.forwardRef<HTMLButtonElement, SaveButtonProps>(
   ({ isLoading, disabled, children = "Simpan", ...props }, ref) => (
     <PrimaryButton type="submit" disabled={isLoading || disabled} ref={ref} {...props}>
-      {isLoading ? "Menyimpan..." : children}
+      {children} {/* 👈 Langsung tampilkan children ("Simpan"), tanpa kondisi "Menyimpan..." */}
     </PrimaryButton>
   )
-)
-SaveButton.displayName = "SaveButton"
+);
 
 
 // 3. Tombol Batal (Gunakan variant="destructive" dari button.tsx)

@@ -34,7 +34,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   className = '',
 }) => {
   return (
-    <div className="w-full space-y-0.5" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className="w-full space-y-0.5" 
+      onMouseDown={(e) => e.stopPropagation()} 
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {label && (
         <label className="block text-[10px] font-semibold text-gray-700 dark:text-gray-300">
           {label}

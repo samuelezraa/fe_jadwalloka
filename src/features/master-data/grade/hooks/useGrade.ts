@@ -1,51 +1,56 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Grade } from '../types/grade.type';
 import { gradeService } from '../services/grade.service';
+import type { Grade } from '../types/grade.type';
 
 export const useGrade = () => {
-  const [data, setData] = useState<Grade[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
+  const [error, setError] = useState<unknown>(null);
 
   const fetchGrades = useCallback(async () => {
+    setIsLoading(true);
+    setIsError(false);
     try {
-      setLoading(true);
-      const result = await gradeService.getAll();
-      setData(result);
-      setError(null);
+      const data = await gradeService.getAll();
+      setGrades(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError('Gagal memuat data Grade');
+      setIsError(true);
+      setError(err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
-  // Fetch data pertama kali saat hook digunakan
   useEffect(() => {
     fetchGrades();
   }, [fetchGrades]);
 
-  const addGrade = async (newData: Omit<Grade, 'status'>) => {
-    await gradeService.create(newData);
-    await fetchGrades(); // Refresh data setelah menambah
+  const createGrade = async (data: Omit<Grade, 'id'>) => {
+    const result = await gradeService.create(data);
+    await fetchGrades();
+    return result;
   };
 
-  const editGrade = async (id: string, updatedData: Partial<Grade>) => {
-    await gradeService.update(id, updatedData);
-    await fetchGrades(); // Refresh data setelah mengedit
+  const updateGrade = async ({ id, data }: { id: string | number; data: Partial<Grade> }) => {
+    const result = await gradeService.update(id, data);
+    await fetchGrades();
+    return result;
   };
 
-  const deleteGrade = async (id: string) => {
-    await gradeService.delete(id);
-    await fetchGrades(); // Refresh data setelah menghapus
+  const deleteGrade = async (id: string | number) => {
+    const result = await gradeService.delete(id);
+    await fetchGrades();
+    return result;
   };
 
   return {
-    data,
-    loading,
+    grades,
+    isLoading,
+    isError,
     error,
-    addGrade,
-    editGrade,
+    createGrade,
+    updateGrade,
     deleteGrade,
     refetch: fetchGrades,
   };

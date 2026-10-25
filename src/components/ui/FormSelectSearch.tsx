@@ -24,6 +24,7 @@ interface FormSelectSearchProps {
   error?: string;
   disabled?: boolean;
   className?: string;
+  showSearch?: boolean; // 👈 Prop baru untuk menyembunyikan/menampilkan input pencarian
 }
 
 export const FormSelectSearch: React.FC<FormSelectSearchProps> = ({
@@ -35,6 +36,7 @@ export const FormSelectSearch: React.FC<FormSelectSearchProps> = ({
   error,
   disabled = false,
   className = '',
+  showSearch = true, // 👈 Default bernilai true
 }) => {
   const [open, setOpen] = useState(false);
   const selectedOption = options.find((opt) => opt.id === value);
@@ -79,7 +81,11 @@ export const FormSelectSearch: React.FC<FormSelectSearchProps> = ({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <Command className="w-full">
-              <CommandInput placeholder="Cari data disini..." className="text-xs h-8" />
+              {/* 👈 Sembunyikan input cari data jika showSearch === false */}
+              {showSearch && (
+                <CommandInput placeholder="Cari data disini..." className="text-xs h-8" />
+              )}
+              
               <CommandList className="w-full max-h-48 overflow-y-auto">
                 <CommandEmpty className="p-2.5 text-center text-xs text-gray-400">
                   Tidak ada data ditemukan.

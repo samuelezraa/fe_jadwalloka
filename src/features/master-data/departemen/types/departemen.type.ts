@@ -1,7 +1,8 @@
 export interface Departemen {
-  id: string;          // Contoh: DP001
-  departemen: string;  // Contoh: IT, HRD, Operasional
-  status?: 'Aktif' | 'Non Aktif';
+  id: number;
+  code: string;        // ID Departemen (contoh: DP001)
+  name: string;        // Nama Departemen (contoh: IT)
+  is_active: boolean;  // Status Aktif (true / false)
   created_at?: string;
   updated_at?: string;
 }

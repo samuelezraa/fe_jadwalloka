@@ -10,7 +10,7 @@ interface SubDepartemenDialogProps {
   onClose: () => void;
   initialData?: SubDepartemen | null;
   departemenList: Departemen[];
-  onSubmit: (data: SubDepartemenFormValues & { departemen_nama: string }) => void;
+  onSubmit: (data: SubDepartemenFormValues & { department_name?: string; departemen_nama?: string }) => void;
 }
 
 export const SubDepartemenDialog: React.FC<SubDepartemenDialogProps> = ({

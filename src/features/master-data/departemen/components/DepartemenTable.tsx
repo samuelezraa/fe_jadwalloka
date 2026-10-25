@@ -14,7 +14,7 @@ import { Building2 } from 'lucide-react';
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
-import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch'; // 👈 Menggunakan FormSelectSearch
 import { Badge } from '../../../../components/ui/badge';
 import { DataTable } from '../../../../components/ui/data-table';
 
@@ -25,23 +25,33 @@ interface DepartemenTableProps {
 }
 
 export const DepartemenTable: React.FC<DepartemenTableProps> = ({
-  data,
+  data = [],
   onEdit,
   onAdd,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(''); // '' | 'true' | 'false'
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Auto-close filter dropdown saat mengklik area di luar
+  // Auto-close filter dropdown saat mengklik area luar
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      // Cek apakah klik berada di dalam portal popover radix/select
+      const isPopoverContent = Boolean(
+        target.closest('[data-radix-popper-content-wrapper]') ||
+        target.closest('[role="dialog"]')
+      );
+
       if (
         filterWrapperRef.current &&
-        !filterWrapperRef.current.contains(event.target as Node)
+        !filterWrapperRef.current.contains(target) &&
+        !isPopoverContent
       ) {
         setShowFilterDropdown(false);
       }
@@ -58,10 +68,11 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // Filter Data berdasarkan Status
+  // Logika Pemfilteran Data berdasarkan Status Boolean
   const filteredData = useMemo(() => {
     if (!statusFilter) return data;
-    return data.filter((item: any) => (item.status || 'Aktif') === statusFilter);
+    const isFilterActive = statusFilter === 'true';
+    return data.filter((item) => item.is_active === isFilterActive);
   }, [data, statusFilter]);
 
   const isFiltered = Boolean(statusFilter);
@@ -82,41 +93,40 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
       },
       
       {
-        accessorKey: 'id',
+        accessorKey: 'code',
         header: 'ID Departemen',
         cell: (info) => (
           <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue())}
+            {String(info.getValue() || '')}
           </span>
         ),
       },
       {
-        accessorKey: 'departemen',
+        accessorKey: 'name',
         header: 'Departemen',
         cell: (info) => (
           <span className="font-semibold text-gray-800 dark:text-gray-100">
-            {String(info.getValue())}
+            {String(info.getValue() || '')}
           </span>
         ),
       },
 
       {
-        accessorKey: 'status',
+        accessorKey: 'is_active',
         header: 'Status',
         cell: (info) => {
-          const val = String(info.getValue() || 'Aktif');
-          const isAktif = val === 'Aktif';
+          const isAktif = Boolean(info.getValue());
           return (
             <div className="flex justify-center">
               <Badge 
-                variant={isAktif ? 'outline' : 'destructive'} 
+                variant="outline"
                 className={
                   isAktif 
                     ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
-                    : 'rounded-full px-3'
+                    : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3'
                 }
               >
-                {val}
+                {isAktif ? 'Aktif' : 'Non Aktif'}
               </Badge>
             </div>
           );
@@ -179,12 +189,13 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={statusFilter}
-                      onChange={setStatusFilter}
+                      onChange={(val) => setStatusFilter(val)}
                       placeholder="Semua Status"
+                      showSearch={false} // 👈 Sembunyikan pencarian khusus untuk filter status
                       options={[
                         { id: '', label: 'Semua Status' },
-                        { id: 'Aktif', label: 'Aktif' },
-                        { id: 'Non Aktif', label: 'Non Aktif' },
+                        { id: 'true', label: 'Aktif' },
+                        { id: 'false', label: 'Non Aktif' },
                       ]}
                     />
                   ),
@@ -207,13 +218,12 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
-              const statusVal = (item as any).status || 'Aktif';
-              const isAktif = statusVal === 'Aktif';
+              const isAktif = item.is_active;
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      {item.id}
+                      {item.code}
                     </span>
                     <Badge 
                       variant={isAktif ? 'outline' : 'destructive'} 
@@ -223,12 +233,12 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
                           : 'rounded-full px-3 py-0.5'
                       }
                     >
-                      {statusVal}
+                      {isAktif ? 'Aktif' : 'Non Aktif'}
                     </Badge>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Departemen</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.departemen}</p>
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.name}</p>
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />

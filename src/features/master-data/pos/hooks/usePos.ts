@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Pos } from '../types/pos.type';
+import type { PosFormValues } from '../schemas/pos.schema';
 import { posService } from '../services/pos.service';
 
 export const usePos = () => {
@@ -11,10 +12,10 @@ export const usePos = () => {
     try {
       setLoading(true);
       const result = await posService.getAll();
-      setData(result);
+      setData(Array.isArray(result) ? result : []);
       setError(null);
-    } catch (err) {
-      setError('Gagal memuat data POS');
+    } catch (err: any) {
+      setError(err?.message || 'Gagal memuat data POS');
     } finally {
       setLoading(false);
     }
@@ -24,13 +25,18 @@ export const usePos = () => {
     fetchPos();
   }, [fetchPos]);
 
-  const addPos = async (newData: Omit<Pos, 'status'>) => {
+  const addPos = async (newData: PosFormValues) => {
     await posService.create(newData);
     await fetchPos();
   };
 
-  const editPos = async (id: string, updatedData: Partial<Pos>) => {
-    await posService.update(id, updatedData);
+const editPos = async (id: number | string, updatedData: PosFormValues) => {
+  await posService.update(id, updatedData);
+  await fetchPos();
+};
+
+  const deletePos = async (id: number) => {
+    await posService.delete(id);
     await fetchPos();
   };
 
@@ -40,6 +46,7 @@ export const usePos = () => {
     error,
     addPos,
     editPos,
+    deletePos,
     refetch: fetchPos,
   };
 };

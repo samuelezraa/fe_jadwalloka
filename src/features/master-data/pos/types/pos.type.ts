@@ -1,11 +1,10 @@
 export interface Pos {
-  id: string;               // ID POS, contoh: POS01
-  departemen_id: string;    // ID Departemen
-  departemen_nama: string;  // Nama Departemen, contoh: IT
-  sub_departemen_id: string;// ID Sub Departemen
-  sub_departemen_nama: string; // Nama Sub Departemen, contoh: Aplikasi & System
-  pos: string;              // Nama POS, contoh: Programmer Officer
-  status: 'Aktif' | 'Nonaktif';
+  id: number;
+  code: string;       // Kode POS/Jabatan (contoh: POS01)
+  title: string;      // Nama POS/Jabatan (contoh: Programmer Officer)
+  is_active: boolean; // Flag Status
+  department_code?: string;
+  sub_department_code?: string;
   created_at?: string;
   updated_at?: string;
 }

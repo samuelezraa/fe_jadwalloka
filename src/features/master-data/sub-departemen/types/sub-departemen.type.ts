@@ -1,9 +1,14 @@
 export interface SubDepartemen {
-  id: string;             // ID Sub Departemen, ex: DS072
-  departemen_id: string;  // ID Departemen relasi, ex: DP001
-  departemen_nama: string;// Nama Departemen, ex: IT
-  sub_departemen: string; // Nama Sub Departemen, ex: Aplikasi & System
-  status?: 'Aktif' | 'Non Aktif';
-  created_at?: string;
-  updated_at?: string;
+  id?: string | number;
+  code: string;
+  name: string;
+  department_code: string;
+  department_name?: string; // 👈 Tambahkan properti ini
+  is_active: boolean;
+  
+  // Property legacy (opsional, jika backend masih mengirim format lama)
+  departemen_id?: string;
+  departemen_nama?: string;
+  sub_departemen?: string;
+  status?: string;
 }

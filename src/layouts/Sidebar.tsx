@@ -139,16 +139,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/master-data/grade" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Grade</span>
                 </NavLink>
-                <NavLink to="/master-data/skema-hari-kerja" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/master-data/schedule-scheme" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Skema Hari Kerja</span>
                 </NavLink>
-                <NavLink to="/master-data/event-tahunan" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/master-data/annual-event" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Event Tahunan</span>
                 </NavLink>
-                <NavLink to="/master-data/data-karyawan" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/master-data/employee" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Data Karyawan</span>
                 </NavLink>
-                <NavLink to="/master-data/custom-jam-kerja" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/master-data/custom-work-hours" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Custom Jam Kerja</span>
                 </NavLink>
               </div>
@@ -182,13 +182,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
 
             {openJadwal && (!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
-                <NavLink to="/jadwal/jam-kerja" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/schedule/five-two-work-hour" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Jam Kerja (Skema 52)</span>
                 </NavLink>
-                <NavLink to="/jadwal/input-jadwal" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/schedule/input-schedule" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Input Jadwal</span>
                 </NavLink>
-                <NavLink to="/jadwal/jadwalku" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                <NavLink to="/schedule/jadwalku" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Jadwalku</span>
                 </NavLink>
               </div>

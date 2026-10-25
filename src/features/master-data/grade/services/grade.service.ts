@@ -1,57 +1,29 @@
+import { api } from '@/lib/axios';
 import type { Grade } from '../types/grade.type';
 
-// Mock data awal sesuai referensi spesifikasi
-let mockGradeList: Grade[] = [
-  {
-    id: 'LV-001',
-    grade: 'General Manager',
-    status: 'Aktif',
-  },
-  {
-    id: 'LV-002',
-    grade: 'Manager',
-    status: 'Aktif',
-  },
-  {
-    id: 'LV-003',
-    grade: 'Supervisor',
-    status: 'Nonaktif',
-  },
-];
-
 export const gradeService = {
-  // Mengambil semua data
   getAll: async (): Promise<Grade[]> => {
-    // Simulasi delay jaringan (opsional, agar loading state terlihat)
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([...mockGradeList]);
-      }, 200);
-    });
+    const response = await api.get('/grades');
+    return response.data.data;
   },
 
-  // Menambah data baru (status default "Aktif" sesuai spesifikasi)
-  create: async (data: Omit<Grade, 'status'>): Promise<Grade> => {
-    const newGrade: Grade = {
-      ...data,
-      status: 'Aktif', 
-    };
-    mockGradeList.push(newGrade);
-    return Promise.resolve(newGrade);
+  getById: async (id: string | number): Promise<Grade> => {
+    const response = await api.get(`/grades/${id}`);
+    return response.data.data;
   },
 
-  // Mengubah data (edit)
-  update: async (id: string, data: Partial<Grade>): Promise<Grade> => {
-    mockGradeList = mockGradeList.map((item) =>
-      item.id === id ? { ...item, ...data } : item
-    );
-    const updated = mockGradeList.find((item) => item.id === id)!;
-    return Promise.resolve(updated);
+  create: async (data: Omit<Grade, 'id'>): Promise<Grade> => {
+    const response = await api.post('/grades', data);
+    return response.data.data;
   },
 
-  // Menghapus data
-  delete: async (id: string): Promise<boolean> => {
-    mockGradeList = mockGradeList.filter((item) => item.id !== id);
-    return Promise.resolve(true);
+  update: async (id: string | number, data: Partial<Grade>): Promise<Grade> => {
+    const response = await api.put(`/grades/${id}`, data);
+    return response.data.data;
+  },
+
+  delete: async (id: string | number): Promise<boolean> => {
+    await api.delete(`/grades/${id}`);
+    return true;
   },
 };

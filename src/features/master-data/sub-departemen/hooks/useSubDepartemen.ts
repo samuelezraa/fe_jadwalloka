@@ -1,45 +1,49 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SubDepartemen } from '../types/sub-departemen.type';
+import type { SubDepartemenFormValues } from '../schemas/sub-departemen.schema';
 import { subDepartemenService } from '../services/sub-departemen.service';
 
 export const useSubDepartemen = () => {
-  const [data, setData] = useState<SubDepartemen[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [subDepartemens, setSubDepartemens] = useState<SubDepartemen[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchSubDepartemen = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await subDepartemenService.getAll();
-      setData(result);
-      setError(null);
-    } catch (err) {
-      setError('Gagal memuat data sub departemen');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  
+  // Di useSubDepartemen.ts
+const fetchSubDepartemens = useCallback(async () => {
+  setIsLoading(true);
+  try {
+    const response = await subDepartemenService.getAll();
+    // Karena service sudah mengembalikan response.data.data, response di sini langsung berupa array
+    const dataList = Array.isArray(response) ? response : [];
+    setSubDepartemens(dataList);
+  } catch (err: any) {
+    console.error('Gagal mengambil data Sub Departemen:', err);
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
 
   useEffect(() => {
-    fetchSubDepartemen();
-  }, [fetchSubDepartemen]);
+    fetchSubDepartemens();
+  }, [fetchSubDepartemens]);
 
-  const addSubDepartemen = async (newData: SubDepartemen) => {
-    await subDepartemenService.create(newData);
-    await fetchSubDepartemen();
+  const addSubDepartemen = async (values: SubDepartemenFormValues) => {
+    const newItem = await subDepartemenService.create(values);
+    setSubDepartemens((prev) => [newItem, ...prev]);
   };
 
-  const editSubDepartemen = async (id: string, updatedData: Partial<SubDepartemen>) => {
-    await subDepartemenService.update(id, updatedData);
-    await fetchSubDepartemen();
+  const editSubDepartemen = async (id: number, values: SubDepartemenFormValues) => {
+    const updatedItem = await subDepartemenService.update(id, values);
+    setSubDepartemens((prev) =>
+      prev.map((item) => (item.id === id ? updatedItem : item))
+    );
   };
 
   return {
-    data,
-    loading,
-    error,
+    subDepartemens,
+    isLoading,
     addSubDepartemen,
     editSubDepartemen,
-    refetch: fetchSubDepartemen,
+    refetch: fetchSubDepartemens,
   };
 };

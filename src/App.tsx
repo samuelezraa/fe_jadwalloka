@@ -18,18 +18,18 @@ import { DepartemenPage } from './features/master-data/departemen/pages/Departem
 import { SubDepartemenPage } from './features/master-data/sub-departemen/pages/SubDepartemenPage';
 import { PosPage } from './features/master-data/pos/pages/PosPage';
 import { GradePage } from './features/master-data/grade/pages/GradePage';
-import { SkemaHariKerjaPage } from './features/master-data/skema-hari-kerja/pages/SkemaHariKerjaPage';
-import { EventTahunanPage } from './features/master-data/event-tahunan/pages/EventTahunanPage';
-import { DataKaryawanPage } from './features/master-data/data-karyawan/pages/DataKaryawanPage';
-import { CustomJamKerjaPage } from './features/master-data/custom-jam-kerja/pages/CustomJamKerjaPage';
+import { ScheduleSchemePage } from './features/master-data/schedule-scheme/pages/ScheduleSchemePage';
+import { AnnualEventPage } from './features/master-data/annual-event/pages/AnnualEventPage';
+import { EmployeePage } from './features/master-data/employee/pages/EmployeePage';
+import { CustomWorkHourPage } from './features/master-data/custom-work-hours/pages/CustomWorkHourPage';
 
 // ==========================================
 // 4. JADWAL
 // ==========================================
-import { JamKerjaPage } from './features/jadwal/jam-kerja/pages/JamKerjaPage';
-import { InputJadwalPage } from './features/jadwal/input-jadwal/pages/InputJadwalPage';
-import { EditJadwalKaryawanPage } from './features/jadwal/input-jadwal/pages/EditJadwalKaryawanPage';
-import { JadwalkuPage } from './features/jadwal/jadwalku/pages/JadwalkuPage';
+import { FiveTwoWorkHourPage } from './features/schedule/five-two-work-hour/pages/FiveTwoWorkHourPage';
+import { InputSchedulePage } from './features/schedule/input-schedule/pages/InputSchedulePage';
+import { EditEmployeeSchedulePage } from './features/schedule/input-schedule/pages/EditEmployeeSchedulePage';
+import { JadwalkuPage } from './features/schedule/jadwalku/pages/JadwalkuPage';
 
 // ==========================================
 // 5. HR MANAGEMENT 🌟
@@ -70,16 +70,17 @@ export default function App() {
           <Route path="/master-data/sub-departemen" element={<SubDepartemenPage />} />
           <Route path="/master-data/pos" element={<PosPage />} />
           <Route path="/master-data/grade" element={<GradePage />} />
-          <Route path="/master-data/skema-hari-kerja" element={<SkemaHariKerjaPage />} />
-          <Route path="/master-data/event-tahunan" element={<EventTahunanPage />} />
-          <Route path="/master-data/data-karyawan" element={<DataKaryawanPage />} />
-          <Route path="/master-data/custom-jam-kerja" element={<CustomJamKerjaPage />} />
+          <Route path="/master-data/schedule-scheme" element={<ScheduleSchemePage />} />
+          <Route path="/master-data/annual-event" element={<AnnualEventPage />} />
+          <Route path="/master-data/employee" element={<EmployeePage />} />
+          <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
 
           {/* JADWAL */}
-          <Route path="/jadwal/jam-kerja" element={<JamKerjaPage />} />
-          <Route path="/jadwal/input-jadwal" element={<InputJadwalPage />} />
-          <Route path="/jadwal/input-jadwal/edit/:id" element={<EditJadwalKaryawanPage />} />
-          <Route path="/jadwal/jadwalku" element={<JadwalkuPage />} />
+          {/* SCHEDULE */}
+          <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
+          <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
+          <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
+          <Route path="/schedule/jadwalku" element={<JadwalkuPage />} />
 
           {/* HR MANAGEMENT 🌟 */}
           <Route path="/hr-management/periode" element={<PeriodeJadwalPage />} />

@@ -31,38 +31,42 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
   } = useForm<DepartemenFormValues>({
     resolver: zodResolver(departemenSchema),
     defaultValues: {
-      id: '',
-      departemen: '',
-      status: 'Aktif',
+      code: '',
+      name: '',
+      is_active: true,
     },
   });
 
   useEffect(() => {
     if (initialData) {
+      // Konversi nilai number (1 / 0) atau string/boolean dari API menjadi boolean murni
+      const rawActive = (initialData as any).is_active ?? (initialData as any).status;
+      const isActiveBoolean = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
+
       reset({
-        id: initialData.id,
-        departemen: initialData.departemen,
-        status: (initialData as any).status || 'Aktif',
+        code: initialData.code || (initialData as any).id || '',
+        name: initialData.name || (initialData as any).departemen || '',
+        is_active: isActiveBoolean, // 👈 Nilai dijamin boolean murni (true/false)
       });
     } else {
       reset({
-        id: '',
-        departemen: '',
-        status: 'Aktif',
+        code: '',
+        name: '',
+        is_active: true,
       });
     }
   }, [initialData, reset]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Field ID Departemen */}
+      {/* Field Kode / ID Departemen */}
       <div>
         <FormInput
           label="ID Departemen"
-          {...register('id')}
+          {...register('code')}
           disabled={isEditMode}
           placeholder="Contoh: DP001"
-          error={errors.id?.message}
+          error={errors.code?.message}
         />
         {isEditMode && (
           <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
@@ -74,27 +78,28 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
       {/* Field Nama Departemen */}
       <FormInput
         label="Nama Departemen"
-        {...register('departemen')}
+        {...register('name')}
         placeholder="Contoh: IT, HRD, Operasional"
-        error={errors.departemen?.message}
+        error={errors.name?.message}
       />
 
       {/* Field Status Departemen dalam Mode Edit */}
       {isEditMode && (
         <Controller
-          name="status"
+          name="is_active"
           control={control}
           render={({ field }) => (
             <FormSelectSearch
               label="Status Departemen"
-              value={field.value}
-              onChange={field.onChange}
+              value={field.value ? 'true' : 'false'}
+              onChange={(val) => field.onChange(val === 'true')}
               placeholder="Pilih Status"
+              showSearch={false} // Sembunyikan input pencarian khusus untuk pilihan status
               options={[
-                { id: 'Aktif', label: 'Aktif' },
-                { id: 'Non Aktif', label: 'Non Aktif' },
+                { id: 'true', label: 'Aktif' },
+                { id: 'false', label: 'Non Aktif' },
               ]}
-              error={errors.status?.message}
+              error={errors.is_active?.message}
             />
           )}
         />

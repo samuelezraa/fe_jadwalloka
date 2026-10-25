@@ -4,7 +4,6 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
-  flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Grade } from '../types/grade.type';
@@ -16,6 +15,8 @@ import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { Badge } from '../../../../components/ui/badge';
 
 interface GradeTableProps {
   data: Grade[];
@@ -24,12 +25,12 @@ interface GradeTableProps {
 }
 
 export const GradeTable: React.FC<GradeTableProps> = ({
-  data,
+  data = [],
   onEdit,
   onAdd,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>(''); // '' | 'true' | 'false'
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
@@ -37,7 +38,12 @@ export const GradeTable: React.FC<GradeTableProps> = ({
   const filteredData = useMemo(() => {
     let result = data;
     if (statusFilter) {
-      result = result.filter((item) => item.status === statusFilter);
+      const isFilterActive = statusFilter === 'true';
+      result = result.filter((item) => {
+        const rawActive = (item as any).is_active ?? (item as any).status;
+        const isActive = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
+        return isActive === isFilterActive;
+      });
     }
     return result;
   }, [data, statusFilter]);
@@ -56,38 +62,47 @@ export const GradeTable: React.FC<GradeTableProps> = ({
         ),
       },
       {
-        accessorKey: 'id',
+        accessorKey: 'code',
         header: 'ID Grade',
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue())}
-          </span>
-        ),
+        cell: (info) => {
+          const val = info.getValue() || (info.row.original as any).id || (info.row.original as any).kode_grade;
+          return (
+            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+              {String(val || '-')}
+            </span>
+          );
+        },
       },
       {
-        accessorKey: 'grade',
+        accessorKey: 'name',
         header: 'Nama Grade',
-        cell: (info) => (
-          <span className="font-semibold text-gray-800 dark:text-gray-100">{String(info.getValue())}</span>
-        ),
+        cell: (info) => {
+          const val = info.getValue() || (info.row.original as any).grade || (info.row.original as any).nama_grade;
+          return (
+            <span className="font-semibold text-gray-800 dark:text-gray-100">
+              {String(val || '-')}
+            </span>
+          );
+        },
       },
       {
-        accessorKey: 'status',
+        accessorKey: 'is_active',
         header: 'Status',
         cell: (info) => {
-          const val = String(info.getValue());
-          const isAktif = val === 'Aktif';
+          const rawActive = (info.row.original as any).is_active ?? (info.row.original as any).status;
+          const isAktif = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
           return (
             <div className="flex justify-center">
-              <span
-                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                  isAktif
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                }`}
+              <Badge 
+                variant="outline"
+                className={
+                  isAktif 
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                    : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3'
+                }
               >
-                {val}
-              </span>
+                {isAktif ? 'Aktif' : 'Non Aktif'}
+              </Badge>
             </div>
           );
         },
@@ -123,9 +138,9 @@ export const GradeTable: React.FC<GradeTableProps> = ({
 
   return (
     <div className="relative">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl  shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* 1. Header Toolbar Reusable dengan TableFilterPopover */}
+        {/* Header Toolbar */}
         <TableToolbar
           title="Master Grade"
           subtitle="Daftar kelola level jabatan LokaHR"
@@ -145,52 +160,61 @@ export const GradeTable: React.FC<GradeTableProps> = ({
                 {
                   key: 'status',
                   label: 'Status',
-                  value: statusFilter,
-                  onChange: setStatusFilter,
-                  options: [
-                    { value: '', label: 'Semua Status' },
-                    { value: 'Aktif', label: 'Aktif' },
-                    { value: 'Nonaktif', label: 'Non Aktif' },
-                  ],
+                  render: () => (
+                    <FormSelectSearch
+                      value={statusFilter}
+                      onChange={(val) => setStatusFilter(val)}
+                      placeholder="Semua Status"
+                      showSearch={false}
+                      options={[
+                        { id: '', label: 'Semua Status' },
+                        { id: 'true', label: 'Aktif' },
+                        { id: 'false', label: 'Non Aktif' },
+                      ]}
+                    />
+                  ),
                 },
               ]}
             />
           }
-          actionButtons={
-            <AddButton onClick={onAdd} />
-          }
+          actionButtons={<AddButton onClick={onAdd} />}
         />
 
-        {/* 2. Pagination */}
+        {/* Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
           <DataPagination table={table} />
         </div>
 
-        {/* 3. TAMPILAN MOBILE: Card */}
+        {/* Mobile View */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
-              const isAktif = item.status === 'Aktif';
+              const rawActive = (item as any).is_active ?? (item as any).status;
+              const isAktif = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
+              const codeVal = item.code || (item as any).id || (item as any).kode_grade;
+              const nameVal = item.name || (item as any).grade || (item as any).nama_grade;
+
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      {item.id}
+                      {codeVal}
                     </span>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                        isAktif
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                          : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                      }`}
+                    <Badge 
+                      variant="outline"
+                      className={
+                        isAktif 
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
+                          : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3 py-0.5'
+                      }
                     >
-                      {item.status}
-                    </span>
+                      {isAktif ? 'Aktif' : 'Non Aktif'}
+                    </Badge>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Nama Grade</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.grade}</p>
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{nameVal}</p>
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />
@@ -205,12 +229,11 @@ export const GradeTable: React.FC<GradeTableProps> = ({
           )}
         </div>
 
-        {/* 4. TAMPILAN DESKTOP: Menggunakan Reusable DataTable */}
+        {/* Desktop View */}
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data grade ditemukan." />
 
       </div>
 
-      {/* 5. FLOATING ACTION BUTTON (FAB) Mobile */}
       <MobileAddFab onClick={onAdd} title="Tambah Grade" />
     </div>
   );

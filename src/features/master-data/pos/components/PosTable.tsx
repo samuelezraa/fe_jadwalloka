@@ -4,7 +4,6 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
-  flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Pos } from '../types/pos.type';
@@ -29,7 +28,7 @@ interface PosTableProps {
 }
 
 export const PosTable: React.FC<PosTableProps> = ({
-  data,
+  data = [],
   departemenList = [],
   subDepartemenList = [],
   onEdit,
@@ -37,7 +36,7 @@ export const PosTable: React.FC<PosTableProps> = ({
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
   
-  // State Filter Ganda
+  // State Filter
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('');
   const [selectedSubDeptFilter, setSelectedSubDeptFilter] = useState<string>('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('');
@@ -45,18 +44,72 @@ export const PosTable: React.FC<PosTableProps> = ({
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
-  // Filter Data
+  // Helper untuk mendapatkan nama Departemen
+const getDepartmentName = (param?: Pos | string | null) => {
+  if (!param) return '-';
+  const deptCode = typeof param === 'string' 
+    ? param 
+    : param.department_code || (param as any).departemen_id || (param as any).department_id;
+  
+  if (deptCode && departemenList.length > 0) {
+    const dept = departemenList.find(
+      (d) => String(d.code || d.id).toLowerCase() === String(deptCode).toLowerCase()
+    );
+    if (dept) {
+      return (dept as any).departemen || dept.name || (dept as any).department_name || deptCode;
+    }
+  }
+  return typeof param === 'object' 
+    ? ((param as any).departemen_nama || (param as any).departemen || (param as any).department_name || '-') 
+    : (deptCode || '-');
+};
+
+// Helper untuk mendapatkan nama Sub Departemen
+const getSubDepartmentName = (param?: Pos | string | null) => {
+  if (!param) return '-';
+  const subDeptCode = typeof param === 'string' 
+    ? param 
+    : param.sub_department_code || (param as any).sub_departemen_id || (param as any).sub_department_id;
+  
+  if (subDeptCode && subDepartemenList.length > 0) {
+    const sub = subDepartemenList.find(
+      (s) => String(s.code || s.id).toLowerCase() === String(subDeptCode).toLowerCase()
+    );
+    if (sub) {
+      // Cek atribut nama sub departemen yang tersedia
+      return (sub as any).sub_departemen || sub.name || (sub as any).sub_department_name || subDeptCode;
+    }
+  }
+  return typeof param === 'object' 
+    ? ((param as any).sub_departemen_nama || (param as any).sub_departemen || (param as any).sub_department_name || '-') 
+    : (subDeptCode || '-');
+};
+
+  // Filter Data Multi-Kriteria
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      const matchDept = selectedDeptFilter ? item.departemen_id === selectedDeptFilter : true;
-      const matchSubDept = selectedSubDeptFilter ? item.sub_departemen_id === selectedSubDeptFilter : true;
-      const matchStatus = selectedStatusFilter ? item.status === selectedStatusFilter : true;
+      const deptCode = item.department_code || (item as any).departemen_id || (item as any).department_id;
+      const subDeptCode = item.sub_department_code || (item as any).sub_departemen_id || (item as any).sub_department_id;
+
+      const matchDept = selectedDeptFilter ? String(deptCode) === String(selectedDeptFilter) : true;
+      const matchSubDept = selectedSubDeptFilter ? String(subDeptCode) === String(selectedSubDeptFilter) : true;
+
+      const rawActive = (item as any).is_active ?? (item as any).status;
+      const isActive = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
+      const matchStatus =
+        selectedStatusFilter === ''
+          ? true
+          : selectedStatusFilter === 'true'
+          ? isActive
+          : !isActive;
+
       return matchDept && matchSubDept && matchStatus;
     });
   }, [data, selectedDeptFilter, selectedSubDeptFilter, selectedStatusFilter]);
 
   const isFiltered = Boolean(selectedDeptFilter || selectedSubDeptFilter || selectedStatusFilter);
 
+  // Kolom Tabel Sesuai Spesifikasi Dokumen
   const columns = useMemo<ColumnDef<Pos>[]>(
     () => [
       {
@@ -69,41 +122,53 @@ export const PosTable: React.FC<PosTableProps> = ({
         ),
       },
       {
-        accessorKey: 'id',
+        accessorKey: 'code',
         header: 'ID POS',
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue())}
+        cell: (info) => {
+          const codeVal = info.getValue() || (info.row.original as any).id;
+          return (
+            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+              {String(codeVal || '-')}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'department_code',
+        header: 'Departemen',
+        cell: ({ row }) => (
+          <span className="font-semibold text-gray-800 dark:text-gray-100">
+            {getDepartmentName(row.original)}
           </span>
         ),
       },
       {
-        accessorKey: 'departemen_nama',
-        header: 'Departemen',
-        cell: (info) => (
-          <span className="font-semibold text-gray-800 dark:text-gray-100">{String(info.getValue())}</span>
-        ),
-      },
-      {
-        accessorKey: 'sub_departemen_nama',
+        accessorKey: 'sub_department_code',
         header: 'Sub Departemen',
-        cell: (info) => (
-          <span className="text-gray-700 dark:text-gray-300 font-medium">{String(info.getValue())}</span>
+        cell: ({ row }) => (
+          <span className="text-gray-700 dark:text-gray-300 font-medium">
+            {getSubDepartmentName(row.original)}
+          </span>
         ),
       },
       {
-        accessorKey: 'pos',
-        header: 'POS',
-        cell: (info) => (
-          <span className="text-gray-700 dark:text-gray-300 font-medium">{String(info.getValue())}</span>
-        ),
+        accessorKey: 'title',
+        header: 'Pos',
+        cell: (info) => {
+          const titleVal = info.getValue() || (info.row.original as any).pos;
+          return (
+            <span className="text-gray-800 dark:text-gray-100 font-semibold">
+              {String(titleVal || '-')}
+            </span>
+          );
+        },
       },
       {
-        accessorKey: 'status',
+        accessorKey: 'is_active',
         header: 'Status',
         cell: (info) => {
-          const val = String(info.getValue());
-          const isAktif = val === 'Aktif';
+          const rawActive = (info.row.original as any).is_active ?? (info.row.original as any).status;
+          const isAktif = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
           return (
             <div className="flex justify-center">
               <span
@@ -113,7 +178,7 @@ export const PosTable: React.FC<PosTableProps> = ({
                     : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
                 }`}
               >
-                {val}
+                {isAktif ? 'Aktif' : 'Nonaktif'}
               </span>
             </div>
           );
@@ -129,7 +194,7 @@ export const PosTable: React.FC<PosTableProps> = ({
         ),
       },
     ],
-    [onEdit]
+    [onEdit, departemenList, subDepartemenList]
   );
 
   const table = useReactTable({
@@ -150,10 +215,7 @@ export const PosTable: React.FC<PosTableProps> = ({
 
   return (
     <div className="relative">
-      {/* Kontainer utama menggunakan overflow-visible agar popover filter tidak terpotong */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
-        
-        {/* Header Toolbar dengan Reusable TableFilterPopover */}
         <TableToolbar
           title="POS"
           subtitle="Daftar kelola posisi jabatan (POS) LokaHR"
@@ -163,7 +225,6 @@ export const PosTable: React.FC<PosTableProps> = ({
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
-
           filterDropdownContent={
             <TableFilterPopover
               isOpen={showFilterDropdown}
@@ -183,12 +244,15 @@ export const PosTable: React.FC<PosTableProps> = ({
                       value={selectedDeptFilter}
                       onChange={(val) => {
                         setSelectedDeptFilter(val);
-                        setSelectedSubDeptFilter(''); // Reset sub departemen jika departemen berubah
+                        setSelectedSubDeptFilter('');
                       }}
                       placeholder="Pilih Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList.map((d) => ({ id: d.id, label: d.departemen })),
+                        ...departemenList.map((d) => ({
+                          id: String(d.code || d.id),
+                          label: d.name || (d as any).departemen || String(d.code || d.id),
+                        })),
                       ]}
                     />
                   ),
@@ -204,8 +268,15 @@ export const PosTable: React.FC<PosTableProps> = ({
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
                         ...subDepartemenList
-                          .filter((sub) => !selectedDeptFilter || sub.departemen_id === selectedDeptFilter)
-                          .map((sub) => ({ id: sub.id, label: sub.sub_departemen })),
+                          .filter((sub) => {
+                            if (!selectedDeptFilter) return true;
+                            const parentCode = sub.department_code || (sub as any).departemen_id;
+                            return String(parentCode) === String(selectedDeptFilter);
+                          })
+                          .map((sub) => ({
+                            id: String(sub.code || sub.id),
+                            label: sub.name || (sub as any).sub_departemen || String(sub.code || sub.id),
+                          })),
                       ]}
                     />
                   ),
@@ -218,10 +289,11 @@ export const PosTable: React.FC<PosTableProps> = ({
                       value={selectedStatusFilter}
                       onChange={(val) => setSelectedStatusFilter(val)}
                       placeholder="Pilih Status"
+                      showSearch={false}
                       options={[
                         { id: '', label: 'Semua Status' },
-                        { id: 'Aktif', label: 'Aktif' },
-                        { id: 'Nonaktif', label: 'Nonaktif' },
+                        { id: 'true', label: 'Aktif' },
+                        { id: 'false', label: 'Nonaktif' },
                       ]}
                     />
                   ),
@@ -229,28 +301,28 @@ export const PosTable: React.FC<PosTableProps> = ({
               ]}
             />
           }
-
-          actionButtons={
-            <AddButton onClick={onAdd} />
-          }
+          actionButtons={<AddButton onClick={onAdd} />}
         />
 
-        {/* Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800">
           <DataPagination table={table} />
         </div>
 
-        {/* Tampilan Mobile Card */}
+        {/* Mobile View */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
-              const isAktif = item.status === 'Aktif';
+              const rawActive = (item as any).is_active ?? (item as any).status;
+              const isAktif = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
+              const codeVal = item.code || (item as any).id;
+              const titleVal = item.title || (item as any).pos;
+
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      {item.id}
+                      {codeVal}
                     </span>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -259,12 +331,22 @@ export const PosTable: React.FC<PosTableProps> = ({
                           : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
                       }`}
                     >
-                      {item.status}
+                      {isAktif ? 'Aktif' : 'Nonaktif'}
                     </span>
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Departemen</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{getDepartmentName(item)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Sub Departemen</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{getSubDepartmentName(item)}</p>
+                    </div>
+                  </div>
                   <div>
-                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">POS</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.pos}</p>
+                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Pos</p>
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{titleVal}</p>
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />
@@ -279,12 +361,9 @@ export const PosTable: React.FC<PosTableProps> = ({
           )}
         </div>
 
-        {/* Tampilan Desktop */}
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data POS ditemukan." />
-
       </div>
 
-      {/* Floating Action Button Mobile (Memanggil MobileAddFab di atas tombol hamburger menu) */}
       <MobileAddFab onClick={onAdd} title="Tambah Pos" />
     </div>
   );

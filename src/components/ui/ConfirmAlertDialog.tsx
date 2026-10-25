@@ -1,7 +1,8 @@
-import React from 'react';
-import { createPortal } from 'react-dom';
-import { AlertTriangle, Power, KeyRound, X } from 'lucide-react';
-import { PrimaryButton, CancelButton } from './ActionButtons';
+import React, { useEffect } from 'react';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 interface ConfirmAlertDialogProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface ConfirmAlertDialogProps {
   description?: string;
   showIcon?: boolean;
   confirmText?: string;
+  cancelText?: string;
+  showCancelButton?: boolean;
   variant?: 'danger' | 'warning' | 'primary';
   isLoading?: boolean;
 }
@@ -21,92 +24,67 @@ export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
   onConfirm,
   title,
   description,
-  showIcon = true,
-  confirmText = 'Ya',
+  confirmText = 'Simpan',
+  cancelText = 'Batal',
+  showCancelButton = true,
   variant = 'warning',
-  isLoading = false,
 }) => {
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const getIcon = () => {
-    switch (variant) {
-      case 'danger':
-        return <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />;
-      case 'primary':
-        return <KeyRound className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />;
-      default:
-        return <Power className="w-5 h-5 text-amber-600 dark:text-amber-400" />;
-    }
-  };
+    // Pemetaan warna tombol konfirmasi berdasarkan variant
+    const confirmButtonBgClass =
+      variant === 'danger'
+        ? 'bg-red-600 hover:bg-red-700'
+        : variant === 'warning'
+        ? 'bg-[#d97706] hover:bg-[#b45309]'
+        : 'bg-[#059669] hover:bg-[#047857]';
 
-  const getBgColor = () => {
-    switch (variant) {
-      case 'danger':
-        return 'bg-red-50 dark:bg-red-950/50';
-      case 'primary':
-        return 'bg-emerald-50 dark:bg-emerald-950/50';
-      default:
-        return 'bg-amber-50 dark:bg-amber-950/50';
-    }
-  };
+    const iconType =
+      variant === 'danger'
+        ? 'error'
+        : variant === 'warning'
+        ? 'question'
+        : 'success';
 
-  return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-      <div 
-        className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-800 space-y-5 relative z-[100000]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+    const iconColor =
+      variant === 'danger'
+        ? '#dc2626'
+        : variant === 'warning'
+        ? '#d97706'
+        : '#059669';
 
-        <div className="flex flex-col items-center text-center space-y-2 pt-1">
-          {showIcon && (
-            <div className={`p-2.5 rounded-2xl ${getBgColor()}`}>
-              {getIcon()}
-            </div>
-          )}
-          
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-              {title}
-            </h3>
-            
-            {description && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                {description}
-              </p>
-            )}
-          </div>
-        </div>
+    MySwal.fire({
+      title: `<span style="font-size: 18px; font-weight: 700; color: #1f2937;">${title}</span>`,
+      html: description
+        ? `<span style="font-size: 13px; color: #6b7280; line-height: 1.5;">${description}</span>`
+        : '',
+      icon: iconType,
+      iconColor: iconColor,
+      width: '420px',
+      showCancelButton: showCancelButton && cancelText !== '',
+      confirmButtonText: confirmText,
+      cancelButtonText: cancelText,
+      reverseButtons: true, // Tombol Batal di kiri, Simpan/OK di kanan
+      buttonsStyling: false,
+      allowOutsideClick: false,
+      customClass: {
+        container: 'z-[999999]',
+        popup: 'rounded-2xl px-6 py-5 shadow-2xl border border-gray-100 dark:bg-gray-900',
+        icon: 'my-2 scale-90', // Skala aman tanpa merusak SVG centang/tanda tanya
+        confirmButton: `px-5 py-2 ${confirmButtonBgClass} text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]`,
+        cancelButton:
+          'px-5 py-2 bg-[#6c757d] hover:bg-[#5a6268] text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]',
+        actions: 'flex items-center justify-center gap-3 pt-3',
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        onConfirm();
+      } else if (result.isDismissed) {
+        onClose();
+      }
+    });
+  }, [isOpen, title, description, confirmText, cancelText, showCancelButton, variant]);
 
-        {/* 🌟 Menggunakan w-24 justify-center agar ukuran horizontal kedua tombol sama persis */}
-        <div className="flex items-center justify-center gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-          <CancelButton onClick={onClose} className="w-24 justify-center" />
-          
-          <PrimaryButton
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            disabled={isLoading}
-            className={`w-24 justify-center ${
-              variant === 'danger'
-                ? 'bg-red-600 hover:bg-red-700'
-                : variant === 'warning'
-                ? 'bg-amber-600 hover:bg-amber-700'
-                : 'bg-emerald-600 hover:bg-emerald-700'
-            }`}
-          >
-            {isLoading ? '...' : confirmText}
-          </PrimaryButton>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
+  return null;
 };

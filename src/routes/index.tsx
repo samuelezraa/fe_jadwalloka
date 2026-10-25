@@ -11,11 +11,11 @@ import { SubDepartemenPage } from '@/features/master-data/sub-departemen/pages/S
 import { PosPage } from '@/features/master-data/pos/pages/PosPage'; 
 import { GradePage } from '@/features/master-data/grade/pages/GradePage';
 import { SkemaHariKerjaPage } from '@/features/master-data/skema-hari-kerja/pages/SkemaHariKerjaPage';
-import { EventTahunanPage } from '@/features/master-data/event-tahunan/pages/EventTahunanPage';
-import { DataKaryawanPage } from '@/features/master-data/data-karyawan/pages/DataKaryawanPage';
+import { EventTahunanPage } from '@/features/master-data/event-tahunan/pages/AnnualEventPage';
+import { DataKaryawanPage } from '@/features/master-data/data-karyawan/pages/EmployeePage';
 
 // Import Jadwal Pages
-import { JamKerjaPage } from '@/features/jadwal/jam-kerja/pages/JamKerjaPage';
+import { JamKerjaPage } from '@/features/jadwal/jam-kerja/pages/FiveTwoWorkHourPage';
 import { InputJadwalPage } from '@/features/jadwal/input-jadwal/pages/InputJadwalPage';
 import { JadwalkuPage } from '@/features/jadwal/jadwalku/pages/JadwalkuPage';
 import { PeriodeJadwalPage } from '@/features/jadwal/periode-jadwal/pages/PeriodeJadwalPage';

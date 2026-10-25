@@ -27,14 +27,14 @@ interface SubDepartemenTableProps {
 }
 
 export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
-  data,
+  data = [],
   departemenList = [],
   onEdit,
   onAdd,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>(''); // '' | 'true' | 'false'
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
@@ -43,9 +43,18 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
   // Auto-close filter popover saat mengklik di luar area filter
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      const isPopoverContent = Boolean(
+        target.closest('[data-radix-popper-content-wrapper]') ||
+        target.closest('[role="dialog"]')
+      );
+
       if (
         filterWrapperRef.current &&
-        !filterWrapperRef.current.contains(event.target as Node)
+        !filterWrapperRef.current.contains(target) &&
+        !isPopoverContent
       ) {
         setShowFilterDropdown(false);
       }
@@ -62,14 +71,42 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // Filter Data berdasarkan Departemen & Status
+  // Helper untuk mendapatkan Nama Departemen secara presisi
+  const getDepartmentName = (item: SubDepartemen) => {
+    // 1. Jika backend mengirimkan objek relasi nested (misal item.department.name)
+    if ((item as any).department?.name) {
+      return (item as any).department.name;
+    }
+
+    // 2. Jika ada properti langsung department_name atau departemen_nama
+    if (item.department_name) return item.department_name;
+    if ((item as any).departemen_nama) return (item as any).departemen_nama;
+
+    // 3. Pencarian fallback berdasarkan department_code / departemen_id di departemenList
+    const targetCode = item.department_code || (item as any).departemen_id;
+    if (targetCode && Array.isArray(departemenList) && departemenList.length > 0) {
+      const foundDept = departemenList.find(
+        (d) => String(d.code || d.id) === String(targetCode)
+      );
+      if (foundDept) {
+        return foundDept.name || (foundDept as any).departemen || targetCode;
+      }
+    }
+
+    return '-';
+  };
+
+  // Filter Data berdasarkan Departemen Code & Status Boolean
   const filteredData = useMemo(() => {
     let result = data;
     if (selectedDeptFilter) {
-      result = result.filter((item) => item.departemen_id === selectedDeptFilter);
+      result = result.filter(
+        (item) => (item.department_code || (item as any).departemen_id) === selectedDeptFilter
+      );
     }
     if (statusFilter) {
-      result = result.filter((item: any) => (item.status || 'Aktif') === statusFilter);
+      const isFilterActive = statusFilter === 'true';
+      result = result.filter((item) => item.is_active === isFilterActive);
     }
     return result;
   }, [data, selectedDeptFilter, statusFilter]);
@@ -88,45 +125,48 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         ),
       },
       {
-        accessorKey: 'departemen_nama',
+        id: 'department_name',
         header: 'Departemen',
-        cell: (info) => (
-          <span className="font-semibold text-gray-800 dark:text-gray-100">{String(info.getValue())}</span>
-        ),
-      },
-      {
-        accessorKey: 'id',
-        header: 'ID Sub Departemen',
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue())}
+        cell: ({ row }) => (
+          <span className="font-semibold text-gray-800 dark:text-gray-100">
+            {getDepartmentName(row.original)}
           </span>
         ),
       },
       {
-        accessorKey: 'sub_departemen',
-        header: 'Sub Departemen',
+        accessorKey: 'code',
+        header: 'ID Sub Departemen',
         cell: (info) => (
-          <span className="text-gray-700 dark:text-gray-300 font-medium">{String(info.getValue())}</span>
+          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+            {String(info.getValue() || (info.row.original as any).id || '')}
+          </span>
         ),
       },
       {
-        accessorKey: 'status',
+        accessorKey: 'name',
+        header: 'Sub Departemen',
+        cell: (info) => (
+          <span className="text-gray-700 dark:text-gray-300 font-medium">
+            {String(info.getValue() || (info.row.original as any).sub_departemen || '')}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'is_active',
         header: 'Status',
         cell: (info) => {
-          const val = String(info.getValue() || 'Aktif');
-          const isAktif = val === 'Aktif';
+          const isAktif = Boolean(info.getValue());
           return (
             <div className="flex justify-center">
               <Badge 
-                variant={isAktif ? 'outline' : 'destructive'} 
+                variant="outline"
                 className={
                   isAktif 
                     ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
-                    : 'rounded-full px-3'
+                    : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3'
                 }
               >
-                {val}
+                {isAktif ? 'Aktif' : 'Non Aktif'}
               </Badge>
             </div>
           );
@@ -142,7 +182,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         ),
       },
     ],
-    [onEdit]
+    [onEdit, departemenList]
   );
 
   const table = useReactTable({
@@ -196,7 +236,10 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
                       placeholder="Semua Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList.map((d) => ({ id: d.id, label: d.departemen })),
+                        ...departemenList.map((d) => ({ 
+                          id: d.code || (d as any).id, 
+                          label: d.name || (d as any).departemen 
+                        })),
                       ]}
                     />
                   ),
@@ -209,10 +252,11 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
                       value={statusFilter}
                       onChange={(val) => setStatusFilter(val)}
                       placeholder="Semua Status"
+                      showSearch={false}
                       options={[
                         { id: '', label: 'Semua Status' },
-                        { id: 'Aktif', label: 'Aktif' },
-                        { id: 'Non Aktif', label: 'Non Aktif' },
+                        { id: 'true', label: 'Aktif' },
+                        { id: 'false', label: 'Non Aktif' },
                       ]}
                     />
                   ),
@@ -236,32 +280,35 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
-              const statusVal = (item as any).status || 'Aktif';
-              const isAktif = statusVal === 'Aktif';
+              const isAktif = item.is_active;
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      {item.id}
+                      {item.code || (item as any).id}
                     </span>
                     <Badge 
-                      variant={isAktif ? 'outline' : 'destructive'} 
+                      variant="outline"
                       className={
                         isAktif 
                           ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
-                          : 'rounded-full px-3 py-0.5'
+                          : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3 py-0.5'
                       }
                     >
-                      {statusVal}
+                      {isAktif ? 'Aktif' : 'Non Aktif'}
                     </Badge>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Departemen</p>
-                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{item.departemen_nama}</p>
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-0.5">
+                      {getDepartmentName(item)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Sub Departemen</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.sub_departemen}</p>
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">
+                      {item.name || (item as any).sub_departemen}
+                    </p>
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />

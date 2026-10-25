@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { subDepartemenSchema, type SubDepartemenFormValues } from '../schemas/sub-departemen.schema';
@@ -12,14 +12,14 @@ import { SaveButton, CancelButton } from '../../../../components/ui/ActionButton
 
 interface SubDepartemenFormProps {
   initialData?: SubDepartemen | null;
-  departemenList: Departemen[];
-  onSubmit: (data: SubDepartemenFormValues & { departemen_nama: string }) => void;
+  departemenList?: Departemen[];
+  onSubmit: (data: SubDepartemenFormValues & { department_name?: string; departemen_nama?: string }) => void;
   onCancel: () => void;
 }
 
 export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
   initialData,
-  departemenList,
+  departemenList = [],
   onSubmit,
   onCancel,
 }) => {
@@ -34,101 +34,127 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
   } = useForm<SubDepartemenFormValues>({
     resolver: zodResolver(subDepartemenSchema),
     defaultValues: {
-      departemen_id: '',
-      id: '',
-      sub_departemen: '',
-      status: 'Aktif',
+      department_code: '',
+      code: '',
+      name: '',
+      is_active: true,
     },
   });
 
   useEffect(() => {
-    if (initialData) {
-      reset({
-        departemen_id: initialData.departemen_id,
-        id: initialData.id,
-        sub_departemen: initialData.sub_departemen,
-        status: (initialData as any).status || 'Aktif',
-      });
-    } else {
-      reset({
-        departemen_id: '',
-        id: '',
-        sub_departemen: '',
-        status: 'Aktif',
-      });
-    }
-  }, [initialData, reset]);
+  if (initialData) {
+    // Konversi nilai number (1 / 0) atau string/boolean menjadi boolean murni
+    const rawActive = (initialData as any).is_active ?? (initialData as any).status;
+    const isActiveBoolean = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
 
-  const handleFormSubmit = (values: SubDepartemenFormValues) => {
-    const selectedDept = departemenList.find((d) => d.id === values.departemen_id);
-    onSubmit({
-      ...values,
-      departemen_nama: selectedDept ? selectedDept.departemen : '',
+    reset({
+      department_code: initialData.department_code || (initialData as any).departemen_id || '',
+      code: initialData.code || (initialData as any).id || '',
+      name: initialData.name || (initialData as any).sub_departemen || '',
+      is_active: isActiveBoolean, // 👈 Nilai dijamin boolean (true/false)
     });
-  };
+  } else {
+    reset({
+      department_code: '',
+      code: '',
+      name: '',
+      is_active: true,
+    });
+  }
+}, [initialData, reset]);
 
-  // 🌟 Penulisan diubah menjadi: ID (Nama Departemen) -> contoh: DP001 (IT)
-  const departemenOptions = departemenList.map((d) => ({
-    id: d.id,
-    label: `${d.id} (${d.departemen})`,
-  }));
+  // Pemetaan opsi aman dengan fallback nilai code & name
+const departemenOptions = useMemo(() => {
+  if (!Array.isArray(departemenList)) return [];
+
+  return departemenList
+    .map((d) => {
+      const codeVal = d.code || (d as any).id || '';
+      const nameVal = d.name || (d as any).departemen || '';
+      return {
+        id: codeVal,
+        label: codeVal && nameVal ? `${codeVal}(${nameVal})` : nameVal || codeVal,
+      };
+    })
+    .filter((opt) => opt.id !== '');
+}, [departemenList]);
+
+const handleFormSubmit = (values: SubDepartemenFormValues) => {
+  const selectedDept = (departemenList || []).find(
+    (d) => (d.code || String(d.id)) === values.department_code
+  );
+  
+  const deptName = selectedDept ? (selectedDept.name || (selectedDept as any).departemen) : '';
+  const deptCode = selectedDept ? (selectedDept.code || values.department_code) : values.department_code;
+
+  onSubmit({
+    ...values,
+    department_code: deptCode, // 👈 Dipastikan selalu terisi kode departemen
+    department_name: deptName,
+    departemen_nama: deptName,
+  } as any);
+};
+
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-      {/* Departemen */}
+      {/* Selection Departemen Induk */}
       <Controller
-        name="departemen_id"
+        name="department_code"
         control={control}
         render={({ field }) => (
           <FormSelectSearch
-            label="Departemen"
+            label="Departemen Induk"
             options={departemenOptions}
             value={field.value}
             onChange={field.onChange}
             placeholder="-- Pilih Departemen --"
-            error={errors.departemen_id?.message}
+            error={errors.department_code?.message}
           />
         )}
       />
 
-      {/* ID Sub Departemen */}
+      {/* Field Kode / ID Sub Departemen */}
       <div>
         <FormInput
           label="ID Sub Departemen"
-          {...register('id')}
+          {...register('code')}
           disabled={isEditMode}
           placeholder="Contoh: DS072"
-          error={errors.id?.message}
+          error={errors.code?.message}
         />
         {isEditMode && (
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">ID Sub Departemen tidak dapat diubah.</p>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+            ID Sub Departemen tidak dapat diubah.
+          </p>
         )}
       </div>
 
-      {/* Nama Sub Departemen */}
+      {/* Field Nama Sub Departemen */}
       <FormInput
         label="Sub Departemen"
-        {...register('sub_departemen')}
+        {...register('name')}
         placeholder="Contoh: Aplikasi & System"
-        error={errors.sub_departemen?.message}
+        error={errors.name?.message}
       />
 
-      {/* Status dalam Mode Edit */}
+      {/* Field Status dalam Mode Edit */}
       {isEditMode && (
         <Controller
-          name="status"
+          name="is_active"
           control={control}
           render={({ field }) => (
             <FormSelectSearch
               label="Status Sub Departemen"
-              value={field.value}
-              onChange={field.onChange}
+              value={field.value ? 'true' : 'false'}
+              onChange={(val) => field.onChange(val === 'true')}
               placeholder="Pilih Status"
+              showSearch={false}
               options={[
-                { id: 'Aktif', label: 'Aktif' },
-                { id: 'Non Aktif', label: 'Non Aktif' },
+                { id: 'true', label: 'Aktif' },
+                { id: 'false', label: 'Non Aktif' },
               ]}
-              error={(errors as any).status?.message}
+              error={errors.is_active?.message}
             />
           )}
         />

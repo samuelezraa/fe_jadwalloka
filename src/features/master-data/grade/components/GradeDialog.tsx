@@ -2,12 +2,13 @@ import React from 'react';
 import { GradeForm } from './GradeForm';
 import { AppDialog } from '../../../../components/ui/AppDialog';
 import type { Grade } from '../types/grade.type';
+import type { GradeFormValues } from '../schemas/grade.schema';
 
 interface GradeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: Grade | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: GradeFormValues) => void;
 }
 
 export const GradeDialog: React.FC<GradeDialogProps> = ({
