@@ -1,10 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { inputScheduleService } from '../services/input-schedule.service';
 import type { InputSchedulePeriodItem, SchedulePeriodSummary } from '../types/input-schedule.type';
 import toast from 'react-hot-toast';
 
 export const useInputSchedule = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedPeriod = searchParams.get('period') || '';
+
+  const setSelectedPeriod = (period: string) => {
+    if (period) {
+      setSearchParams({ period }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  };
+
   const [data, setData] = useState<InputSchedulePeriodItem[]>([]);
   const [summary, setSummary] = useState<SchedulePeriodSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);

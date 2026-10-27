@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '../hooks/useDashboard';
 import { 
   UserCheck, 
@@ -14,10 +15,14 @@ import { DateRangePicker } from '../../../components/ui/DateRangePicker';
 import { PieChartCard, type PieChartDataItem } from '../../../components/ui/PieChartCard';
 
 export const DashboardPage: React.FC = () => {
-  const { stats, loading } = useDashboard();
-  
+  const navigate = useNavigate();
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+
+  const { stats, loading } = useDashboard({
+    start_date: startDate,
+    end_date: endDate,
+  });
 
   if (loading) {
     return (
@@ -29,23 +34,20 @@ export const DashboardPage: React.FC = () => {
     );
   }
 
-  // Data Pie Chart 1: Status Kehadiran
   const attendancePieData: PieChartDataItem[] = [
-    { name: 'Masuk', value: stats?.masuk ?? 0, color: '#10b981' },
-    { name: 'Terlambat', value: stats?.terlambat ?? 0, color: '#f59e0b' },
-    { name: 'Sakit', value: stats?.sakit ?? 0, color: '#3b82f6' },
-    { name: 'Alfa', value: stats?.alfa ?? 0, color: '#ef4444' },
+    { name: 'Masuk', value: stats?.present ?? 0, color: '#10b981' },
+    { name: 'Terlambat', value: stats?.late ?? 0, color: '#f59e0b' },
+    { name: 'Sakit', value: stats?.sick ?? 0, color: '#3b82f6' },
+    { name: 'Alfa', value: stats?.alpha ?? 0, color: '#ef4444' },
   ];
 
-  // Data Pie Chart 2: Status Karyawan
   const employeeStatusPieData: PieChartDataItem[] = [
-    { name: 'Karyawan Aktif', value: (stats as any)?.karyawanAktif ?? 120, color: '#10b981' },
-    { name: 'Karyawan Tidak Aktif', value: (stats as any)?.karyawanNonAktif ?? 15, color: '#6b7280' },
+    { name: 'Karyawan Aktif', value: stats?.active_employees ?? 0, color: '#10b981' },
+    { name: 'Karyawan Tidak Aktif', value: stats?.inactive_employees ?? 0, color: '#6b7280' },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header Judul Halaman & Filter DateRangePicker */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 text-amber-500 dark:text-amber-400 rounded-xl">
@@ -61,7 +63,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter DateRangePicker */}
         <div className="w-full sm:w-64">
           <DateRangePicker
             startDate={startDate}
@@ -75,64 +76,92 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid StatCard Simpel (6 Kartu Status Kehadiran & Karyawan) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* 1. Karyawan Aktif */}
-        <StatCard
-          title="Karyawan Aktif"
-          value={(stats as any)?.karyawanAktif ?? 120}
-          icon={Users}
-          iconBgColor="bg-emerald-50 dark:bg-emerald-950/50"
-          iconColor="text-emerald-600 dark:text-emerald-400"
-        />
+        {/* KARYAWAN AKTIF -> Ke Master Data Employee */}
+        <div 
+          onClick={() => navigate('/master-data/employee')} 
+          className="cursor-pointer transition-all hover:scale-[1.03] active:scale-95"
+        >
+          <StatCard
+            title="Karyawan Aktif"
+            value={stats?.active_employees ?? 0}
+            icon={Users}
+            iconBgColor="bg-emerald-50 dark:bg-emerald-950/50"
+            iconColor="text-emerald-600 dark:text-emerald-400"
+          />
+        </div>
 
-        {/* 2. Karyawan Non Aktif */}
-        <StatCard
-          title="Non Aktif"
-          value={(stats as any)?.karyawanNonAktif ?? 15}
-          icon={UserMinus}
-          iconBgColor="bg-gray-100 dark:bg-gray-800"
-          iconColor="text-gray-600 dark:text-gray-400"
-        />
+        {/* NON AKTIF -> Ke Master Data Employee */}
+        <div 
+          onClick={() => navigate('/master-data/employee')} 
+          className="cursor-pointer transition-all hover:scale-[1.03] active:scale-95"
+        >
+          <StatCard
+            title="Non Aktif"
+            value={stats?.inactive_employees ?? 0}
+            icon={UserMinus}
+            iconBgColor="bg-gray-100 dark:bg-gray-800"
+            iconColor="text-gray-600 dark:text-gray-400"
+          />
+        </div>
 
-        {/* 3. Masuk */}
-        <StatCard
-          title="Masuk"
-          value={stats?.masuk ?? 0}
-          icon={UserCheck}
-          iconBgColor="bg-emerald-50 dark:bg-emerald-950/50"
-          iconColor="text-emerald-600 dark:text-emerald-400"
-        />
+        {/* MASUK -> Ke Reports Attendance */}
+        <div 
+          onClick={() => navigate('/reports/attendance')} 
+          className="cursor-pointer transition-all hover:scale-[1.03] active:scale-95"
+        >
+          <StatCard
+            title="Masuk"
+            value={stats?.present ?? 0}
+            icon={UserCheck}
+            iconBgColor="bg-emerald-50 dark:bg-emerald-950/50"
+            iconColor="text-emerald-600 dark:text-emerald-400"
+          />
+        </div>
 
-        {/* 4. Terlambat */}
-        <StatCard
-          title="Terlambat"
-          value={stats?.terlambat ?? 0}
-          icon={Clock}
-          iconBgColor="bg-amber-50 dark:bg-amber-950/50"
-          iconColor="text-amber-600 dark:text-amber-400"
-        />
+        {/* TERLAMBAT -> Ke Reports Attendance */}
+        <div 
+          onClick={() => navigate('/reports/attendance')} 
+          className="cursor-pointer transition-all hover:scale-[1.03] active:scale-95"
+        >
+          <StatCard
+            title="Terlambat"
+            value={stats?.late ?? 0}
+            icon={Clock}
+            iconBgColor="bg-amber-50 dark:bg-amber-950/50"
+            iconColor="text-amber-600 dark:text-amber-400"
+          />
+        </div>
 
-        {/* 5. Sakit */}
-        <StatCard
-          title="Sakit"
-          value={stats?.sakit ?? 0}
-          icon={Stethoscope}
-          iconBgColor="bg-blue-50 dark:bg-blue-950/50"
-          iconColor="text-blue-600 dark:text-blue-400"
-        />
+        {/* SAKIT -> Ke Reports Attendance */}
+        <div 
+          onClick={() => navigate('/reports/attendance')} 
+          className="cursor-pointer transition-all hover:scale-[1.03] active:scale-95"
+        >
+          <StatCard
+            title="Sakit"
+            value={stats?.sick ?? 0}
+            icon={Stethoscope}
+            iconBgColor="bg-blue-50 dark:bg-blue-950/50"
+            iconColor="text-blue-600 dark:text-blue-400"
+          />
+        </div>
 
-        {/* 6. Alfa */}
-        <StatCard
-          title="Alfa"
-          value={stats?.alfa ?? 0}
-          icon={UserX}
-          iconBgColor="bg-red-50 dark:bg-red-950/50"
-          iconColor="text-red-600 dark:text-red-400"
-        />
+        {/* ALFA -> Ke Reports Attendance */}
+        <div 
+          onClick={() => navigate('/reports/attendance')} 
+          className="cursor-pointer transition-all hover:scale-[1.03] active:scale-95"
+        >
+          <StatCard
+            title="Alfa"
+            value={stats?.alpha ?? 0}
+            icon={UserX}
+            iconBgColor="bg-red-50 dark:bg-red-950/50"
+            iconColor="text-red-600 dark:text-red-400"
+          />
+        </div>
       </div>
 
-      {/* Section Visualisasi Pie Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PieChartCard
           title="Visualisasi Kehadiran"

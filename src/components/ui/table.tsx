@@ -20,6 +20,16 @@ const TableBody = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes
 ))
 TableBody.displayName = "TableBody"
 
+// 🌟 Tambahkan TableFooter di sini
+const TableFooter = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(({ className, ...props }, ref) => (
+  <tfoot
+    ref={ref}
+    className={cn("border-t bg-gray-100/80 dark:bg-gray-800/80 font-bold border-gray-200 dark:border-gray-700", className)}
+    {...props}
+  />
+))
+TableFooter.displayName = "TableFooter"
+
 const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(({ className, ...props }, ref) => (
   <tr 
     ref={ref} 
@@ -32,7 +42,6 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
 ))
 TableRow.displayName = "TableRow"
 
-// 🌟 UBAH `text-gray-600` MENJADI `text-black` (atau `text-gray-900`)
 const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(({ className, ...props }, ref) => (
   <th 
     ref={ref} 
@@ -57,4 +66,5 @@ const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<
 ))
 TableCell.displayName = "TableCell"
 
-export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell }
+// 🌟 Pastikan TableFooter diekspor
+export { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell }

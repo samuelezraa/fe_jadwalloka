@@ -7,16 +7,16 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { CustomWorkHour } from '../types/custom-work-hour.type';
-import { DataPagination } from '../../../../components/DataPagination';
+import { DataPagination } from '@/components/DataPagination';
 import { Clock } from 'lucide-react';
 
 // Reusable UI Components
-import { TableToolbar } from '../../../../components/ui/TableToolbar';
-import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
-import { DataTable } from '../../../../components/ui/data-table';
-import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
-import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
-import { Badge } from '../../../../components/ui/badge';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { AddButton, EditActionButton, MobileAddFab } from '@/components/ui/ActionButtons';
+import { DataTable } from '@/components/ui/data-table';
+import { TableFilterPopover } from '@/components/ui/TableFilterPopover';
+import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
+import { Badge } from '@/components/ui/badge';
 
 interface CustomWorkHourTableProps {
   data: CustomWorkHour[];
@@ -57,19 +57,28 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
   const columns = useMemo<ColumnDef<CustomWorkHour>[]>(
     () => [
       {
-        id: 'number',
-        header: '#',
+        id: 'code',
+        header: 'ID',
         cell: (info) => (
-          <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
+          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold">
+            {String(info.row.original.code || info.row.original.id || `CUS00${info.row.index + 1}`)}
           </span>
         ),
       },
       {
-        accessorKey: 'name',
-        header: 'Nama Jam Kerja',
+        id: 'periode',
+        header: 'Periode',
+        cell: ({ row }) => (
+          <span className="font-medium text-gray-800 dark:text-gray-200 text-xs">
+            {row.original.start_date} ~ {row.original.end_date}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'work_scheme',
+        header: 'Skema Hari Kerja',
         cell: (info) => (
-          <span className="font-semibold text-gray-800 dark:text-gray-100">
+          <span className="font-semibold text-gray-800 dark:text-gray-100 text-xs">
             {String(info.getValue() || '-')}
           </span>
         ),
@@ -85,19 +94,10 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
       },
       {
         accessorKey: 'tolerance',
-        header: 'Toleransi',
+        header: 'Toleransi Keterlambatan',
         cell: (info) => (
           <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue() || '00:00:00')}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'clock_out',
-        header: 'Jam Pulang',
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue() || '-')}
+            {String(info.getValue() || '00:05:00')}
           </span>
         ),
       },
@@ -164,7 +164,7 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const rows = table.getRowModel().rows;
+
 
   return (
     <div className="relative">
@@ -213,64 +213,7 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
-          {rows.length > 0 ? (
-            rows.map((row) => {
-              const item = row.original;
-              const rawActive = (item as any).is_active ?? (item as any).status;
-              const isAktif = Boolean(
-                rawActive === true || 
-                (rawActive as unknown as number) === 1 || 
-                rawActive === 'Aktif' || 
-                rawActive === 'true'
-              );
-
-              return (
-                <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-                      {item.name}
-                    </span>
-                    <Badge 
-                      variant="outline"
-                      className={
-                        isAktif 
-                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
-                          : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3 py-0.5'
-                      }
-                    >
-                      {isAktif ? 'Aktif' : 'Non Aktif'}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">Jam Masuk</p>
-                      <p className="font-mono text-gray-700 dark:text-gray-300">{item.clock_in}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">Toleransi</p>
-                      <p className="font-mono text-gray-700 dark:text-gray-300">{item.tolerance || '00:00:00'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-medium">Jam Pulang</p>
-                      <p className="font-mono text-gray-700 dark:text-gray-300">{item.clock_out}</p>
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
-                    <EditActionButton onClick={() => onEdit(item)} />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-xs">
-              Tidak ada data custom jam kerja ditemukan.
-            </div>
-          )}
-        </div>
-
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data custom jam kerja ditemukan." />
-
       </div>
 
       <MobileAddFab onClick={onAdd} title="Tambah Custom Jam Kerja" />

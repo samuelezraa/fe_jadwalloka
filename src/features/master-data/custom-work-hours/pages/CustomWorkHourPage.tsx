@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CustomWorkHourTable } from '../components/CustomWorkHourTable';
 import { CustomWorkHourDialog } from '../components/CustomWorkHourDialog';
-import { ConfirmAlertDialog } from '../../../../components/ui/ConfirmAlertDialog';
+import { ConfirmAlertDialog } from '@/components/ui/ConfirmAlertDialog';
 import { useCustomWorkHour } from '../hooks/useCustomWorkHour';
 import type { CustomWorkHour } from '../types/custom-work-hour.type';
 import type { CustomWorkHourFormValues } from '../schemas/custom-work-hour.schema';
@@ -12,14 +12,11 @@ export const CustomWorkHourPage: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CustomWorkHour | null>(null);
 
-  // Form Data sementara menunggu konfirmasi
   const [pendingFormData, setPendingFormData] = useState<CustomWorkHourFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
 
-  // State Dialog Konfirmasi
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // State Alert Result (Sukses / Gagal)
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -64,7 +61,7 @@ export const CustomWorkHourPage: React.FC = () => {
         setAlertConfig({
           isOpen: true,
           title: 'Berhasil Diperbarui!',
-          description: `Custom jam kerja "${pendingFormData.name}" berhasil diperbarui.`,
+          description: `Custom jam kerja skema "${pendingFormData.work_scheme}" berhasil diperbarui.`,
           variant: 'primary',
         });
       } else {
@@ -72,7 +69,7 @@ export const CustomWorkHourPage: React.FC = () => {
         setAlertConfig({
           isOpen: true,
           title: 'Berhasil Ditambahkan!',
-          description: `Custom jam kerja baru "${pendingFormData.name}" berhasil ditambahkan.`,
+          description: `Custom jam kerja skema "${pendingFormData.work_scheme}" berhasil ditambahkan.`,
           variant: 'primary',
         });
       }
@@ -126,8 +123,8 @@ export const CustomWorkHourPage: React.FC = () => {
         title={selectedItem ? 'Simpan Perubahan?' : 'Tambah Custom Jam Kerja?'}
         description={
           selectedItem
-            ? `Apakah Anda yakin ingin memperbarui custom jam kerja "${pendingFormData?.name}"?`
-            : `Apakah Anda yakin ingin menambahkan custom jam kerja "${pendingFormData?.name}"?`
+            ? `Apakah Anda yakin ingin memperbarui custom jam kerja skema "${pendingFormData?.work_scheme}"?`
+            : `Apakah Anda yakin ingin menambahkan custom jam kerja skema "${pendingFormData?.work_scheme}"?`
         }
         confirmText="Ya, Simpan"
         variant="warning"

@@ -88,27 +88,6 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
   const columns = useMemo<ColumnDef<InputSchedulePeriodItem>[]>(
     () => [
       {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: (info) => {
-          const val = String(info.getValue());
-          const isAktif = val === 'Aktif';
-          return (
-            <div className="flex justify-center">
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                  isAktif
-                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                }`}
-              >
-                {val}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
         accessorKey: 'periodId',
         header: 'ID Periode',
         cell: (info) => (
@@ -126,6 +105,11 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
         accessorKey: 'name',
         header: 'Nama',
         cell: (info) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(info.getValue())}</span>,
+      },
+      {
+        accessorKey: 'department',
+        header: 'Departemen',
+        cell: (info) => <span className="text-gray-700 dark:text-gray-300 font-medium">{info.getValue() ? String(info.getValue()) : '-'}</span>,
       },
       {
         accessorKey: 'subDept',
@@ -166,6 +150,28 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
         accessorKey: 'ref',
         header: 'Ref',
         cell: (info) => <span className="text-gray-500 dark:text-gray-400 text-xs">{info.getValue() ? String(info.getValue()) : '-'}</span>,
+      },
+      // 🌟 Kolom Status dipindahkan ke sini (sebelum Action)
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: (info) => {
+          const val = String(info.getValue());
+          const isAktif = val === 'Aktif';
+          return (
+            <div className="flex justify-center">
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                  isAktif
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                }`}
+              >
+                {val}
+              </span>
+            </div>
+          );
+        },
       },
       {
         id: 'action',

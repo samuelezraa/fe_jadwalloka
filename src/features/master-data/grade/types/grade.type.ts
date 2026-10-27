@@ -2,6 +2,7 @@ export interface Grade {
   id?: string | number;
   code: string;
   name: string;
+  level?: number;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;

@@ -1,12 +1,12 @@
 export interface SchedulePeriodSummary {
-  totalPeriodDays: number; // Total Hari Periode
-  totalWorkDays: number;   // Total Masuk
-  totalOffDays: number;    // Total Libur
-  totalPhDays: number;     // Total PH
-  totalPermitDays: number; // Total Izin
-  totalAlphaDays: number;  // Total Alfa
-  totalLeaveDays: number;  // Total Cuti
-  totalLateDays: number;   // Total Terlambat
+  totalPeriodDays: number;
+  totalWorkDays: number;
+  totalOffDays: number;
+  totalPhDays: number;
+  totalPermitDays: number;
+  totalAlphaDays: number;
+  totalLeaveDays: number;
+  totalLateDays: number;
 }
 
 export interface InputSchedulePeriodItem {
@@ -14,6 +14,7 @@ export interface InputSchedulePeriodItem {
   periodId: string;
   nip: string;
   name: string;
+  department?: string; // 👈 Tambahkan ini
   subDept: string;
   workScheme: string;
   status: 'Aktif' | 'Nonaktif';

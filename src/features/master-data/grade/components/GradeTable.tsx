@@ -7,16 +7,16 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Grade } from '../types/grade.type';
-import { DataPagination } from '../../../../components/DataPagination';
+import { DataPagination } from '@/components/DataPagination';
 import { Layers } from 'lucide-react';
 
 // Reusable UI Components
-import { TableToolbar } from '../../../../components/ui/TableToolbar';
-import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
-import { DataTable } from '../../../../components/ui/data-table';
-import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
-import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
-import { Badge } from '../../../../components/ui/badge';
+import { TableToolbar } from '@/components/ui/TableToolbar';
+import { AddButton, EditActionButton, MobileAddFab } from '@/components/ui/ActionButtons';
+import { DataTable } from '@/components/ui/data-table';
+import { TableFilterPopover } from '@/components/ui/TableFilterPopover';
+import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
+import { Badge } from '@/components/ui/badge';
 
 interface GradeTableProps {
   data: Grade[];
@@ -30,13 +30,17 @@ export const GradeTable: React.FC<GradeTableProps> = ({
   onAdd,
 }) => {
   const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(''); // '' | 'true' | 'false'
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
-  // Filter Data Berdasarkan Global Search & Status
+  // Filter & Urutkan Data berdasarkan Level Terbesar ke Terkecil
   const filteredData = useMemo(() => {
-    let result = data;
+    let result = [...data];
+
+    // Tetap urutkan berdasarkan level tertinggi di atas
+    result.sort((a, b) => (Number(b.level) || 0) - (Number(a.level) || 0));
+
     if (statusFilter) {
       const isFilterActive = statusFilter === 'true';
       result = result.filter((item) => {
@@ -67,7 +71,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
         cell: (info) => {
           const val = info.getValue() || (info.row.original as any).id || (info.row.original as any).kode_grade;
           return (
-            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold">
               {String(val || '-')}
             </span>
           );

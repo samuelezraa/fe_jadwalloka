@@ -7,7 +7,7 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
-import type { LogHistory } from '../types/logHistory.type';
+import type { LogHistory } from '../types/log-history.type';
 import { DataPagination } from '@/components/DataPagination';
 import { History } from 'lucide-react';
 
@@ -57,11 +57,11 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
     };
   }, [showFilterDropdown]);
 
-  // Filter Data berdasarkan Rentang Tanggal
+  // Filter Data based on Date Range
   const filteredData = useMemo(() => {
     return data.filter((item) => {
-      if (startDate && item.tanggal < startDate) return false;
-      if (endDate && item.tanggal > endDate) return false;
+      if (startDate && item.date < startDate) return false;
+      if (endDate && item.date > endDate) return false;
       return true;
     });
   }, [data, startDate, endDate]);
@@ -80,8 +80,8 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
         ),
       },
       {
-        accessorKey: 'tipe',
-        header: 'Tipe',
+        accessorKey: 'type',
+        header: 'Type',
         cell: (info) => {
           const val = String(info.getValue());
           const isCreate = val === 'Create';
@@ -114,16 +114,16 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
         cell: (info) => <span className="font-medium text-gray-900 dark:text-gray-100">{String(info.getValue())}</span>,
       },
       {
-        accessorKey: 'tanggal',
-        header: 'Tanggal',
+        accessorKey: 'date',
+        header: 'Date',
         cell: (info) => {
           const [y, m, d] = String(info.getValue()).split('-');
           return <span className="text-gray-700 dark:text-gray-300">{`${d}-${m}-${y}`}</span>;
         },
       },
       {
-        accessorKey: 'keterangan',
-        header: 'Keterangan',
+        accessorKey: 'description',
+        header: 'Description',
         cell: (info) => <span className="text-gray-600 dark:text-gray-400">{String(info.getValue())}</span>,
       },
     ],
@@ -154,7 +154,7 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
         <div className="w-full">
           <TableToolbar
             title="Log History"
-            subtitle="Daftar histori aktivitas dan perubahan data sistem"
+            subtitle="List of system activity history and data changes"
             icon={<History className="w-6 h-6" />}
             searchValue={globalFilter ?? ''}
             onSearchChange={setGlobalFilter}
@@ -172,8 +172,8 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
                 }}
                 fields={[
                   {
-                    key: 'tanggal',
-                    label: 'Tanggal',
+                    key: 'date',
+                    label: 'Date',
                     render: () => (
                       <DateRangePicker
                         startDate={startDate}
@@ -196,7 +196,7 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
           <DataPagination table={table} />
         </div>
 
-        {/* Tampilan Desktop Table (Scrollable Horizontal) */}
+        {/* Desktop Table View */}
         <div
           className="hidden md:block w-full overflow-x-auto rounded-b-2xl"
           style={{
@@ -236,7 +236,7 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center text-gray-400">
-                    Tidak ada log history ditemukan.
+                    No log history found.
                   </TableCell>
                 </TableRow>
               )}
@@ -244,7 +244,7 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
           </Table>
         </div>
 
-        {/* Tampilan Mobile Card */}
+        {/* Mobile Card View */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50 rounded-b-2xl">
           {rows.length > 0 ? (
             rows.map((row) => {
@@ -256,23 +256,23 @@ export const LogHistoryTable: React.FC<LogHistoryTableProps> = ({ data }) => {
                       {item.id}
                     </span>
                     <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      {item.tipe}
+                      {item.type}
                     </span>
                   </div>
                   <div>
                     <p className="text-xs font-bold text-gray-500 uppercase">{item.menu} • {item.subMenu}</p>
-                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">{item.keterangan}</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">{item.description}</p>
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-between text-[11px] text-gray-400">
                     <span>PIC: {item.pic}</span>
-                    <span>{item.tanggal}</span>
+                    <span>{item.date}</span>
                   </div>
                 </div>
               );
             })
           ) : (
             <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-xs">
-              Tidak ada log history ditemukan.
+              No log history found.
             </div>
           )}
         </div>

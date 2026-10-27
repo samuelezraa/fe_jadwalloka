@@ -1,19 +1,14 @@
 export interface DashboardStats {
-  masuk?: number;
-  terlambat?: number;
-  sakit?: number;
-  alfa?: number;
-  totalKaryawan?: number;
-  karyawanBelumAbsen?: number;
-  totalDepartemen?: number;
-  totalSubDepartemen?: number;
-  kehadiranAktual?: number;
-  kehadiranPotensial?: number;
-  karyawanAktif?: number;     // <-- Tambahkan ini
-  karyawanNonAktif?: number;  
+  present: number;
+  late: number;
+  sick: number;
+  alpha: number;
+  active_employees: number;
+  inactive_employees: number;
 }
 
 export interface DashboardFilter {
-  tanggal?: string;
-  periode?: string;
+  start_date?: string;
+  end_date?: string;
+  period?: string;
 }

@@ -5,9 +5,9 @@ import { gradeSchema, type GradeFormValues } from '../schemas/grade.schema';
 import type { Grade } from '../types/grade.type';
 
 // Reusable UI Components
-import { FormInput } from '../../../../components/ui/FormInput';
-import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
-import { SaveButton, CancelButton } from '../../../../components/ui/ActionButtons';
+import { FormInput } from '@/components/ui/FormInput';
+import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
+import { SaveButton, CancelButton } from '@/components/ui/ActionButtons';
 
 interface GradeFormProps {
   initialData?: Grade | null;
@@ -29,10 +29,11 @@ export const GradeForm: React.FC<GradeFormProps> = ({
     control,
     formState: { errors, isSubmitting },
   } = useForm<GradeFormValues>({
-    resolver: zodResolver(gradeSchema),
+    resolver: zodResolver(gradeSchema) as any,
     defaultValues: {
       code: '',
       name: '',
+      level: 1,
       is_active: true,
     },
   });
@@ -47,12 +48,14 @@ export const GradeForm: React.FC<GradeFormProps> = ({
       reset({
         code: initialData.code || (initialData as any).id || (initialData as any).kode_grade || '',
         name: initialData.name || (initialData as any).grade || (initialData as any).nama_grade || '',
+        level: initialData.level ?? 1,
         is_active: isActiveBoolean,
       });
     } else {
       reset({
         code: '',
         name: '',
+        level: 1,
         is_active: true,
       });
     }
@@ -84,7 +87,30 @@ export const GradeForm: React.FC<GradeFormProps> = ({
         error={errors.name?.message}
       />
 
-      {/* 3. Status (Hanya Tampil Saat Edit Mode) */}
+      {/* 3. Level Grade (Menggunakan FormSelectSearch tanpa fitur search) */}
+      <Controller
+        name="level"
+        control={control}
+        render={({ field }) => (
+          <FormSelectSearch
+            label="Level Urutan (1 = Terendah)"
+            value={field.value ? String(field.value) : '1'}
+            onChange={(val) => field.onChange(Number(val))}
+            placeholder="Pilih Level"
+            showSearch={false}
+            options={[
+              { id: '1', label: 'Level 1' },
+              { id: '2', label: 'Level 2' },
+              { id: '3', label: 'Level 3' },
+              { id: '4', label: 'Level 4' },
+              { id: '5', label: 'Level 5' },
+            ]}
+            error={errors.level?.message}
+          />
+        )}
+      />
+
+      {/* 4. Status (Hanya Tampil Saat Edit Mode) */}
       {isEditMode && (
         <Controller
           name="is_active"
