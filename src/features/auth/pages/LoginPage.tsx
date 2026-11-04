@@ -1,29 +1,36 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LoginForm } from '@/features/auth/components/LoginForm'; // Sesuaikan path ini dengan letak LoginForm kamu
+import { LoginForm } from '@/features/auth/components/LoginForm';
+import { authService } from '@/features/auth/services/auth.service';
 
 export const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (username: string, password: string) => {
+  const handleLogin = async (username: string, password: string) => {
     setErrorMessage('');
-
-    const VALID_USERNAME = 'admin';
-    const VALID_PASSWORD = 'password123';
-
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (username === VALID_USERNAME && password === VALID_PASSWORD) {
-        setIsLoading(false);
+    try {
+      const response = await authService.login(username, password);
+
+      if (response.success) {
+        // Simpan token atau data user ke localStorage jika diperlukan
+        if (response.data?.token) {
+          localStorage.setItem('token', response.data.token);
+        }
         navigate('/dashboard');
       } else {
-        setIsLoading(false);
-        setErrorMessage('Username atau password yang Anda masukkan salah!');
+        setErrorMessage(response.message || 'Login gagal.');
       }
-    }, 600);
+    } catch (error: any) {
+      // Menangkap pesan error dari response backend (misal status 401)
+      const serverMessage = error.response?.data?.message;
+      setErrorMessage(serverMessage || 'Terjadi kesalahan pada server. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,14 +55,13 @@ export const LoginPage: React.FC = () => {
         <div className="w-full bg-white dark:bg-gray-900 rounded-2xl p-7 shadow-xl border border-gray-100/80 dark:border-gray-800 space-y-5 transition-all">
           
           <div className="text-left space-y-1.5 font-sans">
-          {/* Mengubah font-bold menjadi font-semibold */}
-          <h1 className="text-[22px] font-medium text-[#0f9468] tracking-tight leading-tight">
-            Login LokaHR
-          </h1>
-          <p className="text-[12px] text-gray-400 font-normal leading-relaxed">
-            Sugeng Rawuh, silahkan berikan informasi untuk akses aplikasi 👋
-          </p>
-        </div>
+            <h1 className="text-[22px] font-medium text-[#0f9468] tracking-tight leading-tight">
+              Login LokaHR
+            </h1>
+            <p className="text-[12px] text-gray-400 font-normal leading-relaxed">
+              Sugeng Rawuh, silahkan berikan informasi untuk akses aplikasi 👋
+            </p>
+          </div>
 
           {/* Form Login Component */}
           <LoginForm 
