@@ -51,9 +51,29 @@ export const FiveTwoWorkHourForm: React.FC<FiveTwoWorkHourFormProps> = ({
     },
   });
 
-  useEffect(() => {
-    if (initialData?.weekly_schedule) {
-      reset(initialData.weekly_schedule as any);
+ useEffect(() => {
+    if (initialData) {
+      if (initialData.weekly_schedule) {
+        reset(initialData.weekly_schedule as any);
+        return;
+      }
+
+      if (Array.isArray(initialData.schedule_details) && initialData.schedule_details.length > 0) {
+        const formattedWeekly: Record<string, any> = {};
+
+        initialData.schedule_details.forEach((detail) => {
+          // Status ditentukan dari field is_active atau flag is_day_off
+          const isLibur = detail.is_day_off === true || detail.is_active === false;
+          
+          formattedWeekly[detail.day_of_week] = {
+            status: isLibur ? 'Libur' : 'Berangkat',
+            check_in_time: detail.check_in_time || '00:00:00',
+            check_out_time: detail.check_out_time || '00:00:00',
+          };
+        });
+
+        reset(formattedWeekly as any);
+      }
     }
   }, [initialData, reset]);
 

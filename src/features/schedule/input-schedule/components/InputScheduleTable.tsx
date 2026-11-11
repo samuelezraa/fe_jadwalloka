@@ -1,19 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { InputSchedulePeriodItem, SchedulePeriodSummary } from '../types/input-schedule.type';
 import { DataPagination } from '../../../../components/DataPagination';
-import {
-  CalendarCheck,
-  Settings,
-  Calendar,
-  AlertCircle,
-} from 'lucide-react';
+import { CalendarCheck, Settings, Calendar, AlertCircle, Building2, User, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Reusable UI Components
@@ -31,12 +24,30 @@ import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 interface InputScheduleTableProps {
   data: InputSchedulePeriodItem[];
   summary?: SchedulePeriodSummary | null;
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   selectedPeriod: string;
   onPeriodChange: (period: string) => void;
   onEdit?: (item: InputSchedulePeriodItem) => void;
   onSettingGlobal?: () => void;
   onImport?: () => void;
   onExport?: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  deptFilter: string;
+  onDeptFilterChange: (val: string) => void;
+  subDeptFilter: string;
+  onSubDeptFilterChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
+  departemenList?: any[];
+  subDepartemenList?: any[];
 }
 
 const PERIODE_OPTIONS = [
@@ -45,19 +56,46 @@ const PERIODE_OPTIONS = [
 ];
 
 export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
-  data,
+  data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10 },
+  setPage,
+  setPageSize,
   selectedPeriod,
   onPeriodChange,
   onEdit,
   onSettingGlobal,
   onImport,
   onExport,
+  searchQuery,
+  onSearchChange,
+  deptFilter,
+  onDeptFilterChange,
+  subDeptFilter,
+  onSubDeptFilterChange,
+  statusFilter,
+  onStatusFilterChange,
+  departemenList = [],
+  subDepartemenList = [],
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [subDeptFilter, setSubDeptFilter] = useState('');
-  const [skemaFilter, setSkemaFilter] = useState('');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (filterWrapperRef.current && !filterWrapperRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
 
   const checkPeriodeSelected = (actionCallback?: () => void) => {
     if (!selectedPeriod) {
@@ -67,26 +105,30 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
     if (actionCallback) actionCallback();
     return true;
   };
+  
+  // Filter Sub Departemen secara presisi berdasarkan Departemen yang dipilih
+  const filteredSubDepts = useMemo(() => {
+    if (!deptFilter) return subDepartemenList;
 
-  const filteredData = useMemo(() => {
-    if (!selectedPeriod) return [];
-    let result = data;
-    if (subDeptFilter) {
-      result = result.filter((item) => item.subDept === subDeptFilter);
-    }
-    if (skemaFilter) {
-      result = result.filter((item) => item.workScheme === skemaFilter);
-    }
-    return result;
-  }, [data, selectedPeriod, subDeptFilter, skemaFilter]);
+    return subDepartemenList.filter((sub) => {
+      const subDeptId = sub.department_id ?? sub.department?.id ?? sub.departmentId;
+      return String(subDeptId) === String(deptFilter);
+    });
+  }, [subDepartemenList, deptFilter]);
 
-  const uniqueSubDeptList = useMemo(() => Array.from(new Set(data.map((item) => item.subDept))), [data]);
-  const uniqueSkemaList = useMemo(() => Array.from(new Set(data.map((item) => item.workScheme))), [data]);
-
-  const isFiltered = Boolean(subDeptFilter || skemaFilter);
+  const isFiltered = Boolean(deptFilter || subDeptFilter || statusFilter);
 
   const columns = useMemo<ColumnDef<InputSchedulePeriodItem>[]>(
     () => [
+      {
+        id: 'number',
+        header: '#',
+        cell: (info) => (
+          <span className="font-medium text-gray-500 dark:text-gray-400">
+            {info.row.index + 1 + ((meta.current_page - 1) * meta.per_page)}
+          </span>
+        ),
+      },
       {
         accessorKey: 'periodId',
         header: 'ID Periode',
@@ -98,12 +140,12 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
       },
       {
         accessorKey: 'nip',
-        header: 'NIP',
-        cell: (info) => <span className="font-mono text-gray-700 dark:text-gray-300 text-xs">{String(info.getValue())}</span>,
+        header: 'ID Karyawan',
+        cell: (info) => <span className="font-mono font-semibold text-gray-700 dark:text-gray-300 text-xs">{String(info.getValue())}</span>,
       },
       {
         accessorKey: 'name',
-        header: 'Nama',
+        header: 'Nama Karyawan',
         cell: (info) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(info.getValue())}</span>,
       },
       {
@@ -113,45 +155,9 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
       },
       {
         accessorKey: 'subDept',
-        header: 'Sub Dept',
+        header: 'Sub Departemen',
         cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
       },
-      {
-        accessorKey: 'workScheme',
-        header: 'Skema Kerja',
-        cell: (info) => <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'totalDays',
-        header: 'Total Hari',
-        cell: (info) => <span className="font-medium text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'workDays',
-        header: 'Masuk',
-        cell: (info) => <span className="font-medium text-emerald-600 dark:text-emerald-400">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'offDays',
-        header: 'Total Libur',
-        cell: (info) => <span className="font-medium text-amber-600 dark:text-amber-400">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'phDays',
-        header: 'PH',
-        cell: (info) => <span className="font-medium text-purple-600 dark:text-purple-400">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'leaveDays',
-        header: 'Cuti',
-        cell: (info) => <span className="font-medium text-blue-600 dark:text-blue-400">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'ref',
-        header: 'Ref',
-        cell: (info) => <span className="text-gray-500 dark:text-gray-400 text-xs">{info.getValue() ? String(info.getValue()) : '-'}</span>,
-      },
-      // 🌟 Kolom Status dipindahkan ke sini (sebelum Action)
       {
         accessorKey: 'status',
         header: 'Status',
@@ -183,25 +189,39 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
         ),
       },
     ],
-    [onEdit, selectedPeriod]
+    [onEdit, selectedPeriod, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   return (
-    <div className="relative space-y-4">
+    <div className="relative space-y-4" ref={filterWrapperRef}>
       {/* FILTER PERIODE UTAMA */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -229,8 +249,8 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
           title="Input Schedule (Periode)"
           subtitle="Kelola data jadwal kerja karyawan per periode LokaHR"
           icon={<CalendarCheck className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
@@ -240,31 +260,58 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
               onReset={() => {
-                setSubDeptFilter('');
-                setSkemaFilter('');
+                onDeptFilterChange('');
+                onSubDeptFilterChange('');
+                onStatusFilterChange('');
               }}
               fields={[
                 {
-                  key: 'subDept',
-                  label: 'Sub Departemen',
+                  key: 'department',
+                  label: 'Departemen',
                   render: () => (
                     <FormSelectSearch
-                      value={subDeptFilter}
-                      onChange={setSubDeptFilter}
-                      placeholder="Semua Sub Dept"
-                      options={[{ id: '', label: 'Semua Sub Dept' }, ...uniqueSubDeptList.map((sd) => ({ id: sd, label: sd }))]}
+                      value={deptFilter}
+                      onChange={(val) => {
+                        onDeptFilterChange(val);
+                        onSubDeptFilterChange('');
+                      }}
+                      placeholder="Semua Departemen"
+                      options={[
+                        { id: '', label: 'Semua Departemen' },
+                        ...departemenList.map((d) => ({ id: String(d.id), label: d.name })),
+                      ]}
                     />
                   ),
                 },
                 {
-                  key: 'workScheme',
-                  label: 'Skema Hari Kerja',
+                  key: 'sub_department',
+                  label: 'Sub Departemen',
                   render: () => (
                     <FormSelectSearch
-                      value={skemaFilter}
-                      onChange={setSkemaFilter}
-                      placeholder="Semua Skema"
-                      options={[{ id: '', label: 'Semua Skema' }, ...uniqueSkemaList.map((s) => ({ id: s, label: s }))]}
+                      value={subDeptFilter}
+                      onChange={(val) => onSubDeptFilterChange(val)}
+                      placeholder="Semua Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        ...filteredSubDepts.map((sd) => ({ id: String(sd.id), label: sd.name || sd.sub_department_name })),
+                      ]}
+                    />
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: () => (
+                    <FormSelectSearch
+                      value={statusFilter}
+                      onChange={(val) => onStatusFilterChange(val)}
+                      placeholder="Semua Status"
+                      showSearch={false}
+                      options={[
+                        { id: '', label: 'Semua Status' },
+                        { id: 'true', label: 'Aktif' },
+                        { id: 'false', label: 'Nonaktif' },
+                      ]}
                     />
                   ),
                 },
@@ -302,8 +349,83 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
             <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
               <DataPagination table={table} />
             </div>
+
+            {/* 🖥️ DESKTOP TABLE VIEW */}
             <div className="hidden md:block">
               <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data jadwal periode ditemukan." />
+            </div>
+
+            {/* 📱 MOBILE CARD LIST VIEW */}
+            <div className="block md:hidden p-4 space-y-3">
+              {data.length === 0 ? (
+                <div className="py-12 text-center text-xs text-gray-500 dark:text-gray-400">
+                  Tidak ada data jadwal periode ditemukan.
+                </div>
+              ) : (
+                data.map((item, idx) => {
+                  const isAktif = item.status === 'Aktif';
+                  return (
+                    <div
+                      key={item.id || idx}
+                      className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xs space-y-3"
+                    >
+                      {/* Card Header: Nama & Status */}
+                      <div className="flex items-start justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-2.5">
+                        <div className="space-y-0.5">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            {item.name}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                            <Hash className="w-3 h-3" />
+                            <span>{item.nip}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                            isAktif
+                              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                              : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+
+                      {/* Card Body: Info Periode, Dept & Sub Dept */}
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-semibold">
+                            Periode
+                          </span>
+                          <span className="font-mono text-gray-700 dark:text-gray-300 font-medium">
+                            {item.periodId}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 dark:text-gray-500 block text-[10px] uppercase font-semibold">
+                            Skema
+                          </span>
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            {item.workScheme}
+                          </span>
+                        </div>
+                        <div className="col-span-2 pt-1 border-t border-gray-50 dark:border-gray-800/60 flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+                          <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                          <span className="truncate">
+                            {item.department || '-'} / <strong className="text-gray-700 dark:text-gray-300">{item.subDept}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Footer: Action Edit */}
+                      <div className="flex items-center justify-end pt-2 border-t border-gray-100 dark:border-gray-800">
+                        <EditActionButton onClick={() => checkPeriodeSelected(() => onEdit && onEdit(item))} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </>
         )}

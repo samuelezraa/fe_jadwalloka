@@ -51,13 +51,26 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
   const startDateValue = watch('start_date');
   const endDateValue = watch('end_date');
 
-  // Load opsi Skema Hari Kerja dari Backend Master Data
+  // Load opsi Skema Hari Kerja dari Backend Master Data (Hanya yang Aktif)
   useEffect(() => {
     const fetchSchemes = async () => {
       try {
         const response = await api.get('/work-schedule-schemes');
         const list = response.data.data || response.data || [];
-        const options = list.map((item: any) => ({
+        
+        // 💡 Filter hanya skema yang aktif
+        const activeSchemes = list.filter((item: any) => {
+          const rawActive = item.is_active ?? item.status;
+          return Boolean(
+            rawActive === true || 
+            rawActive === 1 || 
+            rawActive === 'Aktif' || 
+            rawActive === 'true' || 
+            rawActive === undefined
+          );
+        });
+
+        const options = activeSchemes.map((item: any) => ({
           id: item.name || item.code || String(item.id),
           label: item.name ? `${item.name} (${item.code || ''})`.trim() : item.code,
         }));
@@ -82,7 +95,6 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
         rawActive === 'true'
       );
 
-      // Cari ID opsi yang cocok walaupun nilainya berupa "6-1" atau "Skema 6-1"
       let matchedScheme = initialData.work_scheme || '';
       if (schemeOptions.length > 0 && matchedScheme) {
         const found = schemeOptions.find(
@@ -141,7 +153,7 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
         )}
       </div>
 
-      {/* 2. Field Skema Hari Kerja (Dropdown Select Search) */}
+      {/* 2. Field Skema Hari Kerja */}
       <Controller
         name="work_scheme"
         control={control}

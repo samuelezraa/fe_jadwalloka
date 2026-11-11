@@ -7,55 +7,85 @@ export const useEmployeeAttendance = () => {
   const [data, setData] = useState<HrManagementItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Ambil periode awal dari sessionStorage jika sudah pernah dipilih
+  // Pagination & Filter States
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterDept, setFilterDept] = useState<string>('');
+  const [filterSubDept, setFilterSubDept] = useState<string>('');
+  
+  const [meta, setMeta] = useState({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 10,
+  });
+
   const [selectedPeriode, setSelectedPeriode] = useState<string>(() => {
     return sessionStorage.getItem('hr_selected_periode') || '';
   });
 
-  // Fetch daftar rekap absensi per periode
-  const fetchAttendances = useCallback(async (period: string) => {
-    if (!period) {
+  const fetchAttendances = useCallback(async () => {
+    if (!selectedPeriode) {
       setData([]);
       return;
     }
     setIsLoading(true);
     try {
-      const result = await employeeAttendanceService.getAll(period);
-      setData(result);
+      const result = await employeeAttendanceService.getAll({
+        period: selectedPeriode,
+        page,
+        perPage: pageSize,
+        search: searchQuery,
+        dept: filterDept,
+        subDept: filterSubDept,
+      });
+      setData(result.data);
+      setMeta(result.meta);
     } catch (error: any) {
       toast.error('Gagal memuat data absensi karyawan.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedPeriode, page, pageSize, searchQuery, filterDept, filterSubDept]);
 
-  // Simpan periode ke sessionStorage setiap kali berubah
   const handlePeriodeChange = (period: string) => {
     setSelectedPeriode(period);
+    setPage(1);
     if (period) {
       sessionStorage.setItem('hr_selected_periode', period);
     } else {
       sessionStorage.removeItem('hr_selected_periode');
     }
-    fetchAttendances(period);
   };
 
-  // Muat data secara otomatis saat pertama kali komponen dirender jika selectedPeriode sudah ada
   useEffect(() => {
     if (selectedPeriode) {
-      fetchAttendances(selectedPeriode);
+      fetchAttendances();
     }
-  }, [selectedPeriode, fetchAttendances]);
+  }, [fetchAttendances]);
 
   return {
     data,
     selectedPeriode,
     isLoading,
+    meta,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    searchQuery,
+    setSearchQuery,
+    filterDept,
+    setFilterDept,
+    filterSubDept,
+    setFilterSubDept,
     handlePeriodeChange,
-    refetch: () => fetchAttendances(selectedPeriode),
+    refetch: fetchAttendances,
   };
 };
 
+// 🟢 EKSPOR HOOK DETAIL YANG DIBUTUHKAN OLEH HALAMAN EDIT
 export const useEmployeeAttendanceDetail = (id?: string) => {
   const [detailData, setDetailData] = useState<AttendanceDetailResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);

@@ -16,13 +16,26 @@ import { PieChartCard, type PieChartDataItem } from '../../../components/ui/PieC
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+
+  // 🌟 Helper untuk mendapatkan format tanggal hari ini (YYYY-MM-DD)
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // 🌟 Set default state ke tanggal hari ini agar langsung terload saat dibuka
+  const [startDate, setStartDate] = useState<string>(getTodayFormatted());
+  const [endDate, setEndDate] = useState<string>(getTodayFormatted());
 
   const { stats, loading } = useDashboard({
     start_date: startDate,
     end_date: endDate,
   });
+
+
 
   if (loading) {
     return (

@@ -1,58 +1,51 @@
 import React from 'react';
 import { useAttendance } from '@/features/reports/attendance/hooks/useAttendance';
 import { AttendanceTable } from '../components/AttendanceTable';
+import { attendanceService } from '../services/attendance.service';
 import toast from 'react-hot-toast';
 
 export const AttendancePage: React.FC = () => {
-  const { data, isLoading } = useAttendance();
+  const {
+    data,
+    isLoading,
+    meta,
+    setPage,
+    setPageSize,
+    searchQuery,
+    setSearchQuery,
+    dateRange,
+    setDateRange,
+    deptFilter,
+    setDeptFilter,
+    subDeptFilter,
+    setSubDeptFilter,
+    gradeFilter,
+    setGradeFilter,
+    departemenList,
+    subDepartemenList,
+    gradeList,
+  } = useAttendance();
 
-  const handleExport = () => {
-    if (!data || data.length === 0) {
-      toast.error('Tidak ada data absensi untuk diexport.');
-      return;
-    }
-
-    const toastId = toast.loading('Menyiapkan dan mengunduh file export...');
+  const handleExport = async () => {
+    const toastId = toast.loading('Menyiapkan dan mengunduh file Excel...');
 
     try {
-      const headers = [
-        'NIP',
-        'Nama',
-        'Departemen',
-        'Sub Dept',
-        'POS',
-        'Grade',
-        'ID Absen',
-        'Jam Absen',
-        'Tanggal Absen',
-        'ID Mesin',
-        'IP Mesin',
-      ];
+      const blob = await attendanceService.exportAttendanceReport({
+        search: searchQuery,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        dept: deptFilter,
+        subDept: subDeptFilter,
+        grade: gradeFilter,
+      });
 
-      const csvRows = [
-        headers.join(','),
-        ...data.map((item) =>
-          [
-            `"${item.nip || '-'}"`,
-            `"${item.name || '-'}"`,
-            `"${item.dept || '-'}"`,
-            `"${item.subDept || '-'}"`,
-            `"${item.pos || '-'}"`,
-            `"${item.grade || '-'}"`,
-            `"${item.attendanceEnrollId || '-'}"`,
-            `"${item.attendanceTime || '-'}"`,
-            `"${item.attendanceDate || '-'}"`,
-            `"${item.machineId || '-'}"`,
-            `"${item.machineIp || '-'}"`,
-          ].join(',')
-        ),
-      ];
-
-      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Laporan_Absensi_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute(
+        'download',
+        `Laporan_Absensi_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -63,7 +56,7 @@ export const AttendancePage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
@@ -75,7 +68,26 @@ export const AttendancePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <AttendanceTable data={data} onExport={handleExport} />
+      <AttendanceTable
+        data={data}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        deptFilter={deptFilter}
+        onDeptFilterChange={setDeptFilter}
+        subDeptFilter={subDeptFilter}
+        onSubDeptFilterChange={setSubDeptFilter}
+        gradeFilter={gradeFilter}
+        onGradeFilterChange={setGradeFilter}
+        departemenList={departemenList}
+        subDepartemenList={subDepartemenList}
+        gradeList={gradeList}
+        onExport={handleExport}
+      />
     </div>
   );
 };

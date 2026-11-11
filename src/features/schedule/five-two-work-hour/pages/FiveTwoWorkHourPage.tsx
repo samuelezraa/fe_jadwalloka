@@ -1,25 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFiveTwoWorkHour } from '../hooks/useFiveTwoWorkHour';
 import { FiveTwoWorkHourTable } from '../components/FiveTwoWorkHourTable';
 import { FiveTwoWorkHourDialog } from '../components/FiveTwoWorkHourDialog';
 import { ConfirmAlertDialog } from '@/components/ui/ConfirmAlertDialog';
+import { fiveTwoWorkHourService } from '../services/five-two-work-hour.service';
 import type { FiveTwoWorkHourEmployee } from '../types/five-two-work-hour.type';
 import type { FiveTwoWorkHourFormValues } from '../schemas/five-two-work-hour.schema';
+import { api } from '@/lib/axios';
 
 export const FiveTwoWorkHourPage: React.FC = () => {
-  const { schedules, isLoading, updateSchedule } = useFiveTwoWorkHour();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [subDeptFilter, setSubDeptFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const [departemens, setDepartemens] = useState<any[]>([]);
+  const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
+
+  const {
+    schedules,
+    meta,
+    setPage,
+    setPageSize,
+    isLoading,
+    updateSchedule,
+    refetch,
+  } = useFiveTwoWorkHour(searchQuery, deptFilter, subDeptFilter, statusFilter);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FiveTwoWorkHourEmployee | null>(null);
-
-  // Form Data sementara menunggu konfirmasi
   const [pendingFormData, setPendingFormData] = useState<FiveTwoWorkHourFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
-
-  // State Dialog Konfirmasi
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // State Alert Result (Sukses / Gagal)
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -31,6 +44,33 @@ export const FiveTwoWorkHourPage: React.FC = () => {
     description: '',
     variant: 'primary',
   });
+
+  // Fetch Master Departemen & Sub Departemen untuk Dropdown Filter
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [deptRes, subDeptRes] = await Promise.all([
+          api.get('/departments'),
+          api.get('/sub-departments'),
+        ]);
+        setDepartemens(deptRes.data.data || deptRes.data || []);
+        setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
+      } catch (err) {
+        console.error('Gagal memuat master departemen:', err);
+      }
+    };
+    fetchMasterData();
+  }, []);
+
+  // Auto-close Pop-up Berhasil/Gagal dalam 1.5 detik tanpa perlu tombol OK
+  useEffect(() => {
+    if (alertConfig.isOpen) {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen]);
 
   const handleOpenEdit = (item: FiveTwoWorkHourEmployee) => {
     setSelectedItem(item);
@@ -46,48 +86,49 @@ export const FiveTwoWorkHourPage: React.FC = () => {
     setIsConfirmOpen(false);
   };
 
-  // Handler untuk mengunduh data tabel ke file CSV / Excel
-  const handleExport = () => {
-    if (!schedules || schedules.length === 0) {
+  const handleExport = async () => {
+    try {
+      await fiveTwoWorkHourService.exportData();
+    } catch (err) {
       setAlertConfig({
         isOpen: true,
-        title: 'Ekspor Gagal!',
-        description: 'Tidak ada data jam kerja yang tersedia untuk diekspor.',
+        title: 'Export Gagal!',
+        description: 'Gagal mengunduh data jam kerja.',
         variant: 'danger',
       });
-      return;
     }
+  };
 
-    const headers = ['ID Jadwal', 'Nama Jadwal', 'Tipe Jam Kerja', 'Status'];
+  // Handler Download Sample Excel
+  const handleDownloadSample = async () => {
+    try {
+      await fiveTwoWorkHourService.downloadSample();
+    } catch (err) {
+      setAlertConfig({
+        isOpen: true,
+        title: 'Download Sample Gagal!',
+        description: 'Gagal mengunduh file sample jam kerja.',
+        variant: 'danger',
+      });
+    }
+  };
 
-    const rows = schedules.map((item) => {
-      const typeName =
-        (item as any).schedule_schemes?.[0]?.work_schedule_scheme?.name ||
-        item.work_hour_type ||
-        'Skema 5-2';
-      const statusText = item.is_active !== false ? 'Aktif' : 'Nonaktif';
-
-      return [
-        `"${item.id}"`,
-        `"${item.name || '-'}"`,
-        `"${typeName}"`,
-        `"${statusText}"`,
-      ].join(',');
-    });
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `Jam_Kerja_Skema_5-2_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Handler Import File
+// Handler Import File dengan Safety Catch
+  const handleImportFile = async (file: File) => {
+    try {
+      await fiveTwoWorkHourService.importData(file);
+      setAlertConfig({
+        isOpen: true,
+        title: 'Berhasil Diimpor!',
+        description: 'Data jam kerja berhasil diimpor.',
+        variant: 'primary',
+      });
+      refetch();
+    } catch (err: any) {
+      // Re-throw error agar ditangkap dan ditampilkan di ImportScheduleDialog
+      throw err;
+    }
   };
 
   const handleConfirmSave = async () => {
@@ -110,17 +151,12 @@ export const FiveTwoWorkHourPage: React.FC = () => {
     setIsSubmittingApi(true);
 
     try {
-      const payload = {
-        name: selectedItem.name || 'Jadwal Reguler (Skema 5-2)',
-        ...pendingFormData,
-      };
-
-      await updateSchedule(targetId, payload as any);
+      await updateSchedule(targetId, pendingFormData);
 
       setAlertConfig({
         isOpen: true,
         title: 'Berhasil Diperbarui!',
-        description: `Pengaturan jam kerja "${selectedItem.name || 'Jadwal'}" berhasil diperbarui.`,
+        description: `Pengaturan jam kerja "${selectedItem.employee_name || selectedItem.name || 'Karyawan'}" berhasil diperbarui.`,
         variant: 'primary',
       });
 
@@ -153,8 +189,23 @@ export const FiveTwoWorkHourPage: React.FC = () => {
       {/* Tabel Utama Jam Kerja (Skema 5-2) */}
       <FiveTwoWorkHourTable
         data={Array.isArray(schedules) ? schedules : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         onEdit={handleOpenEdit}
         onExport={handleExport}
+        onImport={handleImportFile}
+        onDownloadSample={handleDownloadSample}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        deptFilter={deptFilter}
+        onDeptFilterChange={setDeptFilter}
+        subDeptFilter={subDeptFilter}
+        onSubDeptFilterChange={setSubDeptFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        departemenList={departemens}
+        subDepartemenList={subDepartemens}
       />
 
       {/* Modal Dialog Form Edit */}
@@ -171,23 +222,24 @@ export const FiveTwoWorkHourPage: React.FC = () => {
         onClose={handleCancelConfirm}
         onConfirm={handleConfirmSave}
         title="Simpan Perubahan Jam Kerja?"
-        description={`Apakah Anda yakin ingin memperbarui pengaturan jam kerja untuk "${selectedItem?.name || 'Jadwal'}"?`}
+        description={`Apakah Anda yakin ingin memperbarui pengaturan jam kerja untuk "${selectedItem?.employee_name || selectedItem?.name || 'Karyawan'}"?`}
         confirmText="Ya, Simpan"
         variant="warning"
         isLoading={isSubmittingApi}
       />
 
-      {/* 2. Alert Hasil Sukses / Gagal */}
+      {/* 2. Alert Hasil Sukses / Gagal (Otomatis Hilang Tanpa Tombol OK & Teks Hitam di Light Mode) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText=""
         cancelText=""
         showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

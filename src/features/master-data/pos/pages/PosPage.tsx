@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePos } from '../hooks/usePos';
 import { useDepartemen } from '../../departemen/hooks/useDepartemen';
 import { useSubDepartemen } from '../../sub-departemen/hooks/useSubDepartemen';
@@ -9,9 +9,25 @@ import type { Pos } from '../types/pos.type';
 import type { PosFormValues } from '../schemas/pos.schema';
 
 export const PosPage: React.FC = () => {
-  const { data: posList = [], loading, addPos, editPos } = usePos();
-  const { departemens = [] } = useDepartemen();
-  const { subDepartemens = [] } = useSubDepartemen();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deptQuery, setDeptQuery] = useState('');
+  const [subDeptQuery, setSubDeptQuery] = useState('');
+  const [statusQuery, setStatusQuery] = useState('');
+
+  const { 
+    data: posList = [], 
+    meta,
+
+    setPage,
+ 
+    setPageSize,
+    loading, 
+    addPos, 
+    editPos 
+  } = usePos(searchQuery, deptQuery, subDeptQuery, statusQuery);
+
+  const { departemens = [] } = useDepartemen('', 'true');
+  const { subDepartemens = [] } = useSubDepartemen('', '', 'true');
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Pos | null>(null);
@@ -32,6 +48,16 @@ export const PosPage: React.FC = () => {
     variant: 'primary',
   });
 
+  // Auto-close alert hasil sukses setelah 1.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen && alertConfig.variant === 'primary') {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen, alertConfig.variant]);
+
   const handleOpenAdd = () => {
     setSelectedItem(null);
     setIsDialogOpen(true);
@@ -44,62 +70,64 @@ export const PosPage: React.FC = () => {
 
   const handleSubmitForm = (formData: PosFormValues) => {
     setPendingFormData(formData);
+    setIsDialogOpen(false); // Tutup dialog form agar tidak bertumpuk
     setIsConfirmOpen(true);
   };
 
   const handleCancelConfirm = () => {
     setIsConfirmOpen(false);
+    setIsDialogOpen(true); // Buka kembali form dialog jika batal
   };
 
   const handleConfirmSave = async () => {
-  if (!pendingFormData) return;
+    if (!pendingFormData) return;
 
-  setIsDialogOpen(false);
-  setIsConfirmOpen(false);
-  setIsSubmittingApi(true);
+    setIsDialogOpen(false);
+    setIsConfirmOpen(false);
+    setIsSubmittingApi(true);
 
-  try {
-    const payload = {
-      department_code: pendingFormData.department_code,
-      sub_department_code: pendingFormData.sub_department_code,
-      code: pendingFormData.code,
-      title: pendingFormData.title,
-      is_active: pendingFormData.is_active ?? true,
-    };
+    try {
+      const payload = {
+        department_code: pendingFormData.department_code,
+        sub_department_code: pendingFormData.sub_department_code,
+        code: pendingFormData.code,
+        title: pendingFormData.title,
+        is_active: pendingFormData.is_active ?? true,
+      };
 
-    if (selectedItem) {
-      await editPos(selectedItem.id, payload);
+      if (selectedItem) {
+        await editPos(selectedItem.id, payload);
+        setAlertConfig({
+          isOpen: true,
+          title: 'Berhasil Diperbarui!',
+          description: `Data POS "${pendingFormData.title}" berhasil diperbarui.`,
+          variant: 'primary',
+        });
+      } else {
+        await addPos(payload);
+        setAlertConfig({
+          isOpen: true,
+          title: 'Berhasil Ditambahkan!',
+          description: `POS baru "${pendingFormData.title}" berhasil ditambahkan.`,
+          variant: 'primary',
+        });
+      }
+
+      setPendingFormData(null);
+      setSelectedItem(null);
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Gagal menyimpan data POS. Silakan coba lagi.';
+      setIsDialogOpen(true);
       setAlertConfig({
         isOpen: true,
-        title: 'Berhasil Diperbarui!',
-        description: `Data POS "${pendingFormData.title}" berhasil diperbarui.`,
-        variant: 'primary',
+        title: 'Gagal Menyimpan!',
+        description: errorMessage,
+        variant: 'danger',
       });
-    } else {
-      await addPos(payload);
-      setAlertConfig({
-        isOpen: true,
-        title: 'Berhasil Ditambahkan!',
-        description: `POS baru "${pendingFormData.title}" berhasil ditambahkan.`,
-        variant: 'primary',
-      });
+    } finally {
+      setIsSubmittingApi(false);
     }
-
-    setPendingFormData(null);
-    setSelectedItem(null);
-  } catch (error: any) {
-    const errorMessage = error?.message || 'Gagal menyimpan data POS. Silakan coba lagi.';
-    setIsDialogOpen(true);
-    setAlertConfig({
-      isOpen: true,
-      title: 'Gagal Menyimpan!',
-      description: errorMessage,
-      variant: 'danger',
-    });
-  } finally {
-    setIsSubmittingApi(false);
-  }
-};
+  };
 
   if (loading && posList.length === 0) {
     return (
@@ -113,10 +141,21 @@ export const PosPage: React.FC = () => {
     <div className="space-y-6">
       <PosTable
         data={Array.isArray(posList) ? posList : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         departemenList={Array.isArray(departemens) ? departemens : []}
         subDepartemenList={Array.isArray(subDepartemens) ? subDepartemens : []}
         onAdd={handleOpenAdd}
         onEdit={handleOpenEdit}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedDeptFilter={deptQuery}
+        onDeptFilterChange={setDeptQuery}
+        selectedSubDeptFilter={subDeptQuery}
+        onSubDeptFilterChange={setSubDeptQuery}
+        selectedStatusFilter={statusQuery}
+        onStatusFilterChange={setStatusQuery}
       />
 
       <PosDialog
@@ -143,16 +182,18 @@ export const PosPage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
+      {/* Alert Hasil Sukses / Gagal (Auto-Close Tanpa Tombol OK) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText=""
         cancelText=""
         showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

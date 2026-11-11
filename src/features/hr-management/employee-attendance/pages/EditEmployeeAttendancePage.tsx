@@ -51,6 +51,29 @@ export const EditEmployeeAttendancePage: React.FC = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [jadwalList, setJadwalList] = useState<DetailKehadiranHarian[]>([]);
 
+  // State untuk pop-up sukses/gagal auto-close (tanpa tombol OK)
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant: 'primary' | 'danger';
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    variant: 'primary',
+  });
+
+  // Efek Auto-Close pop-up setelah 2.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen) {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen]);
+
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
@@ -71,25 +94,35 @@ export const EditEmployeeAttendancePage: React.FC = () => {
     setIsConfirmOpen(false);
     try {
       await saveDetail(jadwalList);
-      // Refresh data detail agar data terbaru tampil tanpa berpindah halaman
+      setAlertConfig({
+        isOpen: true,
+        title: 'Berhasil Disimpan!',
+        description: 'Perubahan absensi karyawan berhasil disimpan.',
+        variant: 'primary',
+      });
       await fetchDetail();
-    } catch (error) {
-      // Error handling diproses oleh custom hook
+    } catch (error: any) {
+      setAlertConfig({
+        isOpen: true,
+        title: 'Gagal Menyimpan!',
+        description: error?.response?.data?.message || 'Gagal menyimpan absensi karyawan.',
+        variant: 'danger',
+      });
     }
   };
 
-  const columns: ColumnDef<DetailKehadiranHarian>[] = [
+const columns: ColumnDef<DetailKehadiranHarian>[] = [
     { accessorKey: 'no', header: 'No.' },
-    { accessorKey: 'hari', header: 'Hari' },
-    { accessorKey: 'tanggal', header: 'Tanggal' },
+    { accessorKey: 'day', header: 'Hari' },
+    { accessorKey: 'date', header: 'Tanggal' },
     {
-      accessorKey: 'kehadiran',
+      accessorKey: 'attendanceStatus',
       header: 'Kehadiran',
       cell: ({ row }) => (
         <div className="w-32">
           <FormSelect
-            value={row.original.kehadiran}
-            onValueChange={(val) => handleFieldChange(row.original.id, 'kehadiran', val)}
+            value={row.original.attendanceStatus}
+            onValueChange={(val) => handleFieldChange(row.original.id, 'attendanceStatus', val)}
             options={[
               { value: 'Berangkat', label: 'Berangkat' },
               { value: 'Libur', label: 'Libur' },
@@ -102,59 +135,66 @@ export const EditEmployeeAttendancePage: React.FC = () => {
       ),
     },
     {
-      accessorKey: 'jamDatang',
+      accessorKey: 'scheduledCheckIn',
       header: () => <div className="text-center">Jam Datang</div>,
       cell: ({ row }) => (
-        <FormTimeInput
-          value={row.original.jamDatang}
-          onChange={(newVal) => handleFieldChange(row.original.id, 'jamDatang', newVal)}
-        />
+        <div className="flex items-center justify-between px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
+          <FormTimeInput
+            value={row.original.scheduledCheckIn}
+            onChange={(newVal) => handleFieldChange(row.original.id, 'scheduledCheckIn', newVal)}
+          />
+        </div>
       ),
     },
     {
-      accessorKey: 'jamPulang',
+      accessorKey: 'scheduledCheckOut',
       header: () => <div className="text-center">Jam Pulang</div>,
       cell: ({ row }) => (
-        <FormTimeInput
-          value={row.original.jamPulang}
-          onChange={(newVal) => handleFieldChange(row.original.id, 'jamPulang', newVal)}
-        />
+        <div className="flex items-center justify-between px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
+          <FormTimeInput
+            value={row.original.scheduledCheckOut}
+            onChange={(newVal) => handleFieldChange(row.original.id, 'scheduledCheckOut', newVal)}
+          />
+        </div>
       ),
     },
     {
-      accessorKey: 'absenDatang',
+      accessorKey: 'actualCheckIn',
       header: () => <div className="text-center">Absen Datang</div>,
       cell: ({ row }) => (
-        <FormTimeInput
-          value={row.original.absenDatang}
-          onChange={(newVal) => handleFieldChange(row.original.id, 'absenDatang', newVal)}
-        />
+        <div className="flex items-center justify-between px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
+          <FormTimeInput
+            value={row.original.actualCheckIn}
+            onChange={(newVal) => handleFieldChange(row.original.id, 'actualCheckIn', newVal)}
+          />
+        </div>
       ),
     },
     {
-      accessorKey: 'absenPulang',
+      accessorKey: 'actualCheckOut',
       header: () => <div className="text-center">Absen Pulang</div>,
       cell: ({ row }) => (
-        <FormTimeInput
-          value={row.original.absenPulang}
-          onChange={(newVal) => handleFieldChange(row.original.id, 'absenPulang', newVal)}
-        />
+        <div className="flex items-center justify-between px-2.5 py-1.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
+          <FormTimeInput
+            value={row.original.actualCheckOut}
+            onChange={(newVal) => handleFieldChange(row.original.id, 'actualCheckOut', newVal)}
+          />
+        </div>
       ),
     },
     { accessorKey: 'status', header: 'Status' },
     {
-      accessorKey: 'keterangan',
+      accessorKey: 'notes',
       header: 'Keterangan',
       cell: ({ row }) => (
         <KeteranganCell
-          value={row.original.keterangan}
-          onChange={(newVal) => handleFieldChange(row.original.id, 'keterangan', newVal)}
+          value={row.original.notes}
+          onChange={(newVal) => handleFieldChange(row.original.id, 'notes', newVal)}
         />
       ),
     },
     { accessorKey: 'ref', header: 'Ref' },
   ];
-
   const table = useReactTable({
     data: jadwalList,
     columns,
@@ -179,7 +219,7 @@ export const EditEmployeeAttendancePage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/hr-management/employee-attendance')}
-          className="..."
+          className="p-2 rounded-xl border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -203,17 +243,17 @@ export const EditEmployeeAttendancePage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                    {karyawanInfo.nama}
+                    {karyawanInfo.name}
                   </h2>
-                  <span className="font-mono text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                  <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                     {karyawanInfo.nip}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-0.5 font-medium">
                   <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>{karyawanInfo.periode}</span>
+                  <span>{karyawanInfo.period}</span>
                   <span>•</span>
-                  <span>{karyawanInfo.rentangTanggal}</span>
+                  <span>{karyawanInfo.dateRange}</span>
                 </p>
               </div>
             </div>
@@ -224,8 +264,8 @@ export const EditEmployeeAttendancePage: React.FC = () => {
                   <Briefcase className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-400 font-semibold uppercase">Skema</p>
-                  <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{karyawanInfo.skema}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">Skema</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{karyawanInfo.scheme}</p>
                 </div>
               </div>
 
@@ -234,8 +274,8 @@ export const EditEmployeeAttendancePage: React.FC = () => {
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-400 font-semibold uppercase">Total Hari</p>
-                  <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{karyawanInfo.totalHariKerja} Hari</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">Total Hari</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{karyawanInfo.totalWorkDays} Hari</p>
                 </div>
               </div>
 
@@ -244,8 +284,8 @@ export const EditEmployeeAttendancePage: React.FC = () => {
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-400 font-semibold uppercase">Jam / Hari</p>
-                  <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{karyawanInfo.jamKerjaPerHari} Jam</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">Jam / Hari</p>
+                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{karyawanInfo.hoursPerDay} Jam</p>
                 </div>
               </div>
             </div>
@@ -265,6 +305,7 @@ export const EditEmployeeAttendancePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Dialog Konfirmasi Awal Simpan */}
       <ConfirmAlertDialog
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
@@ -272,6 +313,18 @@ export const EditEmployeeAttendancePage: React.FC = () => {
         title="Simpan Perubahan Absensi Karyawan?"
         confirmText="Ya"
         isLoading={isSubmitting}
+      />
+
+      {/* Pop-up Hasil Sukses/Gagal (Auto-Close tanpa tombol OK dan teks hitam di Light Mode) */}
+      <ConfirmAlertDialog
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
+        title={alertConfig.title}
+        description={alertConfig.description}
+        variant={alertConfig.variant}
+        showCancelButton={false}
+        confirmText=""
       />
     </div>
   );

@@ -7,19 +7,39 @@ export const useSchedulePeriod = () => {
   const [data, setData] = useState<PeriodeJadwal[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+
+  // Pagination Server-Side & Search State
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [meta, setMeta] = useState<{
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  }>({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 10,
+  });
 
   const fetchPeriods = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await schedulePeriodService.getAll();
-      setData(result);
+      const result = await schedulePeriodService.getAll({
+        page,
+        perPage: pageSize,
+        search: searchQuery,
+      });
+      setData(result.data);
+      setMeta(result.meta);
     } catch (error: any) {
       toast.error('Gagal memuat data periode jadwal.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [page, pageSize, searchQuery]);
 
   useEffect(() => {
     fetchPeriods();
@@ -29,11 +49,7 @@ export const useSchedulePeriod = () => {
     setIsSubmitting(true);
     try {
       await schedulePeriodService.create(formData);
-      toast.success('Periode jadwal berhasil ditambahkan.');
-      setIsDialogOpen(false);
       fetchPeriods();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Gagal menambahkan periode jadwal.');
     } finally {
       setIsSubmitting(false);
     }
@@ -43,8 +59,13 @@ export const useSchedulePeriod = () => {
     data,
     isLoading,
     isSubmitting,
-    isDialogOpen,
-    setIsDialogOpen,
+    meta,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    searchQuery,
+    setSearchQuery,
     handleCreate,
     refetch: fetchPeriods,
   };

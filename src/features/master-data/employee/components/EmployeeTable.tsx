@@ -2,8 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Employee } from '../types/employee.type';
@@ -27,44 +25,77 @@ import { SettingDropdown } from '../../../../components/ui/SettingDropdown';
 
 interface EmployeeTableProps {
   data: Employee[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onEdit: (item: Employee) => void;
   onAdd: () => void;
   onToggleStatus: (ids: (string | number)[]) => void;
   onBulkResetPassword: (selectedIds: (string | number)[]) => void;
   onDownloadSample?: () => void;
   onImportData?: () => void;
-  onExportData?: () => void;
+  onExportData?: (selectedIds?: (string | number)[]) => void; // 👈 Menerima parameter selectedIds
+  
+  // Props Master Data untuk Filter
+  departemenList?: any[];
+  subDepartemenList?: any[];
+  posList?: any[];
+  gradeList?: any[];
+
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  deptFilter: string;
+  onDeptFilterChange: (val: string) => void;
+  subDeptFilter: string;
+  onSubDeptFilterChange: (val: string) => void;
+  posFilter: string;
+  onPosFilterChange: (val: string) => void;
+  gradeFilter: string;
+  onGradeFilterChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
 }
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   data,
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   onEdit,
   onAdd,
   onToggleStatus,
   onBulkResetPassword,
   onImportData,
   onExportData,
+  departemenList = [],
+  subDepartemenList = [],
+  posList = [],
+  gradeList = [],
+  searchQuery,
+  onSearchChange,
+  deptFilter,
+  onDeptFilterChange,
+  subDeptFilter,
+  onSubDeptFilterChange,
+  posFilter,
+  onPosFilterChange,
+  gradeFilter,
+  onGradeFilterChange,
+  statusFilter,
+  onStatusFilterChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
-
-  // State Confirmation Dialog
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
-
-  // State Filter
-  const [deptFilter, setDeptFilter] = useState('');
-  const [subDeptFilter, setSubDeptFilter] = useState('');
-  const [posFilter, setPosFilter] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [skemaHariKerjaFilter, setSkemaHariKerjaFilter] = useState('');
-  
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-  // 🔹 Nonaktifkan kolom Skema Hari Kerja, Tanggal Bergabung, Tanggal Lahir, dan No. Telp secara default
- // Gunakan tipe Record<string, boolean> agar fleksibel
-  // 🔹 Set false agar default-nya nonaktif (tidak dicentang) di menu Kolom
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     'No. Telepon': false,
     'Skema Hari Kerja': false,
@@ -95,31 +126,18 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  const filteredData = useMemo(() => {
-    let result = data;
-    if (deptFilter) result = result.filter((item) => String(item.department_id || item.department?.name || (item as any).departemen) === deptFilter);
-    if (subDeptFilter) result = result.filter((item) => String(item.sub_department_id || item.sub_department?.name || (item as any).sub_departemen) === subDeptFilter);
-    if (posFilter) result = result.filter((item) => String(item.position_id || item.position?.title || item.position?.name || (item as any).pos) === posFilter);
-    if (gradeFilter) result = result.filter((item) => String(item.grade_id || item.grade?.name) === gradeFilter);
-    if (statusFilter) {
-      const isAktifFilter = statusFilter === 'true';
-      result = result.filter((item) => Boolean(item.is_active ?? ((item as any).status === 'Aktif')) === isAktifFilter);
-    }
-    return result;
-  }, [data, deptFilter, subDeptFilter, posFilter, gradeFilter, statusFilter, skemaHariKerjaFilter]);
-
   const isFiltered = Boolean(
-    deptFilter || subDeptFilter || posFilter || gradeFilter || statusFilter || skemaHariKerjaFilter
+    deptFilter || subDeptFilter || posFilter || gradeFilter || statusFilter
   );
 
   const isAllSelected = useMemo(() => {
-    if (filteredData.length === 0) return false;
-    return filteredData.every((item) => item.id && selectedIds.includes(item.id));
-  }, [filteredData, selectedIds]);
+    if (data.length === 0) return false;
+    return data.every((item) => item.id && selectedIds.includes(item.id));
+  }, [data, selectedIds]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = filteredData.map((item) => item.id!).filter(Boolean);
+      const allIds = data.map((item) => item.id!).filter(Boolean);
       setSelectedIds(allIds);
     } else {
       setSelectedIds([]);
@@ -132,22 +150,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     } else {
       setSelectedIds((prev) => prev.filter((item) => item !== id));
     }
-  };
-
-  const handleTriggerResetPassword = () => {
-    if (selectedIds.length === 0) {
-      toast.error('Pilih setidaknya satu karyawan terlebih dahulu.');
-      return;
-    }
-    setShowResetConfirm(true);
-  };
-
-  const handleTriggerToggleStatus = () => {
-    if (selectedIds.length === 0) {
-      toast.error('Pilih setidaknya satu karyawan terlebih dahulu.');
-      return;
-    }
-    setShowStatusConfirm(true);
   };
 
   const columns = useMemo<ColumnDef<Employee>[]>(
@@ -221,30 +223,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         },
       },
       {
-        accessorKey: 'id_absen',
-        id: 'ID Absen',
-        header: () => <span className="block leading-tight text-center text-xs">ID Absen /<br/>Username</span>,
-        size: 90,
-        cell: ({ row }) => {
-          const item = row.original;
-          const val = (item as any).id_absen || item.nik || item.nip || '-';
-          return (
-            <div className="flex justify-center">
-              <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-[11px]">
-                {String(val)}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'nik',
-        id: 'NIK / NIP',
-        header: 'NIK / NIP',
+        accessorKey: 'nip',
+        id: 'NIP',
+        header: 'NIP',
         size: 85,
         cell: ({ row }) => {
           const item = row.original;
-          const val = item.nik || item.nip || '-';
+          const val = item.nip || '-';
           return <span className="font-mono text-gray-700 dark:text-gray-300 text-xs whitespace-nowrap">{String(val)}</span>;
         },
       },
@@ -262,48 +247,30 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       {
         accessorKey: 'phone',
         id: 'No. Telepon',
-        header: () => <span className="block leading-tight text-center text-xs">No.<br/>Telepon</span>,
+        header: 'No. Telepon',
         size: 110,
-        cell: ({ row }) => {
-          const item = row.original;
-          const val = item.phone || (item as any).nomor_telephone || '-';
-          return <span className="text-gray-700 dark:text-gray-300 text-xs whitespace-nowrap">{String(val)}</span>;
-        },
-      },
-      {
-        accessorKey: 'work_schedule_scheme',
-        id: 'Skema Hari Kerja',
-        header: () => <span className="block leading-tight text-center text-xs">Skema Hari<br/>Kerja</span>,
-        size: 100,
-        cell: ({ row }) => {
-          const item = row.original;
-          const val = item.work_schedule_scheme?.name || (item as any).skema_hari_kerja || '-';
-          return <span className="text-gray-700 dark:text-gray-300 font-mono text-xs whitespace-nowrap text-center block">{String(val)}</span>;
-        },
-      },
-      {
-        accessorKey: 'join_date',
-        id: 'Tanggal Bergabung',
-        header: () => <span className="block leading-tight text-center text-xs">Tanggal<br/>Bergabung</span>,
-        size: 95,
-        cell: ({ row }) => {
-          const item = row.original;
-          const rawVal = item.join_date || (item as any).tanggal_bergabung || '-';
-          const formattedVal = rawVal && rawVal !== '-' ? String(rawVal).split('T')[0] : '-';
-          return <span className="text-gray-700 dark:text-gray-300 text-xs whitespace-nowrap text-center block">{formattedVal}</span>;
-        },
+        cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300 text-xs">{String(row.original.phone || '-')}</span>,
       },
       {
         accessorKey: 'birth_date',
         id: 'Tanggal Lahir',
         header: () => <span className="block leading-tight text-center text-xs">Tanggal<br/>Lahir</span>,
         size: 95,
-        cell: ({ row }) => {
-          const item = row.original;
-          const rawVal = item.birth_date || (item as any).tanggal_lahir || '-';
-          const formattedVal = rawVal && rawVal !== '-' ? String(rawVal).split('T')[0] : '-';
-          return <span className="text-gray-700 dark:text-gray-300 text-xs whitespace-nowrap text-center block">{formattedVal}</span>;
-        },
+        cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300 text-xs text-center block">{row.original.birth_date || '-'}</span>,
+      },
+      {
+        accessorKey: 'age_years',
+        id: 'Umur',
+        header: () => <span className="block leading-tight text-center text-xs">Umur<br/>(Thn)</span>,
+        size: 75,
+        cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300 text-xs text-center block font-mono">{row.original.age_years ?? '-'}</span>,
+      },
+      {
+        accessorKey: 'work_duration_months',
+        id: 'Lama Bekerja',
+        header: () => <span className="block leading-tight text-center text-xs">Lama Kerja<br/>(Bln)</span>,
+        size: 85,
+        cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300 text-xs text-center block font-mono">{row.original.work_duration_months ?? '-'}</span>,
       },
       {
         accessorKey: 'is_active',
@@ -311,7 +278,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         header: 'Status',
         size: 85,
         cell: (info) => {
-          const isAktif = Boolean(info.getValue() ?? ((info.row.original as any).status === 'Aktif'));
+          const isAktif = Boolean(info.getValue());
           return (
             <div className="flex justify-center">
               <Badge 
@@ -332,62 +299,71 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         id: 'action',
         header: 'Action',
         size: 65,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="flex items-center justify-center">
-              <EditActionButton onClick={() => onEdit(item)} />
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center">
+            <EditActionButton onClick={() => onEdit(row.original)} />
+          </div>
+        ),
       },
     ],
-    [onEdit, selectedIds, isAllSelected, filteredData]
+    [onEdit, selectedIds, isAllSelected, data]
   );
 
-const table = useReactTable({
-    data: filteredData,
+  const table = useReactTable({
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
-    onColumnVisibilityChange: setColumnVisibility as any, // 👈 Casting ke any untuk mem-bypass perbedaan tipe updater TanStack
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
+    onColumnVisibilityChange: setColumnVisibility as any,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
-
-  const rows = table.getRowModel().rows;
 
   return (
     <div className="grid grid-cols-1 w-full relative">
       <div 
         ref={filterWrapperRef}
-        className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm mb-16 md:mb-0 flex flex-col overflow-hidden"
+        className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm mb-16 md:mb-0 flex flex-col overflow-visible"
       >
         <div className="w-full">
           <TableToolbar
             title="Data Karyawan"
             subtitle="Daftar manajemen data karyawan LokaHR"
             icon={<Users className="w-6 h-6" />}
-            searchValue={globalFilter ?? ''}
-            onSearchChange={setGlobalFilter}
+            searchValue={searchQuery ?? ''}
+            onSearchChange={onSearchChange}
             showFilterDropdown={showFilterDropdown}
             onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
+            isFiltered={isFiltered}
             filterDropdownContent={
               <TableFilterPopover
                 isOpen={showFilterDropdown}
                 onClose={() => setShowFilterDropdown(false)}
                 isFiltered={isFiltered}
                 onReset={() => {
-                  setDeptFilter('');
-                  setSubDeptFilter('');
-                  setPosFilter('');
-                  setGradeFilter('');
-                  setStatusFilter('');
-                  setSkemaHariKerjaFilter('');
+                  onDeptFilterChange('');
+                  onSubDeptFilterChange('');
+                  onPosFilterChange('');
+                  onGradeFilterChange('');
+                  onStatusFilterChange('');
                 }}
                 fields={[
                   { 
@@ -396,12 +372,17 @@ const table = useReactTable({
                     render: () => (
                       <FormSelectSearch
                         value={deptFilter}
-                        onChange={setDeptFilter}
+                        onChange={(val) => {
+                          onDeptFilterChange(val);
+                          onSubDeptFilterChange('');
+                        }}
                         placeholder="Semua Departemen"
                         options={[
                           { id: '', label: 'Semua Departemen' },
-                          { id: '1', label: 'IT' },
-                          { id: '2', label: 'HRD' },
+                          ...departemenList.filter(d => d.is_active).map(d => ({
+                            id: String(d.id),
+                            label: d.name || d.departemen
+                          }))
                         ]}
                       />
                     ) 
@@ -412,12 +393,16 @@ const table = useReactTable({
                     render: () => (
                       <FormSelectSearch
                         value={subDeptFilter}
-                        onChange={setSubDeptFilter}
+                        onChange={onSubDeptFilterChange}
                         placeholder="Semua Sub Departemen"
                         options={[
                           { id: '', label: 'Semua Sub Departemen' },
-                          { id: '1', label: 'Aplikasi & System' },
-                          { id: '2', label: 'Infrastructure' },
+                          ...subDepartemenList
+                            .filter(sub => sub.is_active && (!deptFilter || String(sub.department_id || sub.department_code) === String(deptFilter)))
+                            .map(sub => ({
+                              id: String(sub.id),
+                              label: sub.name || sub.sub_departemen
+                            }))
                         ]}
                       />
                     ) 
@@ -428,12 +413,32 @@ const table = useReactTable({
                     render: () => (
                       <FormSelectSearch
                         value={posFilter}
-                        onChange={setPosFilter}
+                        onChange={onPosFilterChange}
                         placeholder="Semua POS"
                         options={[
                           { id: '', label: 'Semua POS' },
-                          { id: '1', label: 'Programmer Officer' },
-                          { id: '2', label: 'System Analyst' },
+                          ...posList.filter(p => p.is_active).map(p => ({
+                            id: String(p.id),
+                            label: p.title || p.name
+                          }))
+                        ]}
+                      />
+                    ) 
+                  },
+                  { 
+                    key: 'grade', 
+                    label: 'Grade', 
+                    render: () => (
+                      <FormSelectSearch
+                        value={gradeFilter}
+                        onChange={onGradeFilterChange}
+                        placeholder="Semua Grade"
+                        options={[
+                          { id: '', label: 'Semua Grade' },
+                          ...gradeList.filter(g => g.is_active).map(g => ({
+                            id: String(g.id),
+                            label: g.name || g.grade
+                          }))
                         ]}
                       />
                     ) 
@@ -444,7 +449,7 @@ const table = useReactTable({
                     render: () => (
                       <FormSelectSearch
                         value={statusFilter}
-                        onChange={setStatusFilter}
+                        onChange={onStatusFilterChange}
                         placeholder="Semua Status"
                         showSearch={false}
                         options={[
@@ -461,37 +466,48 @@ const table = useReactTable({
             actionButtons={
               <div className="flex items-center gap-2">
                 <AddButton onClick={onAdd} />
-
                 <SettingDropdown
                   items={[
+                    {
+                      key: 'reset_password',
+                      label: 'Reset Password',
+                      icon: <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+                      variant: 'blue',
+                      onClick: () => {
+                        if (selectedIds.length === 0) {
+                          toast.error('Pilih setidaknya satu karyawan terlebih dahulu.');
+                          return;
+                        }
+                        setShowResetConfirm(true);
+                      },
+                    },
+                    {
+                      key: 'import',
+                      label: 'Import Data',
+                      icon: <Upload className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+                      variant: 'blue',
+                      onClick: () => onImportData?.(),
+                    },
                     {
                       key: 'export',
                       label: 'Export Data',
                       icon: <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
                       variant: 'emerald',
-                      onClick: () => onExportData?.(),
-                    },
-                    {
-                      key: 'import',
-                      label: 'Import Data',
-                      icon: <Upload className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
-                      variant: 'emerald',
-                      onClick: () => onImportData?.(),
-                    },
-                    {
-                      key: 'reset-password',
-                      label: 'Reset Password',
-                      icon: <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
-                      variant: 'blue',
-                      dividerTop: true,
-                      onClick: handleTriggerResetPassword,
+                      onClick: () => onExportData?.(selectedIds), // 👈 Kirim selectedIds ke handler export
                     },
                     {
                       key: 'status',
                       label: 'Status',
                       icon: <ToggleLeft className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
                       variant: 'amber',
-                      onClick: handleTriggerToggleStatus,
+                      dividerTop: true,
+                      onClick: () => {
+                        if (selectedIds.length === 0) {
+                          toast.error('Pilih setidaknya satu karyawan terlebih dahulu.');
+                          return;
+                        }
+                        setShowStatusConfirm(true);
+                      },
                     },
                   ]}
                 />
@@ -504,65 +520,95 @@ const table = useReactTable({
           <DataPagination table={table} />
         </div>
 
-        {/* Tabel Desktop */}
-        <DataTable
-          table={table}
-          columnsLength={columns.length}
-          emptyMessage="Tidak ada data karyawan ditemukan."
-        />
+        {/* TABEL VIEW (DESKTOP) */}
+        <div className="hidden md:block">
+          <DataTable
+            table={table}
+            columnsLength={columns.length}
+            emptyMessage="Tidak ada data karyawan ditemukan."
+          />
+        </div>
 
-        {/* TAMPILAN MOBILE */}
-        <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50 rounded-b-2xl">
-          {rows.length > 0 ? (
-            rows.map((row) => {
-              const item = row.original;
-              const isAktif = Boolean(item.is_active ?? ((item as any).status === 'Aktif'));
+        {/* CARDS VIEW (MOBILE) */}
+        <div className="block md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+          {data.length === 0 ? (
+            <div className="p-8 text-center text-xs text-gray-500">
+              Tidak ada data karyawan ditemukan.
+            </div>
+          ) : (
+            data.map((item) => {
               const isSelected = item.id ? selectedIds.includes(item.id) : false;
+              const deptName = item.department?.name || (item as any).departemen || '-';
+              const subDeptName = item.sub_department?.name || (item as any).sub_departemen || '-';
+              const posTitle = item.position?.title || item.position?.name || (item as any).pos || '-';
+              const gradeName = item.grade?.name || (item as any).grade || '-';
+
               return (
-                <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                <div key={item.id} className="p-4 flex flex-col gap-3 bg-white dark:bg-gray-900">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={(e) => item.id && handleSelectRow(item.id, e.target.checked)}
                         className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
-                      <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                        NIK: {item.nik || item.nip}
-                      </span>
+                      <div>
+                        <h4 className="font-bold text-xs text-gray-900 dark:text-gray-100">
+                          {item.full_name || item.name || '-'}
+                        </h4>
+                        <span className="font-mono text-[11px] text-gray-500">
+                          NIP: {item.nip || '-'}
+                        </span>
+                      </div>
                     </div>
                     <Badge 
-                      variant={isAktif ? 'outline' : 'destructive'} 
+                      variant={item.is_active ? 'outline' : 'destructive'}
                       className={
-                        isAktif 
-                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3 py-0.5' 
-                          : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3 py-0.5'
+                        item.is_active 
+                          ? 'rounded-full bg-emerald-50 text-emerald-600 border-emerald-200 px-2 py-0.5 text-[10px]' 
+                          : 'rounded-full bg-rose-50 text-rose-600 border-rose-200 px-2 py-0.5 text-[10px]'
                       }
                     >
-                      {isAktif ? 'Aktif' : 'Non Aktif'}
+                      {item.is_active ? 'Aktif' : 'Non Aktif'}
                     </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.full_name || item.name}</p>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/80">
+                    <div>
+                      <span className="text-[10px] text-gray-400 block uppercase font-semibold">Departemen</span>
+                      <span className="font-semibold text-gray-700 dark:text-gray-200">{deptName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block uppercase font-semibold">Sub Departemen</span>
+                      <span className="text-gray-700 dark:text-gray-300">{subDeptName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block uppercase font-semibold">POS</span>
+                      <span className="text-gray-700 dark:text-gray-300">{posTitle}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block uppercase font-semibold">Grade</span>
+                      <span className="text-gray-700 dark:text-gray-300">{gradeName}</span>
+                    </div>
                   </div>
-                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end">
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-gray-500">
+                      Umur: <strong className="font-mono">{item.age_years ?? '-'} thn</strong> | Kerja: <strong className="font-mono">{item.work_duration_months ?? '-'} bln</strong>
+                    </span>
                     <EditActionButton onClick={() => onEdit(item)} />
                   </div>
                 </div>
               );
             })
-          ) : (
-            <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-xs">
-              Tidak ada data karyawan ditemukan.
-            </div>
           )}
         </div>
       </div>
 
       <MobileAddFab onClick={onAdd} title="Tambah Karyawan" />
 
-      {/* Alert SweetAlert2 Konfirmasi Reset Password */}
+      {/* Confirm Alert Dialog Reset Password */}
       <ConfirmAlertDialog
         isOpen={showResetConfirm}
         onClose={() => setShowResetConfirm(false)}
@@ -572,13 +618,13 @@ const table = useReactTable({
           setShowResetConfirm(false);
         }}
         title="Reset Password Karyawan?"
-        description={`Apakah Anda yakin ingin mereset password untuk ${selectedIds.length} karyawan yang dipilih?`}
-        confirmText="Ya, Reset"
+        description={`Apakah Anda yakin ingin mereset password untuk ${selectedIds.length} karyawan yang dipilih? Password akan dikembalikan ke default (NIP).`}
+        confirmText="Ya, Reset Password"
         cancelText="Batal"
-        variant="primary"
+        variant="warning"
       />
 
-      {/* Alert SweetAlert2 Konfirmasi Ubah Status */}
+      {/* Confirm Alert Dialog Status */}
       <ConfirmAlertDialog
         isOpen={showStatusConfirm}
         onClose={() => setShowStatusConfirm(false)}

@@ -2,15 +2,12 @@ import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Grade } from '../types/grade.type';
 import { DataPagination } from '@/components/DataPagination';
 import { Layers } from 'lucide-react';
 
-// Reusable UI Components
 import { TableToolbar } from '@/components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '@/components/ui/ActionButtons';
 import { DataTable } from '@/components/ui/data-table';
@@ -20,37 +17,38 @@ import { Badge } from '@/components/ui/badge';
 
 interface GradeTableProps {
   data: Grade[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onEdit: (item: Grade) => void;
   onAdd: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
 }
 
 export const GradeTable: React.FC<GradeTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   onEdit,
   onAdd,
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
-
-  // Filter & Urutkan Data berdasarkan Level Terbesar ke Terkecil
-  const filteredData = useMemo(() => {
-    let result = [...data];
-
-    // Tetap urutkan berdasarkan level tertinggi di atas
-    result.sort((a, b) => (Number(b.level) || 0) - (Number(a.level) || 0));
-
-    if (statusFilter) {
-      const isFilterActive = statusFilter === 'true';
-      result = result.filter((item) => {
-        const rawActive = (item as any).is_active ?? (item as any).status;
-        const isActive = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
-        return isActive === isFilterActive;
-      });
-    }
-    return result;
-  }, [data, statusFilter]);
 
   const isFiltered = Boolean(statusFilter);
 
@@ -61,7 +59,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
           </span>
         ),
       },
@@ -121,21 +119,35 @@ export const GradeTable: React.FC<GradeTableProps> = ({
         ),
       },
     ],
-    [onEdit]
+    [onEdit, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -144,13 +156,12 @@ export const GradeTable: React.FC<GradeTableProps> = ({
     <div className="relative">
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* Header Toolbar */}
         <TableToolbar
           title="Master Grade"
           subtitle="Daftar kelola level jabatan LokaHR"
           icon={<Layers className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showStatusDropdown}
           onToggleFilterDropdown={() => setShowStatusDropdown(!showStatusDropdown)}
           isFiltered={isFiltered}
@@ -159,7 +170,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
               isOpen={showStatusDropdown}
               onClose={() => setShowStatusDropdown(false)}
               isFiltered={isFiltered}
-              onReset={() => setStatusFilter('')}
+              onReset={() => onStatusFilterChange('')}
               fields={[
                 {
                   key: 'status',
@@ -167,7 +178,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={statusFilter}
-                      onChange={(val) => setStatusFilter(val)}
+                      onChange={(val) => onStatusFilterChange(val)}
                       placeholder="Semua Status"
                       showSearch={false}
                       options={[
@@ -184,7 +195,6 @@ export const GradeTable: React.FC<GradeTableProps> = ({
           actionButtons={<AddButton onClick={onAdd} />}
         />
 
-        {/* Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
           <DataPagination table={table} />
         </div>
@@ -233,7 +243,6 @@ export const GradeTable: React.FC<GradeTableProps> = ({
           )}
         </div>
 
-        {/* Desktop View */}
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data grade ditemukan." />
 
       </div>

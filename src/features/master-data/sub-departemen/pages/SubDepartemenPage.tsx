@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSubDepartemen } from '../hooks/useSubDepartemen';
 import { useDepartemen } from '../../departemen/hooks/useDepartemen';
 import { SubDepartemenTable } from '../components/SubDepartemenTable';
@@ -8,32 +8,35 @@ import type { SubDepartemen } from '../types/sub-departemen.type';
 import type { SubDepartemenFormValues } from '../schemas/sub-departemen.schema';
 
 export const SubDepartemenPage: React.FC = () => {
-  // Destructure sesuai dengan return dari custom hooks (departemens/subDepartemens & isLoading)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deptQuery, setDeptQuery] = useState('');
+  const [statusQuery, setStatusQuery] = useState('');
+
   const { 
     subDepartemens = [], 
+    meta,
+    setPage,
+    setPageSize,
     isLoading: isSubLoading, 
     addSubDepartemen, 
     editSubDepartemen 
-  } = useSubDepartemen();
-  
-  
-  // Ubah destructuring `departemens` menjadi `data: departemens` (alias)
- const { 
-  departemens = [], 
-  isLoading: isDeptLoading 
-} = useDepartemen();
+  } = useSubDepartemen(searchQuery, deptQuery, statusQuery);
+
+    // 🌟 Ubah pemanggilan ini agar hanya mengambil departemen yang aktif (status 'true')
+  const { 
+    departemens = [], 
+    isLoading: isDeptLoading 
+  } = useDepartemen('', 'true');
+
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<SubDepartemen | null>(null);
 
-  // State untuk menyimpan data form sementara yang akan dikonfirmasi
   const [pendingFormData, setPendingFormData] = useState<SubDepartemenFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
 
-  // State Dialog Konfirmasi (Pertanyaan sebelum simpan)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // State Alert Result (Hasil Sukses / Gagal)
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -46,6 +49,16 @@ export const SubDepartemenPage: React.FC = () => {
     variant: 'primary',
   });
 
+  // Auto-close alert hasil sukses setelah 1.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen && alertConfig.variant === 'primary') {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen, alertConfig.variant]);
+
   const handleOpenAdd = () => {
     setSelectedItem(null);
     setIsDialogOpen(true);
@@ -56,47 +69,39 @@ export const SubDepartemenPage: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  // 1. Saat Klik 'Simpan' di Form: Tahan data & Buka Dialog Konfirmasi Pertanyaan
   const handleSubmitForm = (formData: SubDepartemenFormValues) => {
     setPendingFormData(formData);
+    setIsDialogOpen(false); // Tutup dialog form agar tidak bertumpuk
     setIsConfirmOpen(true);
   };
 
-  // 2. Batal Konfirmasi: Tutup dialog konfirmasi, form tetap ada
   const handleCancelConfirm = () => {
     setIsConfirmOpen(false);
+    setIsDialogOpen(true); // Buka kembali form dialog jika batal
   };
 
-  // 3. Eksekusi API saat user klik 'Ya, Simpan' di Dialog Konfirmasi
   const handleConfirmSave = async () => {
     if (!pendingFormData) return;
 
-    // ⚡ TUTUP FORM EDIT & DIALOG KONFIRMASI DULUAN DI AWAL (agar tidak saling tumpuk)
     setIsDialogOpen(false);
     setIsConfirmOpen(false);
     setIsSubmittingApi(true);
 
     try {
-      // Lakukan pengecekan ID terlebih dahulu sebelum memanggil API
       if (selectedItem && selectedItem.id !== undefined) {
-        // Konversi selectedItem.id ke number secara eksplisit
         await editSubDepartemen(Number(selectedItem.id), pendingFormData);
-
         setAlertConfig({
           isOpen: true,
           title: 'Berhasil Diperbarui!',
-          description: `Sub departemen berhasil diperbarui.`,
+          description: `Sub departemen "${pendingFormData.name}" berhasil diperbarui.`,
           variant: 'primary',
         });
       } else {
-        // Alur untuk tambah data baru
         await addSubDepartemen(pendingFormData);
-
-
         setAlertConfig({
           isOpen: true,
           title: 'Berhasil Ditambahkan!',
-          description: `Sub departemen baru berhasil ditambahkan.`,
+          description: `Sub departemen baru "${pendingFormData.name}" berhasil ditambahkan.`,
           variant: 'primary',
         });
       }
@@ -106,7 +111,6 @@ export const SubDepartemenPage: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error?.message || 'Gagal menyimpan data sub departemen. Silakan coba lagi.';
       
-      // Buka kembali modal form edit jika terjadi kesalahan jaringan/server
       setIsDialogOpen(true); 
       setAlertConfig({
         isOpen: true,
@@ -119,7 +123,7 @@ export const SubDepartemenPage: React.FC = () => {
     }
   };
 
-  const isLoading = isSubLoading || isDeptLoading;
+  const isLoading = (isSubLoading && subDepartemens.length === 0) || isDeptLoading;
 
   if (isLoading) {
     return (
@@ -131,25 +135,31 @@ export const SubDepartemenPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabel Utama Sub Departemen */}
-    {/* KODE PERBAIKAN */}
-    <SubDepartemenTable
-      data={Array.isArray(subDepartemens) ? subDepartemens : []}
-      departemenList={Array.isArray(departemens) ? departemens : []}
-      onEdit={handleOpenEdit}
-      onAdd={handleOpenAdd}
-/>
+      <SubDepartemenTable
+        data={Array.isArray(subDepartemens) ? subDepartemens : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        departemenList={Array.isArray(departemens) ? departemens : []}
+        onEdit={handleOpenEdit}
+        onAdd={handleOpenAdd}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedDeptFilter={deptQuery}
+        onDeptFilterChange={setDeptQuery}
+        statusFilter={statusQuery}
+        onStatusFilterChange={setStatusQuery}
+      />
 
-      {/* Modal Dialog Form */}
-     <SubDepartemenDialog
-      isOpen={isDialogOpen}
-      onClose={() => setIsDialogOpen(false)}
-      initialData={selectedItem}
-      departemenList={Array.isArray(departemens) ? departemens : []}
-      onSubmit={handleSubmitForm}
-    />
+      <SubDepartemenDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        initialData={selectedItem}
+        departemenList={Array.isArray(departemens) ? departemens : []}
+        onSubmit={handleSubmitForm}
+      />
 
-      {/* 1. Dialog Pertanyaan Konfirmasi Sebelum Simpan */}
+      {/* 1. Dialog Pertanyaan Konfirmasi */}
       <ConfirmAlertDialog
         isOpen={isConfirmOpen}
         onClose={handleCancelConfirm}
@@ -160,22 +170,23 @@ export const SubDepartemenPage: React.FC = () => {
             ? `Apakah Anda yakin ingin memperbarui data sub departemen "${pendingFormData?.name}"?`
             : `Apakah Anda yakin ingin menambahkan sub departemen "${pendingFormData?.name}"?`
         }
-        confirmText="Simpan"
+        confirmText="Ya, Simpan"
         variant="warning"
         isLoading={isSubmittingApi}
       />
 
-      {/* 2. Alert Result (Sukses / Gagal Setelah Simpan) */}
-      {/* 2. Alert Result (Sukses / Gagal Setelah Simpan) */}
+      {/* 2. Alert Result Sukses / Gagal (Auto-Close Tanpa Tombol OK) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText="" 
         cancelText=""
+        showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

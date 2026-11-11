@@ -13,6 +13,7 @@ interface TableToolbarProps {
   isFiltered?: boolean;
   filterDropdownContent?: React.ReactNode;
   actionButtons?: React.ReactNode;
+  debounceTime?: number; // Opsional: jeda waktu debounce dalam milidetik (default 500ms)
 }
 
 export const TableToolbar: React.FC<TableToolbarProps> = ({
@@ -26,8 +27,30 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   isFiltered,
   filterDropdownContent,
   actionButtons,
+  debounceTime = 500,
 }) => {
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // State lokal agar ketikan di input terasa responsif seketika (tanpa lag)
+  const [localValue, setLocalValue] = useState(searchValue);
+
+  // Sinkronisasi jika nilai dari parent berubah dari luar
+  useEffect(() => {
+    setLocalValue(searchValue);
+  }, [searchValue]);
+
+  // Efek Debounce: menunda pemanggilan onSearchChange ke parent/backend
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (localValue !== searchValue) {
+        onSearchChange(localValue);
+      }
+    }, debounceTime);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [localValue, debounceTime, onSearchChange, searchValue]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -66,8 +89,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           </span>
           <input
             type="text"
-            value={searchValue ?? ''}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localValue ?? ''}
+            onChange={(e) => setLocalValue(e.target.value)}
             placeholder="Cari data disini..."
             className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-gray-50 dark:focus:bg-gray-800 transition-all shadow-sm"
           />
@@ -84,7 +107,6 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           )}
 
           {/* Kontainer Popover Filter */}
-          {/* Dropdown Menu Filter */}
           {showFilterDropdown && filterDropdownContent && (
             <div className="absolute right-0 top-full mt-2 z-30 w-auto p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-visible">
               {filterDropdownContent}

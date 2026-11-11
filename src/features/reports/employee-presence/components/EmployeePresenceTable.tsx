@@ -2,8 +2,6 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
@@ -22,23 +20,47 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter, // 👈 Import TableFooter di sini
+  TableFooter,
 } from '@/components/ui/table';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
 
 interface EmployeePresenceTableProps {
   data: EmployeePresence[];
+  grandTotalPax: number;
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  selectedPeriode: string;
+  onPeriodeChange: (val: string) => void;
+  startDate: string;
+  endDate: string;
+  onDateRangeChange: (start: string, end: string) => void;
   onExport?: () => void;
 }
 
-export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ data, onExport }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  
-  const [selectedPeriode, setSelectedPeriode] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  
+export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({
+  data = [],
+  grandTotalPax = 0,
+  meta,
+  setPage,
+  setPageSize,
+  searchQuery,
+  onSearchChange,
+  selectedPeriode,
+  onPeriodeChange,
+  startDate,
+  endDate,
+  onDateRangeChange,
+  onExport,
+}) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -63,15 +85,6 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
     };
   }, [showFilterDropdown]);
 
-  const filteredData = useMemo(() => {
-    return data;
-  }, [data, startDate, endDate, selectedPeriode]);
-
-  // Hitung total pax secara dinamis
-  const grandTotalPax = useMemo(() => {
-    return filteredData.reduce((acc, item) => acc + (Number(item.totalPax) || 0), 0);
-  }, [filteredData]);
-
   const isFiltered = Boolean(startDate || endDate || selectedPeriode);
 
   const columns = useMemo<ColumnDef<EmployeePresence>[]>(
@@ -79,9 +92,9 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
       {
         id: 'index',
         header: '#',
-        cell: (info) => (
+        cell: ({ row }) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1}
+            {row.index + 1 + (meta.current_page - 1) * meta.per_page}
           </span>
         ),
       },
@@ -104,26 +117,41 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
         ),
       },
     ],
-    []
+    [meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) =>
+      onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
 
   return (
     <div className="grid grid-cols-1 w-full relative">
-      <div 
+      <div
         ref={filterWrapperRef}
         className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm mb-16 md:mb-0 flex flex-col relative"
       >
@@ -132,8 +160,8 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
             title="Kehadiran Karyawan"
             subtitle="Rekapitulasi total pax kehadiran berdasarkan departemen"
             icon={<Users className="w-6 h-6" />}
-            searchValue={globalFilter ?? ''}
-            onSearchChange={setGlobalFilter}
+            searchValue={searchQuery ?? ''}
+            onSearchChange={onSearchChange}
             showFilterDropdown={showFilterDropdown}
             onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
             isFiltered={isFiltered}
@@ -143,9 +171,8 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
                 onClose={() => setShowFilterDropdown(false)}
                 isFiltered={isFiltered}
                 onReset={() => {
-                  setSelectedPeriode('');
-                  setStartDate('');
-                  setEndDate('');
+                  onPeriodeChange('');
+                  onDateRangeChange('', '');
                 }}
                 fields={[
                   {
@@ -154,9 +181,10 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
                     render: () => (
                       <FormSelectSearch
                         value={selectedPeriode}
-                        onChange={setSelectedPeriode}
+                        onChange={onPeriodeChange}
                         placeholder="Pilih Periode..."
                         options={[
+                          { id: '', label: 'Semua Periode' },
                           { id: '2026-09', label: 'September 2026' },
                           { id: '2026-10', label: 'Oktober 2026' },
                         ]}
@@ -170,10 +198,7 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
                       <DateRangePicker
                         startDate={startDate}
                         endDate={endDate}
-                        onChange={(start, end) => {
-                          setStartDate(start);
-                          setEndDate(end);
-                        }}
+                        onChange={onDateRangeChange}
                         placeholder="DD-MM-YYYY ~ DD-MM-YYYY"
                       />
                     ),
@@ -193,7 +218,6 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
           <DataPagination table={table} />
         </div>
 
-        {/* Tampilan Desktop Table */}
         <div className="hidden md:block w-full overflow-x-auto rounded-b-2xl">
           <Table className="w-full font-sans">
             <TableHeader>
@@ -227,12 +251,11 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
               )}
             </TableBody>
 
-            {/* Total Row Footer */}
             {rows.length > 0 && (
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={2} className="px-4 py-3 text-right text-gray-700 dark:text-gray-200 uppercase tracking-wider text-xs font-bold">
-                    Total
+                    Total Seluruhnya
                   </TableCell>
                   <TableCell className="px-4 py-3 text-emerald-600 dark:text-emerald-400 text-sm font-extrabold">
                     {grandTotalPax} Pax
@@ -243,7 +266,6 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
           </Table>
         </div>
 
-        {/* Tampilan Mobile Card */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50 rounded-b-2xl">
           {rows.length > 0 ? (
             <>
@@ -265,7 +287,6 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({ da
                 );
               })}
 
-              {/* Card Total Mobile */}
               <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 flex justify-between items-center">
                 <span className="font-bold text-sm text-gray-800 dark:text-gray-100 uppercase">
                   Total Seluruhnya

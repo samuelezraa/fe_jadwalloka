@@ -1,27 +1,55 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { EmployeePresence, EmployeePresenceFilterParams } from '../types/employee-presence.type';
+import type { EmployeePresence } from '../types/employee-presence.type';
 import { employeePresenceService } from '../services/employee-presence.service';
 import toast from 'react-hot-toast';
 
-export const useEmployeePresence = (params?: EmployeePresenceFilterParams) => {
+export const useEmployeePresence = () => {
   const [data, setData] = useState<EmployeePresence[]>([]);
+  const [grandTotalPax, setGrandTotalPax] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // Pagination Server-Side
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [meta, setMeta] = useState<{
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  }>({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 10,
+  });
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedPeriode, setSelectedPeriode] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
-      const result = await employeePresenceService.getPresenceData(params);
-      setData(result);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Gagal memuat data kehadiran karyawan';
-      setError(msg);
-      toast.error(msg);
+      const result = await employeePresenceService.getPresenceData({
+        page,
+        perPage: pageSize,
+        search: searchQuery,
+        selectedPeriode,
+        startDate,
+        endDate,
+      });
+
+      setData(result.data);
+      setGrandTotalPax(result.grandTotalPax ?? 0);
+      setMeta(result.meta);
+    } catch (error: any) {
+      toast.error('Gagal memuat data kehadiran karyawan.');
     } finally {
       setLoading(false);
     }
-  }, [params?.selectedPeriode, params?.startDate, params?.endDate]);
+  }, [page, pageSize, searchQuery, selectedPeriode, startDate, endDate]);
 
   useEffect(() => {
     fetchData();
@@ -29,8 +57,21 @@ export const useEmployeePresence = (params?: EmployeePresenceFilterParams) => {
 
   return {
     data,
+    grandTotalPax,
     loading,
-    error,
+    meta,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    searchQuery,
+    setSearchQuery,
+    selectedPeriode,
+    setSelectedPeriode,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
     refetch: fetchData,
   };
 };

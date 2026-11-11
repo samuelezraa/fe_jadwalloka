@@ -2,8 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Departemen } from '../types/departemen.type';
@@ -14,23 +12,42 @@ import { Building2 } from 'lucide-react';
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
-import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch'; // 👈 Menggunakan FormSelectSearch
+import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 import { Badge } from '../../../../components/ui/badge';
 import { DataTable } from '../../../../components/ui/data-table';
 
 interface DepartemenTableProps {
   data: Departemen[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onEdit: (item: Departemen) => void;
   onAdd: () => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
 }
 
 export const DepartemenTable: React.FC<DepartemenTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   onEdit,
   onAdd,
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState(''); // '' | 'true' | 'false'
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
@@ -42,7 +59,6 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
       const target = event.target as Element | null;
       if (!target) return;
 
-      // Cek apakah klik berada di dalam portal popover radix/select
       const isPopoverContent = Boolean(
         target.closest('[data-radix-popper-content-wrapper]') ||
         target.closest('[role="dialog"]')
@@ -68,13 +84,6 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // Logika Pemfilteran Data berdasarkan Status Boolean
-  const filteredData = useMemo(() => {
-    if (!statusFilter) return data;
-    const isFilterActive = statusFilter === 'true';
-    return data.filter((item) => item.is_active === isFilterActive);
-  }, [data, statusFilter]);
-
   const isFiltered = Boolean(statusFilter);
 
   const columns = useMemo<ColumnDef<Departemen>[]>(
@@ -84,14 +93,10 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index +
-              1 +
-              info.table.getState().pagination.pageIndex *
-                info.table.getState().pagination.pageSize}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
           </span>
         ),
       },
-      
       {
         accessorKey: 'code',
         header: 'ID Departemen',
@@ -110,7 +115,6 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           </span>
         ),
       },
-
       {
         accessorKey: 'is_active',
         header: 'Status',
@@ -132,7 +136,6 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           );
         },
       },
-      
       {
         id: 'action',
         header: 'Action',
@@ -143,21 +146,35 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
         ),
       },
     ],
-    [onEdit]
+    [onEdit, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -171,8 +188,8 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           title="Master Departemen"
           subtitle="Daftar kelola induk departemen LokaHR"
           icon={<Building2 className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
@@ -181,7 +198,7 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
               isOpen={showFilterDropdown}
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
-              onReset={() => setStatusFilter('')}
+              onReset={() => onStatusFilterChange('')}
               fields={[
                 {
                   key: 'status',
@@ -189,9 +206,9 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={statusFilter}
-                      onChange={(val) => setStatusFilter(val)}
+                      onChange={(val) => onStatusFilterChange(val)}
                       placeholder="Semua Status"
-                      showSearch={false} // 👈 Sembunyikan pencarian khusus untuk filter status
+                      showSearch={false}
                       options={[
                         { id: '', label: 'Semua Status' },
                         { id: 'true', label: 'Aktif' },
@@ -208,7 +225,7 @@ export const DepartemenTable: React.FC<DepartemenTableProps> = ({
           }
         />
 
-        {/* Pagination */}
+        {/* Data Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
           <DataPagination table={table} />
         </div>

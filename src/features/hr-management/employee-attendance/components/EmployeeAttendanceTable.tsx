@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
   type VisibilityState,
 } from '@tanstack/react-table';
@@ -23,6 +21,16 @@ interface EmployeeAttendanceTableProps {
   selectedPeriode: string;
   onPeriodeChange: (period: string) => void;
   isLoading?: boolean;
+  meta: { current_page: number; last_page: number; total: number; per_page: number };
+  page: number;
+  setPage: (p: number) => void;
+  setPageSize: (size: number) => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  filterDept: string;
+  onDeptChange: (d: string) => void;
+  filterSubDept: string;
+  onSubDeptChange: (sd: string) => void;
 }
 
 const PERIODE_OPTIONS = [
@@ -35,71 +43,32 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
   selectedPeriode,
   onPeriodeChange,
   isLoading = false,
+  meta,
+  setPage,
+  setPageSize,
+  searchQuery,
+  onSearchChange,
+  filterDept,
+  onDeptChange,
+  filterSubDept,
+  onSubDeptChange,
 }) => {
   const navigate = useNavigate();
-
-  const [globalFilter, setGlobalFilter] = useState('');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
-  // State Filter Hanya Untuk Departemen dan Sub Departemen
-  const [filterDept, setFilterDept] = useState('');
-  const [filterSubDept, setFilterSubDept] = useState('');
-
-  // 1. Generate Opsi Dynamic Filter dari Data Rekapitulasi
-  const deptOptions = useMemo(() => {
-    const list = Array.from(new Set(data.map((i) => i.departemen).filter(Boolean)));
-    return [{ id: '', label: 'Semua Departemen' }, ...list.map((item) => ({ id: item, label: item }))];
-  }, [data]);
-
-  const subDeptOptions = useMemo(() => {
-    const list = Array.from(
-      new Set(
-        data
-          .filter((i) => !filterDept || i.departemen === filterDept)
-          .map((i) => i.subDepartemen || i.subDept)
-          .filter(Boolean)
-      )
-    );
-    return [{ id: '', label: 'Semua Sub Departemen' }, ...list.map((item) => ({ id: item, label: item }))];
-  }, [data, filterDept]);
-
-  // Reset Filter
   const handleResetFilters = () => {
-    setFilterDept('');
-    setFilterSubDept('');
-    setGlobalFilter('');
+    onDeptChange('');
+    onSubDeptChange('');
+    onSearchChange('');
   };
 
-  // 2. Filter Logika Berdasarkan Seleksi Departemen & Sub Departemen
-  const filteredData = useMemo(() => {
-    if (!selectedPeriode) return [];
-    let result = data;
-
-    if (filterDept) {
-      result = result.filter((item) => item.departemen === filterDept);
-    }
-    if (filterSubDept) {
-      result = result.filter(
-        (item) => item.subDepartemen === filterSubDept || item.subDept === filterSubDept
-      );
-    }
-
-    if (globalFilter) {
-      result = result.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(globalFilter.toLowerCase())
-        )
-      );
-    }
-    return result;
-  }, [data, selectedPeriode, globalFilter, filterDept, filterSubDept]);
-
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    employeeId: true,
     nip: true,
     nama: true,
     departemen: true,
     subDepartemen: true,
-    subDept: true,
+    subDept: false,
     pos: false,
     grade: false,
     skemaKerja: true,
@@ -115,41 +84,34 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
     action: true,
   });
 
-  const columns = useMemo<ColumnDef<HrManagementItem>[]>(
+ const columns = useMemo<ColumnDef<HrManagementItem>[]>(
     () => [
+      { accessorKey: 'employeeId', header: 'ID Karyawan' },
       { accessorKey: 'nip', header: 'NIP' },
       {
-        accessorKey: 'nama',
+        accessorKey: 'name', // 🟢 Ubah dari 'nama' menjadi 'name'
         header: 'Nama',
         cell: (info) => (
           <span className="font-bold text-gray-900 dark:text-gray-100">
-            {String(info.getValue())}
+            {String(info.getValue() ?? '-')}
           </span>
         ),
       },
-      { accessorKey: 'departemen', header: 'Departemen' },
-      { accessorKey: 'subDepartemen', header: 'Sub Departemen' },
-      { accessorKey: 'subDept', header: 'Sub Dept' },
+      { accessorKey: 'department', header: 'Departemen' }, // 🟢 Pastikan ini juga 'department' jika sebelumnya 'departemen'
+      { accessorKey: 'subDepartment', header: 'Sub Departemen' },
       { accessorKey: 'pos', header: 'POS' },
       { accessorKey: 'grade', header: 'Grade' },
-      { accessorKey: 'skemaKerja', header: 'Skema Kerja' },
-      { accessorKey: 'totalLibur', header: 'Total Libur' },
-      { accessorKey: 'totalPH', header: 'Total PH' },
-      { accessorKey: 'totalIzin', header: 'Total Izin' },
-      { accessorKey: 'totalAlfa', header: 'Total Alfa' },
-      { accessorKey: 'totalSakit', header: 'Total Sakit' },
-      { accessorKey: 'totalCuti', header: 'Total Cuti' },
-      { accessorKey: 'totalTerlambat', header: 'Total Terlambat' },
+      { accessorKey: 'workScheme', header: 'Skema Kerja' }, // 🟢 Pastikan ini 'workScheme'
       {
-        accessorKey: 'totalMasuk',
+        accessorKey: 'totalWorkDays', // 🟢 Ubah dari 'totalMasuk' menjadi 'totalWorkDays'
         header: 'Total Masuk',
         cell: (info) => (
           <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-            {String(info.getValue())}
+            {String(info.getValue() ?? 0)} Hari
           </span>
         ),
       },
-      { accessorKey: 'totalHari', header: 'Total Hari' },
+      { accessorKey: 'totalPeriodDays', header: 'Total Hari' }, // 🟢 Ubah dari 'totalHari' menjadi 'totalPeriodDays'
       {
         id: 'action',
         header: 'Action',
@@ -164,24 +126,38 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
     ],
     [navigate]
   );
-
+  
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
       columnVisibility,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) =>
+      onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   return (
     <div className="space-y-4">
-      {/* Selector Periode */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -207,45 +183,54 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
           title="Absensi Karyawan"
           subtitle="Kelola rincian data kehadiran & jadwal HR LokaHR"
           icon={<Users className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           filterDropdownContent={
-           <TableFilterPopover
-            isOpen={showFilterDropdown}
-            onClose={() => setShowFilterDropdown(false)}
-            onReset={handleResetFilters}
-            fields={[
-              {
-                key: 'departemen', // 👈 Tambahkan key di sini
-                label: 'Departemen',
-                render: () => (
-                  <FormSelectSearch
-                    value={filterDept}
-                    onChange={(val) => {
-                      setFilterDept(val);
-                      setFilterSubDept(''); // Reset sub dept ketika departemen berubah
-                    }}
-                    placeholder="Semua Departemen"
-                    options={deptOptions}
-                  />
-                ),
-              },
-              {
-                key: 'subDepartemen', // 👈 Tambahkan key di sini
-                label: 'Sub Departemen',
-                render: () => (
-                  <FormSelectSearch
-                    value={filterSubDept}
-                    onChange={(val) => setFilterSubDept(val)}
-                    placeholder="Semua Sub Departemen"
-                    options={subDeptOptions}
-                  />
-                ),
-              },
-            ]}
-          />
+            <TableFilterPopover
+              isOpen={showFilterDropdown}
+              onClose={() => setShowFilterDropdown(false)}
+              onReset={handleResetFilters}
+              fields={[
+                {
+                  key: 'departemen',
+                  label: 'Departemen',
+                  render: () => (
+                    <FormSelectSearch
+                      value={filterDept}
+                      onChange={(val) => {
+                        onDeptChange(val);
+                        onSubDeptChange('');
+                      }}
+                      placeholder="Semua Departemen"
+                      options={[
+                        { id: '', label: 'Semua Departemen' },
+                        { id: 'IT', label: 'IT' },
+                        { id: 'HRD', label: 'HRD' },
+                        { id: 'Operasional', label: 'Operasional' },
+                      ]}
+                    />
+                  ),
+                },
+                {
+                  key: 'subDepartemen',
+                  label: 'Sub Departemen',
+                  render: () => (
+                    <FormSelectSearch
+                      value={filterSubDept}
+                      onChange={(val) => onSubDeptChange(val)}
+                      placeholder="Semua Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        { id: 'Frontend Engineering', label: 'Frontend Engineering' },
+                        { id: 'Backend Engineering', label: 'Backend Engineering' },
+                      ]}
+                    />
+                  ),
+                },
+              ]}
+            />
           }
         />
 
@@ -271,47 +256,35 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
               <DataPagination table={table} />
             </div>
 
-            {/* TAMPILAN DESKTOP */}
             <div className="hidden md:block">
               <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data Absensi Karyawan ditemukan." />
             </div>
 
-            {/* TAMPILAN MOBILE */}
+           {/* TAMPILAN MOBILE */}
             <div className="block md:hidden p-4 space-y-3">
-              {filteredData.length === 0 ? (
+              {data.length === 0 ? (
                 <p className="text-center text-xs text-gray-500 py-6">Tidak ada data Absensi Karyawan ditemukan.</p>
               ) : (
-                filteredData.map((item) => (
+                data.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/80 rounded-xl p-4 shadow-xs space-y-3 transition-all hover:border-amber-500/50"
+                    className="bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700/80 rounded-xl p-4 shadow-xs space-y-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.nama}</h3>
-                        <p className="font-mono text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">NIP: {item.nip}</p>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.name}</h3> {/* 🟢 item.name */}
+                        <p className="font-mono text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">NIP: {item.nip} | ID: {item.employeeId}</p>
                       </div>
-                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono text-[10px] rounded-lg border border-gray-200 dark:border-gray-600">
-                        {item.skemaKerja}
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono text-[10px] rounded-lg">
+                        {item.workScheme} {/* 🟢 item.workScheme */}
                       </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs">
-                      <div>
-                        <span className="text-[10px] text-gray-400 uppercase font-semibold block">Sub Dept</span>
-                        <span className="text-gray-700 dark:text-gray-300 font-medium">{item.subDepartemen || item.subDept}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-gray-400 uppercase font-semibold block">Total Masuk</span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">{item.totalMasuk} / {item.totalHari} Hari</span>
-                      </div>
                     </div>
 
                     <div className="pt-2 flex items-center justify-end border-t border-gray-100 dark:border-gray-700">
                       <button
                         type="button"
                         onClick={() => navigate(`/hr-management/employee-attendance/edit/${item.id}`)}
-                        className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline py-1 px-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200/60 dark:border-amber-900/60"
+                        className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline py-1 px-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-lg"
                       >
                         <span>Edit Rincian</span>
                         <ChevronRight className="w-3.5 h-3.5" />

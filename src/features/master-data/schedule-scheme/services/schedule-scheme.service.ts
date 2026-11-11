@@ -2,9 +2,18 @@ import { api } from '@/lib/axios';
 import type { ScheduleScheme } from '../types/schedule-scheme.type';
 
 export const scheduleSchemeService = {
-  getAll: async (): Promise<ScheduleScheme[]> => {
-    const response = await api.get('/work-schedule-schemes');
-    return response.data.data;
+  getAll: async (search?: string, status?: string, page = 1, perPage = 10) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status !== undefined && status !== '') params.append('status', status);
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+
+    const response = await api.get(`/work-schedule-schemes?${params.toString()}`);
+    return {
+      data: response.data.data,
+      meta: response.data.meta,
+    };
   },
 
   getById: async (id: string | number): Promise<ScheduleScheme> => {

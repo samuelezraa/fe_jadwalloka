@@ -7,7 +7,12 @@ export const useDashboard = (filter?: DashboardFilter) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fetchStats = useCallback(async () => {
+ const fetchStats = useCallback(async () => {
+    // 🌟 Jika tanggal awal diisi tapi tanggal akhir kosong, jangan fetch dulu!
+    if ((filter?.start_date && !filter?.end_date) || (!filter?.start_date && filter?.end_date)) {
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await dashboardService.getStats(filter);
@@ -18,7 +23,6 @@ export const useDashboard = (filter?: DashboardFilter) => {
       setLoading(false);
     }
   }, [filter?.start_date, filter?.end_date, filter?.period]);
-
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);

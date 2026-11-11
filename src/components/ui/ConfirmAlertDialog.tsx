@@ -16,6 +16,7 @@ interface ConfirmAlertDialogProps {
   showCancelButton?: boolean;
   variant?: 'danger' | 'warning' | 'primary';
   isLoading?: boolean;
+  autoClose?: boolean;
 }
 
 export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
@@ -28,11 +29,16 @@ export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
   cancelText = 'Batal',
   showCancelButton = true,
   variant = 'warning',
+  autoClose = false,
 }) => {
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      if (Swal.isVisible()) {
+        Swal.close();
+      }
+      return;
+    }
 
-    // Pemetaan warna tombol konfirmasi berdasarkan variant
     const confirmButtonBgClass =
       variant === 'danger'
         ? 'bg-red-600 hover:bg-red-700'
@@ -51,31 +57,36 @@ export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
       variant === 'danger'
         ? '#dc2626'
         : variant === 'warning'
-        ? '#d97706'
+        ? '#107254'
         : '#059669';
 
-    MySwal.fire({
-      title: `<span style="font-size: 18px; font-weight: 700; color: #1f2937;">${title}</span>`,
+ MySwal.fire({
+      // 🌟 Menggunakan warna gelap untuk Light Mode (#1f2937) dan otomatis terang di Dark Mode (#f3f4f6)
+      title: `<span style="font-size: 18px; font-weight: 700;" class="text-gray-900 dark:text-gray-100">${title}</span>`,
       html: description
-        ? `<span style="font-size: 13px; color: #6b7280; line-height: 1.5;">${description}</span>`
+        ? `<span style="font-size: 13px; line-height: 1.5;" class="text-gray-600 dark:text-gray-400">${description}</span>`
         : '',
       icon: iconType,
       iconColor: iconColor,
       width: '420px',
-      showCancelButton: showCancelButton && cancelText !== '',
+      showCancelButton: showCancelButton && cancelText !== '' && !autoClose,
+      showConfirmButton: !autoClose,
       confirmButtonText: confirmText,
       cancelButtonText: cancelText,
-      reverseButtons: true, // Tombol Batal di kiri, Simpan/OK di kanan
+      reverseButtons: true,
       buttonsStyling: false,
       allowOutsideClick: false,
+      timer: autoClose ? 1500 : undefined,
+      timerProgressBar: false,
       customClass: {
         container: 'z-[999999]',
-        popup: 'rounded-2xl px-6 py-5 shadow-2xl border border-gray-100 dark:bg-gray-900',
-        icon: 'my-2 scale-90', // Skala aman tanpa merusak SVG centang/tanda tanya
+        // 🌟 Pastikan background popup mendukung bg-white dan dark:bg-gray-900
+        popup: 'rounded-2xl px-6 py-5 shadow-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900',
+        icon: 'my-2 scale-90',
         confirmButton: `px-5 py-2 ${confirmButtonBgClass} text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]`,
         cancelButton:
           'px-5 py-2 bg-[#6c757d] hover:bg-[#5a6268] text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]',
-        actions: 'flex items-center justify-center gap-3 pt-3',
+        actions: autoClose ? 'hidden' : 'flex items-center justify-center gap-3 pt-3',
       },
     }).then((result) => {
       if (result.isConfirmed) {
@@ -84,7 +95,13 @@ export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
         onClose();
       }
     });
-  }, [isOpen, title, description, confirmText, cancelText, showCancelButton, variant]);
+
+    return () => {
+      if (Swal.isVisible()) {
+        Swal.close();
+      }
+    };
+  }, [isOpen]);
 
   return null;
 };

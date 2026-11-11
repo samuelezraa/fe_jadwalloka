@@ -69,7 +69,7 @@ export const GradeForm: React.FC<GradeFormProps> = ({
           label="ID Grade"
           {...register('code')}
           disabled={isEditMode}
-          placeholder="Contoh: GR001"
+          placeholder="Contoh: LV001"
           error={errors.code?.message}
         />
         {isEditMode && (
@@ -83,7 +83,7 @@ export const GradeForm: React.FC<GradeFormProps> = ({
       <FormInput
         label="Nama Grade"
         {...register('name')}
-        placeholder="Contoh: Staff / Junior"
+        placeholder="Contoh: Manager "
         error={errors.name?.message}
       />
 

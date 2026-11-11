@@ -2,9 +2,23 @@ import { api } from '@/lib/axios';
 import type { CustomWorkHour } from '../types/custom-work-hour.type';
 
 export const customWorkHourService = {
-  getAll: async (): Promise<CustomWorkHour[]> => {
-    const response = await api.get('/custom-work-hours');
-    return response.data.data || response.data;
+  getAll: async (
+    search?: string,
+    status?: string,
+    page = 1,
+    perPage = 10
+  ) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status !== undefined && status !== '') params.append('status', status);
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+
+    const response = await api.get(`/custom-work-hours?${params.toString()}`);
+    return {
+      data: response.data.data,
+      meta: response.data.meta,
+    };
   },
 
   getById: async (id: string | number): Promise<CustomWorkHour> => {

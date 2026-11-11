@@ -9,11 +9,24 @@ export const api = axios.create({
   },
 });
 
-// Interceptor untuk menangani response dan error secara global
+// 🟢 1. REQUEST INTERCEPTOR: Otomatis selipkan token di setiap request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token'); // Sesuaikan dengan key token yang Anda simpan saat login
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 2. RESPONSE INTERCEPTOR: Menangani response dan error secara global
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Menampilkan pesan error jika terjadi kegagalan request API
     const message = error.response?.data?.message || 'Terjadi kesalahan pada server';
     console.error('API Error:', message);
     return Promise.reject(error);

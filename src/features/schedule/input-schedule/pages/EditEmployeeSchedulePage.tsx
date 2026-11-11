@@ -95,6 +95,17 @@ export const EditEmployeeSchedulePage: React.FC = () => {
     fetchDetail();
   }, [id]);
 
+  // 💡 Auto-close Pop-up Berhasil/Gagal dalam 1.5 detik tanpa perlu tombol OK
+  useEffect(() => {
+    if (alertConfig.isOpen) {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+        fetchDetail();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen]);
+
   const handleFieldChange = (rowId: string, field: keyof DailyScheduleDetail, value: any) => {
     setScheduleList((prev) =>
       prev.map((item) => (item.id === rowId ? { ...item, [field]: value } : item))
@@ -128,14 +139,6 @@ export const EditEmployeeSchedulePage: React.FC = () => {
     }
   };
 
-  // 🌟 Disesuaikan agar tetap stay di halaman setelah tekan OK
-  const handleCloseAlert = () => {
-    setAlertConfig((prev) => ({ ...prev, isOpen: false }));
-    // Panggil fetchDetail() jika ingin menyegarkan data terbaru tanpa berpindah halaman
-    fetchDetail();
-  };
-
-  
   const columns: ColumnDef<DailyScheduleDetail>[] = [
     { accessorKey: 'no', header: 'No.' },
     { accessorKey: 'dayName', header: 'Hari' },
@@ -273,17 +276,18 @@ export const EditEmployeeSchedulePage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* Alert Hasil Sukses / Gagal */}
+      {/* Alert Hasil Sukses / Gagal (Otomatis Hilang Tanpa Tombol OK & Teks Hitam di Light Mode) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
-        onClose={handleCloseAlert}
-        onConfirm={handleCloseAlert}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText=""
         cancelText=""
         showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

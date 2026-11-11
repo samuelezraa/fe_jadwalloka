@@ -1,25 +1,64 @@
 import { api } from '@/lib/axios';
 import type { AttendanceReport } from '../types/attendance.type';
 
-export const attendanceService = {
-  getAttendanceList: async (): Promise<AttendanceReport[]> => {
-    const response = await api.get<{ success: boolean; data: any[] }>('/attendance-log-details');
+export interface AttendanceParams {
+  page?: number;
+  perPage?: number;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  dept?: string;
+  subDept?: string;
+  grade?: string;
+}
 
-    return response.data.data.map((item) => ({
-      nip: item.nik || '-',
-      name: item.employee_name || item.employee?.full_name || '-',
-      dept: item.department_name || item.employee?.department?.name || '-',
-      subDept: item.employee?.sub_department?.name || item.employee?.subDepartment?.name || '-',
-      pos: item.employee?.position?.name || item.employee?.position?.title || item.employee?.pos?.name || item.employee?.pos?.title || '-',
-      grade: item.employee?.grade?.name || '-',
-      attendanceEnrollId: item.nik || '-',
-      attendanceVerification: '99',
-      presenceVerification: '255',
-      attendanceTime: item.attendance_time ? new Date(item.attendance_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-',
-      attendanceDate: item.date ? String(item.date).split('T')[0] : '-',
-      dataUploadTime: item.created_at ? new Date(item.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-',
-      machineId: item.attendance_log_id ? String(item.attendance_log_id) : '-',
-      machineIp: item.attendance_log?.machine_ip || '-',
-    }));
+export interface AttendanceApiResponse {
+  success: boolean;
+  data: AttendanceReport[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+  };
+}
+
+export const attendanceService = {
+  getAttendanceList: async (params: AttendanceParams = {}): Promise<AttendanceApiResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+    if (params.search) searchParams.append('search', params.search);
+    if (params.startDate) searchParams.append('start_date', params.startDate);
+    if (params.endDate) searchParams.append('end_date', params.endDate);
+    if (params.dept) searchParams.append('dept', params.dept);
+    if (params.subDept) searchParams.append('sub_dept', params.subDept);
+    if (params.grade) searchParams.append('grade', params.grade);
+
+    const response = await api.get<AttendanceApiResponse>(
+      `/attendance-log-details?${searchParams.toString()}`
+    );
+    return response.data;
   },
+
+
+  exportAttendanceReport: async (params: AttendanceParams = {}): Promise<Blob> => {
+  const searchParams = new URLSearchParams();
+
+  if (params.search) searchParams.append('search', params.search);
+  if (params.startDate) searchParams.append('start_date', params.startDate);
+  if (params.endDate) searchParams.append('end_date', params.endDate);
+  if (params.dept) searchParams.append('dept', params.dept);
+  if (params.subDept) searchParams.append('sub_dept', params.subDept);
+  if (params.grade) searchParams.append('grade', params.grade);
+
+  const response = await api.get(`/attendance-log-details/export?${searchParams.toString()}`, {
+    responseType: 'blob',
+  });
+
+  return response.data;
+},
 };

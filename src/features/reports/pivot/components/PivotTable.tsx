@@ -2,8 +2,6 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
@@ -28,24 +26,68 @@ import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
 
 interface PivotTableProps {
   data: PivotData[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  periodeFilter: string;
+  onPeriodeChange: (val: string) => void;
+  startDateFilter: string;
+  endDateFilter: string;
+  onDateRangeChange: (start: string, end: string) => void;
+  departemenFilter: string;
+  onDepartemenChange: (val: string) => void;
+  subDepartemenFilter: string;
+  onSubDepartemenChange: (val: string) => void;
+  posFilter: string;
+  onPosChange: (val: string) => void;
+  gradeFilter: string;
+  onGradeChange: (val: string) => void;
+  skemaFilter: string;
+  onSkemaChange: (val: string) => void;
+  departemenList?: any[];
+  subDepartemenList?: any[];
+  posList?: any[];
+  gradeList?: any[];
+  skemaList?: any[];
   onExport?: () => void;
 }
 
-export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  
-  // State Filter Utama & Tanggal
-  const [periodeFilter, setPeriodeFilter] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
-
-  // State Filter Tambahan (Departemen, Sub Dept, Grade, POS, Skema)
-  const [departemenFilter, setDepartemenFilter] = useState('');
-  const [subDepartemenFilter, setSubDepartemenFilter] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('');
-  const [posFilter, setPosFilter] = useState('');
-  const [skemaFilter, setSkemaFilter] = useState('');
-  
+export const PivotTable: React.FC<PivotTableProps> = ({
+  data = [],
+  meta,
+  setPage,
+  setPageSize,
+  searchQuery,
+  onSearchChange,
+  periodeFilter,
+  onPeriodeChange,
+  startDateFilter,
+  endDateFilter,
+  onDateRangeChange,
+  departemenFilter,
+  onDepartemenChange,
+  subDepartemenFilter,
+  onSubDepartemenChange,
+  posFilter,
+  onPosChange,
+  gradeFilter,
+  onGradeChange,
+  skemaFilter,
+  onSkemaChange,
+  departemenList = [],
+  subDepartemenList = [],
+  posList = [],
+  gradeList = [],
+  skemaList = [],
+  onExport,
+}) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
@@ -72,89 +114,124 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
     };
   }, [showFilterDropdown]);
 
-  // Extract Opsi Unik dari Data
-  const departemenOptions = useMemo(() => {
-    const unique = Array.from(new Set(data.map((item) => item.departemen).filter(Boolean)));
-    return [
-      { id: '', label: 'Semua Departemen' },
-      ...unique.map((dep) => ({ id: dep, label: dep })),
-    ];
-  }, [data]);
+  // 🟢 1. Filter Sub Departemen Aktif Berdasarkan Departemen Terpilih
+  const filteredSubDepts = useMemo(() => {
+    if (!departemenFilter) return subDepartemenList;
 
-  const subDepartemenOptions = useMemo(() => {
-    const unique = Array.from(new Set(data.map((item) => item.sub_departemen).filter(Boolean)));
-    return [
-      { id: '', label: 'Semua Sub Departemen' },
-      ...unique.map((sub) => ({ id: sub, label: sub })),
-    ];
-  }, [data]);
+    const selectedDeptObj = departemenList.find((d) => {
+      const dId = typeof d === 'object' ? String(d?.id) : '';
+      const dName = typeof d === 'string' ? d : String(d?.name || '');
+      return dId === String(departemenFilter) || dName.toLowerCase() === String(departemenFilter).toLowerCase();
+    });
 
-  const posOptions = useMemo(() => {
-    const unique = Array.from(new Set(data.map((item) => item.pos).filter(Boolean)));
-    return [
-      { id: '', label: 'Semua POS' },
-      ...unique.map((p) => ({ id: p, label: p })),
-    ];
-  }, [data]);
+    if (!selectedDeptObj) return subDepartemenList;
 
-  const gradeOptions = useMemo(() => {
-    const unique = Array.from(new Set(data.map((item) => item.grade).filter(Boolean)));
-    return [
-      { id: '', label: 'Semua Grade' },
-      ...unique.map((g) => ({ id: g, label: g })),
-    ];
-  }, [data]);
+    return subDepartemenList.filter((sub) => {
+      if (selectedDeptObj.id !== undefined && sub.department_id !== undefined) {
+        return String(sub.department_id) === String(selectedDeptObj.id);
+      }
+      const subDeptParentName = sub.department?.name || sub.department_name;
+      if (subDeptParentName && selectedDeptObj.name) {
+        return String(subDeptParentName).toLowerCase() === String(selectedDeptObj.name).toLowerCase();
+      }
+      return true;
+    });
+  }, [subDepartemenList, departemenList, departemenFilter]);
 
-  const skemaOptions = useMemo(() => {
-    const unique = Array.from(new Set(data.map((item) => item.skema).filter(Boolean)));
-    return [
-      { id: '', label: 'Semua Skema' },
-      ...unique.map((s) => ({ id: s, label: s })),
-    ];
-  }, [data]);
+// 🟢 2. Filter POS Aktif Berdasarkan Sub Departemen / Departemen Terpilih
+  const filteredPosList = useMemo(() => {
+    let result = posList;
 
-  // Logic Filtering Data
-  const filteredData = useMemo(() => {
-    let result = data;
-
-    if (departemenFilter) {
-      result = result.filter((item) => item.departemen === departemenFilter);
-    }
+    // A. Jika Sub Departemen dipilih (misal: "Frontend Engineering")
     if (subDepartemenFilter) {
-      result = result.filter((item) => item.sub_departemen === subDepartemenFilter);
+      // Cari objek Sub Departemen terpilih dari master list
+      const selectedSubDeptObj = subDepartemenList.find((sd) => {
+        const sdName = typeof sd === 'string' ? sd : String(sd?.name || '');
+        const sdId = typeof sd === 'object' ? String(sd?.id) : '';
+        const sdCode = typeof sd === 'object' ? String(sd?.code || '') : '';
+        return (
+          sdName.toLowerCase() === String(subDepartemenFilter).toLowerCase() ||
+          sdId === String(subDepartemenFilter) ||
+          sdCode === String(subDepartemenFilter)
+        );
+      });
+
+      const targetSubCode = selectedSubDeptObj?.code || null;
+      const targetSubId = selectedSubDeptObj?.id ? String(selectedSubDeptObj.id) : null;
+      const targetSubName = String(subDepartemenFilter).toLowerCase();
+
+      return result.filter((p) => {
+        // 1. Match via sub_department_code (misal: SUB001)
+        if (targetSubCode && p.sub_department_code) {
+          if (String(p.sub_department_code) === String(targetSubCode)) return true;
+        }
+
+        // 2. Match via sub_department_id
+        const pSubId = p.sub_department_id ?? p.sub_department?.id;
+        if (targetSubId && pSubId !== undefined && pSubId !== null) {
+          if (String(pSubId) === targetSubId) return true;
+        }
+
+        // 3. Match via Nama Sub Departemen
+        const pSubName = p.sub_department?.name || p.sub_department_name || p.title;
+        if (pSubName && targetSubName) {
+          return String(pSubName).toLowerCase().includes(targetSubName);
+        }
+
+        return false;
+      });
     }
-    if (posFilter) {
-      result = result.filter((item) => item.pos === posFilter);
-    }
-    if (gradeFilter) {
-      result = result.filter((item) => item.grade === gradeFilter);
-    }
-    if (skemaFilter) {
-      result = result.filter((item) => item.skema === skemaFilter);
+
+    // B. Jika Sub Departemen BELUM dipilih tetapi Departemen dipilih (misal: "IT")
+    if (departemenFilter) {
+      const selectedDeptObj = departemenList.find((d) => {
+        const dName = typeof d === 'string' ? d : String(d?.name || '');
+        const dId = typeof d === 'object' ? String(d?.id) : '';
+        const dCode = typeof d === 'object' ? String(d?.code || '') : '';
+        return (
+          dName.toLowerCase() === String(departemenFilter).toLowerCase() ||
+          dId === String(departemenFilter) ||
+          dCode === String(departemenFilter)
+        );
+      });
+
+      const targetDeptCode = selectedDeptObj?.code || null;
+      const targetDeptId = selectedDeptObj?.id ? String(selectedDeptObj.id) : null;
+      const targetDeptName = String(departemenFilter).toLowerCase();
+
+      return result.filter((p) => {
+        // 1. Match via department_code
+        if (targetDeptCode && p.department_code) {
+          if (String(p.department_code) === String(targetDeptCode)) return true;
+        }
+
+        // 2. Match via department_id
+        const pDeptId = p.department_id ?? p.department?.id;
+        if (targetDeptId && pDeptId !== undefined && pDeptId !== null) {
+          if (String(pDeptId) === targetDeptId) return true;
+        }
+
+        // 3. Match via Nama Departemen
+        const pDeptName = p.department?.name || p.department_name;
+        if (pDeptName && targetDeptName) {
+          return String(pDeptName).toLowerCase().includes(targetDeptName);
+        }
+
+        return false;
+      });
     }
 
     return result;
-  }, [
-    data,
-    periodeFilter,
-    startDateFilter,
-    endDateFilter,
-    departemenFilter,
-    subDepartemenFilter,
-    posFilter,
-    gradeFilter,
-    skemaFilter,
-  ]);
-
+  }, [posList, subDepartemenList, departemenList, subDepartemenFilter, departemenFilter]);
   const isFiltered = Boolean(
     periodeFilter ||
-    startDateFilter ||
-    endDateFilter ||
-    departemenFilter ||
-    subDepartemenFilter ||
-    posFilter ||
-    gradeFilter ||
-    skemaFilter
+      startDateFilter ||
+      endDateFilter ||
+      departemenFilter ||
+      subDepartemenFilter ||
+      posFilter ||
+      gradeFilter ||
+      skemaFilter
   );
 
   const columns = useMemo<ColumnDef<PivotData>[]>(
@@ -163,128 +240,120 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
         id: 'rowNumber',
         header: '#',
         size: 50,
-        cell: ({ row, table }) => {
-          const paginationState = table.getState().pagination;
-          return (
-            <span className="font-medium text-gray-500 dark:text-gray-400">
-              {paginationState.pageIndex * paginationState.pageSize + row.index + 1}
-            </span>
-          );
-        },
+        cell: ({ row }) => (
+          <span className="font-medium text-gray-500 dark:text-gray-400">
+            {row.index + 1 + (meta.current_page - 1) * meta.per_page}
+          </span>
+        ),
       },
       {
         accessorKey: 'nip',
         header: 'NIP',
         size: 90,
-        cell: (info) => <span className="font-mono text-gray-800 dark:text-gray-100">{String(info.getValue())}</span>,
+        cell: ({ row }) => (
+          <span className="font-mono text-gray-800 dark:text-gray-100 font-medium">
+            {String(row.original.nip || row.original.employee_id || '-')}
+          </span>
+        ),
       },
       {
         accessorKey: 'nama',
         header: 'Nama',
         size: 160,
-        cell: (info) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="font-bold text-gray-900 dark:text-gray-100">
+            {String(info.getValue())}
+          </span>
+        ),
       },
       {
         accessorKey: 'departemen',
         header: 'Departemen',
         size: 110,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>
+        ),
       },
       {
         accessorKey: 'sub_departemen',
         header: 'Sub Departemen',
         size: 150,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>
+        ),
       },
       {
         accessorKey: 'pos',
         header: 'POS',
         size: 150,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>
+        ),
       },
       {
         accessorKey: 'grade',
         header: 'Grade',
         size: 100,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>
+        ),
       },
       {
         accessorKey: 'skema',
         header: 'Skema',
         size: 90,
-        cell: (info) => <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
+        cell: (info) => (
+          <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
+            {String(info.getValue())}
+          </span>
+        ),
       },
-      {
-        accessorKey: 'masuk',
-        header: 'Masuk',
-        size: 70,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'libur',
-        header: 'Libur',
-        size: 70,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'ph',
-        header: 'PH',
-        size: 60,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'izin',
-        header: 'Izin',
-        size: 60,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'alfa',
-        header: 'Alfa',
-        size: 60,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'sakit',
-        header: 'Sakit',
-        size: 60,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'cuti',
-        header: 'Cuti',
-        size: 60,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
-      {
-        accessorKey: 'terlambat',
-        header: 'Terlambat',
-        size: 80,
-        cell: (info) => <span className="text-gray-700 dark:text-gray-300">{String(info.getValue())}</span>,
-      },
+      { accessorKey: 'masuk', header: 'Masuk', size: 70 },
+      { accessorKey: 'libur', header: 'Libur', size: 70 },
+      { accessorKey: 'ph', header: 'PH', size: 60 },
+      { accessorKey: 'izin', header: 'Izin', size: 60 },
+      { accessorKey: 'alfa', header: 'Alfa', size: 60 },
+      { accessorKey: 'sakit', header: 'Sakit', size: 60 },
+      { accessorKey: 'cuti', header: 'Cuti', size: 60 },
+      { accessorKey: 'terlambat', header: 'Terlambat', size: 80 },
     ],
-    []
+    [meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) =>
+      onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
 
   return (
     <div className="grid grid-cols-1 w-full relative">
-      <div 
+      <div
         ref={filterWrapperRef}
         className="w-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm mb-16 md:mb-0 flex flex-col relative"
       >
@@ -293,8 +362,8 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
             title="Pivot"
             subtitle="Laporan rekapitulasi data kehadiran pivot karyawan"
             icon={<FileText className="w-6 h-6" />}
-            searchValue={globalFilter ?? ''}
-            onSearchChange={setGlobalFilter}
+            searchValue={searchQuery ?? ''}
+            onSearchChange={onSearchChange}
             showFilterDropdown={showFilterDropdown}
             onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
             isFiltered={isFiltered}
@@ -304,14 +373,13 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                 onClose={() => setShowFilterDropdown(false)}
                 isFiltered={isFiltered}
                 onReset={() => {
-                  setPeriodeFilter('');
-                  setStartDateFilter('');
-                  setEndDateFilter('');
-                  setDepartemenFilter('');
-                  setSubDepartemenFilter('');
-                  setGradeFilter('');
-                  setPosFilter('');
-                  setSkemaFilter('');
+                  onPeriodeChange('');
+                  onDateRangeChange('', '');
+                  onDepartemenChange('');
+                  onSubDepartemenChange('');
+                  onGradeChange('');
+                  onPosChange('');
+                  onSkemaChange('');
                 }}
                 fields={[
                   {
@@ -320,7 +388,7 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                     render: () => (
                       <FormSelectSearch
                         value={periodeFilter}
-                        onChange={setPeriodeFilter}
+                        onChange={onPeriodeChange}
                         placeholder="Semua Periode"
                         options={[
                           { id: '', label: 'Semua Periode' },
@@ -336,33 +404,59 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                     render: () => (
                       <FormSelectSearch
                         value={departemenFilter}
-                        onChange={setDepartemenFilter}
+                        onChange={(val) => {
+                          onDepartemenChange(val);
+                          onSubDepartemenChange(''); // Reset Sub Departemen
+                          onPosChange('');           // Reset POS
+                        }}
                         placeholder="Semua Departemen"
-                        options={departemenOptions}
+                        options={[
+                          { id: '', label: 'Semua Departemen' },
+                          ...departemenList.map((d) => ({
+                            id: d.name || d,
+                            label: d.name || d,
+                          })),
+                        ]}
                       />
                     ),
                   },
-                  {
-                    key: 'sub_departemen',
-                    label: 'Sub Departemen',
-                    render: () => (
-                      <FormSelectSearch
-                        value={subDepartemenFilter}
-                        onChange={setSubDepartemenFilter}
-                        placeholder="Semua Sub Departemen"
-                        options={subDepartemenOptions}
-                      />
-                    ),
-                  },
+                 {
+                  key: 'sub_departemen',
+                  label: 'Sub Departemen',
+                  render: () => (
+                    <FormSelectSearch
+                      value={subDepartemenFilter}
+                      onChange={(val) => {
+                        onSubDepartemenChange(val);
+                        onPosChange(''); // Reset pilihan POS saat Sub Departemen diubah
+                      }}
+                      placeholder="Semua Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        ...filteredSubDepts.map((sd) => ({
+                          id: sd.name || sd,
+                          label: sd.name || sd,
+                        })),
+                      ]}
+                    />
+                  ),
+                },
+                  // ✅ KODE BARU (Sudah menggunakan filteredPosList)
                   {
                     key: 'pos',
                     label: 'POS',
                     render: () => (
                       <FormSelectSearch
                         value={posFilter}
-                        onChange={setPosFilter}
+                        onChange={onPosChange}
                         placeholder="Semua POS"
-                        options={posOptions}
+                        options={[
+                          { id: '', label: 'Semua POS' },
+                          ...filteredPosList.map((p) => ({           // 👈 Ubah posList menjadi filteredPosList
+                            id: p.name || p.title || p,
+                            label: p.name || p.title || p,
+                          })),
+                        ]}
                       />
                     ),
                   },
@@ -372,9 +466,15 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                     render: () => (
                       <FormSelectSearch
                         value={gradeFilter}
-                        onChange={setGradeFilter}
+                        onChange={onGradeChange}
                         placeholder="Semua Grade"
-                        options={gradeOptions}
+                        options={[
+                          { id: '', label: 'Semua Grade' },
+                          ...gradeList.map((g) => ({
+                            id: g.name || g,
+                            label: g.name || g,
+                          })),
+                        ]}
                       />
                     ),
                   },
@@ -384,9 +484,15 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                     render: () => (
                       <FormSelectSearch
                         value={skemaFilter}
-                        onChange={setSkemaFilter}
+                        onChange={onSkemaChange}
                         placeholder="Semua Skema"
-                        options={skemaOptions}
+                        options={[
+                          { id: '', label: 'Semua Skema' },
+                          ...skemaList.map((s) => ({
+                            id: s.name || s.code || s,
+                            label: s.name || s.code || s,
+                          })),
+                        ]}
                       />
                     ),
                   },
@@ -397,19 +503,14 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                       <DateRangePicker
                         startDate={startDateFilter}
                         endDate={endDateFilter}
-                        onChange={(start, end) => {
-                          setStartDateFilter(start);
-                          setEndDateFilter(end);
-                        }}
+                        onChange={onDateRangeChange}
                       />
                     ),
                   },
                 ]}
               />
             }
-            actionButtons={
-              <ExportIconButton onClick={onExport} title="Export Pivot" />
-            }
+            actionButtons={<ExportIconButton onClick={onExport} title="Export Pivot" />}
           />
         </div>
 
@@ -423,12 +524,14 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead 
-                      key={header.id} 
+                    <TableHead
+                      key={header.id}
                       className="whitespace-nowrap px-3 py-3"
                       style={{ width: header.getSize() }}
                     >
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -439,8 +542,8 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                 rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell 
-                        key={cell.id} 
+                      <TableCell
+                        key={cell.id}
                         className="whitespace-nowrap px-3 py-3 truncate"
                         style={{ width: cell.column.getSize() }}
                       >
@@ -465,7 +568,10 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
             rows.map((row) => {
               const item = row.original;
               return (
-                <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3"
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                       NIP: {item.nip}
@@ -476,7 +582,9 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, onExport }) => {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.nama}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.departemen} - {item.sub_departemen}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {item.departemen} - {item.sub_departemen}
+                    </p>
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-xs pt-1 border-t border-gray-100 dark:border-gray-800 text-center">
                     <div className="bg-gray-50 dark:bg-gray-800 p-1 rounded">

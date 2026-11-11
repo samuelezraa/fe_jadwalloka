@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CustomWorkHourTable } from '../components/CustomWorkHourTable';
 import { CustomWorkHourDialog } from '../components/CustomWorkHourDialog';
 import { ConfirmAlertDialog } from '@/components/ui/ConfirmAlertDialog';
@@ -7,14 +7,23 @@ import type { CustomWorkHour } from '../types/custom-work-hour.type';
 import type { CustomWorkHourFormValues } from '../schemas/custom-work-hour.schema';
 
 export const CustomWorkHourPage: React.FC = () => {
-  const { data, loading, addCustomWorkHour, editCustomWorkHour } = useCustomWorkHour();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const {
+    data,
+    meta,
+    setPage,
+    setPageSize,
+    loading,
+    addCustomWorkHour,
+    editCustomWorkHour,
+  } = useCustomWorkHour(searchQuery, statusFilter);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CustomWorkHour | null>(null);
-
   const [pendingFormData, setPendingFormData] = useState<CustomWorkHourFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
-
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const [alertConfig, setAlertConfig] = useState<{
@@ -28,6 +37,16 @@ export const CustomWorkHourPage: React.FC = () => {
     description: '',
     variant: 'primary',
   });
+
+  // 💡 Auto-close Pop-up Berhasil/Gagal dalam 1.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen) {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen]);
 
   const handleOpenAdd = () => {
     setSelectedItem(null);
@@ -103,8 +122,15 @@ export const CustomWorkHourPage: React.FC = () => {
       {/* Tabel Utama Custom Work Hour */}
       <CustomWorkHourTable
         data={Array.isArray(data) ? data : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         onAdd={handleOpenAdd}
         onEdit={handleOpenEdit}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
       />
 
       {/* Modal Dialog Form */}
@@ -131,17 +157,18 @@ export const CustomWorkHourPage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* 2. Alert Hasil Sukses / Gagal */}
+      {/* 2. Alert Hasil Sukses / Gagal (Otomatis Hilang Tanpa Tombol OK & Teks Hitam di Light Mode) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText=""
         cancelText=""
         showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

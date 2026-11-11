@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { Pos } from '../types/pos.type';
@@ -13,7 +11,6 @@ import { DataPagination } from '../../../../components/DataPagination';
 import { Building2 } from 'lucide-react';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 
-// Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
@@ -21,95 +18,77 @@ import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover
 
 interface PosTableProps {
   data: Pos[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   departemenList?: Departemen[];
   subDepartemenList?: SubDepartemen[];
   onEdit: (item: Pos) => void;
   onAdd: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  selectedDeptFilter: string;
+  onDeptFilterChange: (val: string) => void;
+  selectedSubDeptFilter: string;
+  onSubDeptFilterChange: (val: string) => void;
+  selectedStatusFilter: string;
+  onStatusFilterChange: (val: string) => void;
 }
 
 export const PosTable: React.FC<PosTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   departemenList = [],
   subDepartemenList = [],
   onEdit,
   onAdd,
+  searchQuery,
+  onSearchChange,
+  selectedDeptFilter,
+  onDeptFilterChange,
+  selectedSubDeptFilter,
+  onSubDeptFilterChange,
+  selectedStatusFilter,
+  onStatusFilterChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  
-  // State Filter
-  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('');
-  const [selectedSubDeptFilter, setSelectedSubDeptFilter] = useState<string>('');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('');
-  
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
 
-  // Helper untuk mendapatkan nama Departemen
-const getDepartmentName = (param?: Pos | string | null) => {
-  if (!param) return '-';
-  const deptCode = typeof param === 'string' 
-    ? param 
-    : param.department_code || (param as any).departemen_id || (param as any).department_id;
-  
-  if (deptCode && departemenList.length > 0) {
-    const dept = departemenList.find(
-      (d) => String(d.code || d.id).toLowerCase() === String(deptCode).toLowerCase()
-    );
-    if (dept) {
-      return (dept as any).departemen || dept.name || (dept as any).department_name || deptCode;
+  const getDepartmentName = (param?: Pos | string | null) => {
+    if (!param) return '-';
+    const deptCode = typeof param === 'string' ? param : param.department_code;
+    if (deptCode && departemenList.length > 0) {
+      const dept = departemenList.find(
+        (d) => String(d.code || d.id).toLowerCase() === String(deptCode).toLowerCase()
+      );
+      if (dept) return dept.name || (dept as any).departemen || deptCode;
     }
-  }
-  return typeof param === 'object' 
-    ? ((param as any).departemen_nama || (param as any).departemen || (param as any).department_name || '-') 
-    : (deptCode || '-');
-};
+    return deptCode || '-';
+  };
 
-// Helper untuk mendapatkan nama Sub Departemen
-const getSubDepartmentName = (param?: Pos | string | null) => {
-  if (!param) return '-';
-  const subDeptCode = typeof param === 'string' 
-    ? param 
-    : param.sub_department_code || (param as any).sub_departemen_id || (param as any).sub_department_id;
-  
-  if (subDeptCode && subDepartemenList.length > 0) {
-    const sub = subDepartemenList.find(
-      (s) => String(s.code || s.id).toLowerCase() === String(subDeptCode).toLowerCase()
-    );
-    if (sub) {
-      // Cek atribut nama sub departemen yang tersedia
-      return (sub as any).sub_departemen || sub.name || (sub as any).sub_department_name || subDeptCode;
+  const getSubDepartmentName = (param?: Pos | string | null) => {
+    if (!param) return '-';
+    const subDeptCode = typeof param === 'string' ? param : param.sub_department_code;
+    if (subDeptCode && subDepartemenList.length > 0) {
+      const sub = subDepartemenList.find(
+        (s) => String(s.code || s.id).toLowerCase() === String(subDeptCode).toLowerCase()
+      );
+      if (sub) return sub.name || (sub as any).sub_departemen || subDeptCode;
     }
-  }
-  return typeof param === 'object' 
-    ? ((param as any).sub_departemen_nama || (param as any).sub_departemen || (param as any).sub_department_name || '-') 
-    : (subDeptCode || '-');
-};
-
-  // Filter Data Multi-Kriteria
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const deptCode = item.department_code || (item as any).departemen_id || (item as any).department_id;
-      const subDeptCode = item.sub_department_code || (item as any).sub_departemen_id || (item as any).sub_department_id;
-
-      const matchDept = selectedDeptFilter ? String(deptCode) === String(selectedDeptFilter) : true;
-      const matchSubDept = selectedSubDeptFilter ? String(subDeptCode) === String(selectedSubDeptFilter) : true;
-
-      const rawActive = (item as any).is_active ?? (item as any).status;
-      const isActive = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
-      const matchStatus =
-        selectedStatusFilter === ''
-          ? true
-          : selectedStatusFilter === 'true'
-          ? isActive
-          : !isActive;
-
-      return matchDept && matchSubDept && matchStatus;
-    });
-  }, [data, selectedDeptFilter, selectedSubDeptFilter, selectedStatusFilter]);
+    return subDeptCode || '-';
+  };
 
   const isFiltered = Boolean(selectedDeptFilter || selectedSubDeptFilter || selectedStatusFilter);
 
-  // Kolom Tabel Sesuai Spesifikasi Dokumen
   const columns = useMemo<ColumnDef<Pos>[]>(
     () => [
       {
@@ -117,7 +96,7 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
           </span>
         ),
       },
@@ -194,21 +173,35 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
         ),
       },
     ],
-    [onEdit, departemenList, subDepartemenList]
+    [onEdit, departemenList, subDepartemenList, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -220,8 +213,8 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
           title="POS"
           subtitle="Daftar kelola posisi jabatan (POS) LokaHR"
           icon={<Building2 className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
@@ -231,9 +224,9 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
               onReset={() => {
-                setSelectedDeptFilter('');
-                setSelectedSubDeptFilter('');
-                setSelectedStatusFilter('');
+                onDeptFilterChange('');
+                onSubDeptFilterChange('');
+                onStatusFilterChange('');
               }}
               fields={[
                 {
@@ -243,16 +236,18 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
                     <FormSelectSearch
                       value={selectedDeptFilter}
                       onChange={(val) => {
-                        setSelectedDeptFilter(val);
-                        setSelectedSubDeptFilter('');
+                        onDeptFilterChange(val);
+                        onSubDeptFilterChange('');
                       }}
                       placeholder="Pilih Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList.map((d) => ({
-                          id: String(d.code || d.id),
-                          label: d.name || (d as any).departemen || String(d.code || d.id),
-                        })),
+                        ...departemenList
+                          .filter((d) => Boolean(d.is_active))
+                          .map((d) => ({
+                            id: String(d.code || d.id),
+                            label: d.name || (d as any).departemen || String(d.code || d.id),
+                          })),
                       ]}
                     />
                   ),
@@ -263,12 +258,13 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
                   render: () => (
                     <FormSelectSearch
                       value={selectedSubDeptFilter}
-                      onChange={(val) => setSelectedSubDeptFilter(val)}
+                      onChange={(val) => onSubDeptFilterChange(val)}
                       placeholder="Pilih Sub Departemen"
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
                         ...subDepartemenList
                           .filter((sub) => {
+                            if (!Boolean(sub.is_active)) return false;
                             if (!selectedDeptFilter) return true;
                             const parentCode = sub.department_code || (sub as any).departemen_id;
                             return String(parentCode) === String(selectedDeptFilter);
@@ -287,7 +283,7 @@ const getSubDepartmentName = (param?: Pos | string | null) => {
                   render: () => (
                     <FormSelectSearch
                       value={selectedStatusFilter}
-                      onChange={(val) => setSelectedStatusFilter(val)}
+                      onChange={(val) => onStatusFilterChange(val)}
                       placeholder="Pilih Status"
                       showSearch={false}
                       options={[

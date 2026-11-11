@@ -2,8 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { SubDepartemen } from '../types/sub-departemen.type';
@@ -11,7 +9,6 @@ import type { Departemen } from '../../departemen/types/departemen.type';
 import { DataPagination } from '../../../../components/DataPagination';
 import { Building2 } from 'lucide-react';
 
-// Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
 import { AddButton, EditActionButton, MobileAddFab } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
@@ -21,26 +18,46 @@ import { Badge } from '../../../../components/ui/badge';
 
 interface SubDepartemenTableProps {
   data: SubDepartemen[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   departemenList?: Departemen[];
   onEdit: (item: SubDepartemen) => void;
   onAdd: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  selectedDeptFilter: string;
+  onDeptFilterChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
 }
 
 export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   departemenList = [],
   onEdit,
   onAdd,
+  searchQuery,
+  onSearchChange,
+  selectedDeptFilter,
+  onDeptFilterChange,
+  statusFilter,
+  onStatusFilterChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>(''); // '' | 'true' | 'false'
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
-
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Auto-close filter popover saat mengklik di luar area filter
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Element | null;
@@ -71,18 +88,13 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // Helper untuk mendapatkan Nama Departemen secara presisi
   const getDepartmentName = (item: SubDepartemen) => {
-    // 1. Jika backend mengirimkan objek relasi nested (misal item.department.name)
     if ((item as any).department?.name) {
       return (item as any).department.name;
     }
-
-    // 2. Jika ada properti langsung department_name atau departemen_nama
     if (item.department_name) return item.department_name;
     if ((item as any).departemen_nama) return (item as any).departemen_nama;
 
-    // 3. Pencarian fallback berdasarkan department_code / departemen_id di departemenList
     const targetCode = item.department_code || (item as any).departemen_id;
     if (targetCode && Array.isArray(departemenList) && departemenList.length > 0) {
       const foundDept = departemenList.find(
@@ -92,24 +104,8 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         return foundDept.name || (foundDept as any).departemen || targetCode;
       }
     }
-
     return '-';
   };
-
-  // Filter Data berdasarkan Departemen Code & Status Boolean
-  const filteredData = useMemo(() => {
-    let result = data;
-    if (selectedDeptFilter) {
-      result = result.filter(
-        (item) => (item.department_code || (item as any).departemen_id) === selectedDeptFilter
-      );
-    }
-    if (statusFilter) {
-      const isFilterActive = statusFilter === 'true';
-      result = result.filter((item) => item.is_active === isFilterActive);
-    }
-    return result;
-  }, [data, selectedDeptFilter, statusFilter]);
 
   const isFiltered = Boolean(selectedDeptFilter || statusFilter);
 
@@ -120,7 +116,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
           </span>
         ),
       },
@@ -182,21 +178,35 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         ),
       },
     ],
-    [onEdit, departemenList]
+    [onEdit, departemenList, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -205,25 +215,23 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
     <div className="relative" ref={filterWrapperRef}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* Header Toolbar */}
         <TableToolbar
           title="Sub Departemen"
           subtitle="Daftar kelola sub departemen LokaHR"
           icon={<Building2 className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
-          
           filterDropdownContent={
             <TableFilterPopover
               isOpen={showFilterDropdown}
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
               onReset={() => {
-                setSelectedDeptFilter('');
-                setStatusFilter('');
+                onDeptFilterChange('');
+                onStatusFilterChange('');
               }}
               fields={[
                 {
@@ -232,14 +240,16 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={selectedDeptFilter}
-                      onChange={(val) => setSelectedDeptFilter(val)}
+                      onChange={(val) => onDeptFilterChange(val)}
                       placeholder="Semua Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList.map((d) => ({ 
-                          id: d.code || (d as any).id, 
-                          label: d.name || (d as any).departemen 
-                        })),
+                        ...departemenList
+                          .filter((d) => Boolean(d.is_active)) // 👈 Filter hanya departemen aktif
+                          .map((d) => ({ 
+                            id: d.code || (d as any).id, 
+                            label: d.name || (d as any).departemen 
+                          })),
                       ]}
                     />
                   ),
@@ -250,7 +260,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={statusFilter}
-                      onChange={(val) => setStatusFilter(val)}
+                      onChange={(val) => onStatusFilterChange(val)}
                       placeholder="Semua Status"
                       showSearch={false}
                       options={[
@@ -264,18 +274,16 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
               ]}
             />
           }
-
           actionButtons={
             <AddButton onClick={onAdd} />
           }
         />
 
-        {/* Pagination */}
         <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
           <DataPagination table={table} />
         </div>
 
-        {/* TAMPILAN MOBILE: Card */}
+        {/* TAMPILAN MOBILE */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
@@ -329,7 +337,6 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
       </div>
 
       <MobileAddFab onClick={onAdd} title="Tambah Sub Departemen" />
-
     </div>
   );
 };

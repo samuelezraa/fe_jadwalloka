@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InputScheduleTable } from '../components/InputScheduleTable';
 import { ImportScheduleDialog } from '../components/ImportScheduleDialog';
@@ -6,50 +6,71 @@ import { WeeklyWorkHourSettingDialog } from '../components/WeeklyWorkHourSetting
 import { useInputSchedule } from '../hooks/useInputSchedule';
 import { inputScheduleService, type WeeklyWorkHourPayload } from '../services/input-schedule.service';
 import type { InputSchedulePeriodItem } from '../types/input-schedule.type';
-import toast from 'react-hot-toast';
+import { api } from '@/lib/axios';
+import toast from 'react-hot-toast'; // 👈 Tambahkan Toast Alert
 
 export const InputSchedulePage: React.FC = () => {
   const navigate = useNavigate();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [subDeptFilter, setSubDeptFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const [departemens, setDepartemens] = useState<any[]>([]);
+  const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
+
   const {
     selectedPeriod,
     setSelectedPeriod,
     summary,
     data,
+    meta,
+    setPage,
+    setPageSize,
     isLoading,
     refetch,
-  } = useInputSchedule();
+  } = useInputSchedule(searchQuery, deptFilter, subDeptFilter, statusFilter);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [deptRes, subDeptRes] = await Promise.all([
+          api.get('/departments'),
+          api.get('/sub-departments'),
+        ]);
+        setDepartemens(deptRes.data.data || deptRes.data || []);
+        setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
+      } catch (err) {
+        console.error('Gagal memuat master departemen:', err);
+      }
+    };
+    fetchMasterData();
+  }, []);
 
   const handleNavigateEdit = (item: InputSchedulePeriodItem) => {
     navigate(`/schedule/input-schedule/edit/${item.id}`);
   };
 
-  // 🌟 Menghubungkan Import ke backend service
   const handleExecuteImport = async (file: File) => {
-    if (!selectedPeriod) {
-      toast.error('Silakan pilih periode terlebih dahulu!');
-      return;
-    }
-    const toastId = toast.loading('Mengimport data jadwal...');
+    if (!selectedPeriod) return;
+    const toastId = toast.loading('Mengimpor data jadwal...');
     try {
       await inputScheduleService.importSchedule(file, selectedPeriod);
-      toast.success('Data jadwal berhasil diimport!', { id: toastId });
+      toast.success('Data jadwal berhasil diimpor!', { id: toastId });
       setIsImportOpen(false);
       if (refetch) refetch();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Gagal mengimport jadwal.', { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Gagal mengimpor jadwal.', { id: toastId });
     }
   };
 
-  // 🌟 Menghubungkan Export ke backend service & download file
   const handleExport = async () => {
-    if (!selectedPeriod) {
-      toast.error('Silakan pilih periode terlebih dahulu!');
-      return;
-    }
-    const toastId = toast.loading('Menyiapkan unduhan data jadwal...');
+    if (!selectedPeriod) return;
+    const toastId = toast.loading('Menyiapkan file ekspor...');
     try {
       const blob = await inputScheduleService.exportSchedule(selectedPeriod);
       const url = window.URL.createObjectURL(new Blob([blob]));
@@ -59,25 +80,26 @@ export const InputSchedulePage: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
-      toast.success('Unduhan data jadwal dimulai...', { id: toastId });
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Gagal mengexport data jadwal.', { id: toastId });
+      toast.success('File berhasil diunduh.', { id: toastId });
+    } catch (err: any) {
+      toast.error('Gagal mengekspor data jadwal.', { id: toastId });
     }
   };
 
-  // 🌟 Menghubungkan Setting Jam Mingguan ke backend service
+  // 💡 Pembaruan Jam Kerja Mingguan dengan Alert & Refetch
   const handleSaveWeeklyHours = async (payload: WeeklyWorkHourPayload) => {
-    const toastId = toast.loading('Menyimpan pengaturan jam mingguan...');
+    const toastId = toast.loading('Menyimpan jam kerja mingguan...');
     try {
       await inputScheduleService.setWeeklyWorkHours(payload);
-      toast.success('Jam kerja mingguan berhasil diperbarui!', { id: toastId });
+      toast.success('Jam kerja mingguan berhasil diperbarui untuk seluruh karyawan!', { id: toastId });
       setIsSettingOpen(false);
+      if (refetch) refetch();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Gagal menyimpan pengaturan.', { id: toastId });
+      toast.error(error?.response?.data?.message || 'Gagal menyimpan jam kerja mingguan.', { id: toastId });
     }
   };
 
-  if (isLoading) {
+  if (isLoading && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
@@ -92,12 +114,25 @@ export const InputSchedulePage: React.FC = () => {
       <InputScheduleTable
         data={data}
         summary={summary}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         onEdit={handleNavigateEdit}
         onSettingGlobal={() => setIsSettingOpen(true)}
         onImport={() => setIsImportOpen(true)}
         onExport={handleExport}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        deptFilter={deptFilter}
+        onDeptFilterChange={setDeptFilter}
+        subDeptFilter={subDeptFilter}
+        onSubDeptFilterChange={setSubDeptFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        departemenList={departemens}
+        subDepartemenList={subDepartemens}
       />
 
       <ImportScheduleDialog

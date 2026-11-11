@@ -16,11 +16,15 @@ export const LoginPage: React.FC = () => {
       const response = await authService.login(username, password);
 
       if (response.success) {
-        // Simpan token atau data user ke localStorage jika diperlukan
-        if (response.data?.token) {
-          localStorage.setItem('token', response.data.token);
+        // 🟢 Perbaikan: Mengambil token dari response.data.token sesuai struktur interface LoginResponse
+        const token = response.data?.token;
+
+        if (token) {
+          localStorage.setItem('token', token);
         }
-        navigate('/dashboard');
+        
+        // Arahkan ke halaman utama/dashboard setelah berhasil login
+          navigate('/dashboard');
       } else {
         setErrorMessage(response.message || 'Login gagal.');
       }
@@ -76,3 +80,5 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+
+export default LoginPage;

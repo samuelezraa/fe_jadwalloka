@@ -1,10 +1,16 @@
 import { api } from '@/lib/axios';
-import type { PeriodeJadwal, PeriodeJadwalFormData } from '../types/schedule-period.type';
+import type { PeriodeJadwal, PeriodeJadwalFormData, PeriodApiResponse } from '../types/schedule-period.type';
 
 export const schedulePeriodService = {
-  getAll: async (): Promise<PeriodeJadwal[]> => {
-    const response = await api.get('/periods');
-    return response.data.data;
+  getAll: async (params: { page?: number; perPage?: number; search?: string } = {}): Promise<PeriodApiResponse> => {
+    const searchParams = new URLSearchParams();
+
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.perPage) searchParams.append('per_page', params.perPage.toString());
+    if (params.search) searchParams.append('search', params.search);
+
+    const response = await api.get<PeriodApiResponse>(`/periods?${searchParams.toString()}`);
+    return response.data;
   },
 
   create: async (data: PeriodeJadwalFormData): Promise<PeriodeJadwal> => {

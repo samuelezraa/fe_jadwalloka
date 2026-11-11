@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDepartemen } from '../hooks/useDepartemen';
 import { DepartemenTable } from '../components/DepartemenTable';
 import { DepartemenDialog } from '../components/DepartemenDialog';
@@ -7,24 +7,28 @@ import type { Departemen } from '../types/departemen.type';
 import type { DepartemenFormValues } from '../schemas/departemen.schema';
 
 export const DepartemenPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusQuery, setStatusQuery] = useState('');
+
+  // 🌟 Ambil meta, page, dan setter pagination dari hook
   const { 
     departemens = [], 
+    meta,
+    setPage,
+    setPageSize,
     isLoading, 
     addDepartemen, 
     editDepartemen 
-  } = useDepartemen();
+  } = useDepartemen(searchQuery, statusQuery);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDepartemen, setSelectedDepartemen] = useState<Departemen | null>(null);
 
-  // Data form sementara yang sedang menunggu konfirmasi
   const [pendingFormData, setPendingFormData] = useState<DepartemenFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
 
-  // State Dialog Konfirmasi (Pertanyaan)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // State Alert Result (Hasil Sukses / Gagal)
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -37,6 +41,16 @@ export const DepartemenPage: React.FC = () => {
     variant: 'primary',
   });
 
+  // Auto-close alert sukses otomatis setelah 1.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen && alertConfig.variant === 'primary') {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen, alertConfig.variant]);
+
   const handleOpenAdd = () => {
     setSelectedDepartemen(null);
     setIsDialogOpen(true);
@@ -47,22 +61,20 @@ export const DepartemenPage: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  // 1. Saat Klik 'Simpan' di Form: Buka Dialog Konfirmasi saja
   const handleSubmitForm = (formData: DepartemenFormValues) => {
     setPendingFormData(formData);
+    setIsDialogOpen(false);
     setIsConfirmOpen(true);
   };
 
-  // 2. Jika Batal Konfirmasi: Hanya tutup dialog konfirmasi, form tetap ada
   const handleCancelConfirm = () => {
     setIsConfirmOpen(false);
+    setIsDialogOpen(true);
   };
 
-  // 3. Saat Klik 'Ya, Simpan': TUTUP FORM EDIT DULUAN, baru eksekusi API & tampilkan alert sukses
   const handleConfirmSave = async () => {
     if (!pendingFormData) return;
 
-    // Tutup Form Edit & Dialog Konfirmasi sekaligus secara bersamaan DI AWAL
     setIsDialogOpen(false);
     setIsConfirmOpen(false);
     setIsSubmittingApi(true);
@@ -91,7 +103,6 @@ export const DepartemenPage: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error?.message || 'Gagal menyimpan data departemen. Silakan coba lagi.';
       
-      // Jika GAGAL, baru buka kembali form edit agar user bisa perbaiki isinya
       setIsDialogOpen(true); 
       setAlertConfig({
         isOpen: true,
@@ -104,7 +115,7 @@ export const DepartemenPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && departemens.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500 text-xs animate-pulse">Memuat data Departemen...</p>
@@ -114,14 +125,20 @@ export const DepartemenPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabel Utama */}
+      {/* 🌟 Kirimkan props pagination lengkap ke DepartemenTable */}
       <DepartemenTable
         data={Array.isArray(departemens) ? departemens : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         onAdd={handleOpenAdd}
         onEdit={handleOpenEdit}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusQuery}
+        onStatusFilterChange={setStatusQuery}
       />
 
-      {/* Modal Dialog Form */}
       <DepartemenDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
@@ -129,7 +146,6 @@ export const DepartemenPage: React.FC = () => {
         onSubmit={handleSubmitForm}
       />
 
-      {/* 1. Dialog Pertanyaan Konfirmasi */}
       <ConfirmAlertDialog
         isOpen={isConfirmOpen}
         onClose={handleCancelConfirm}
@@ -145,17 +161,17 @@ export const DepartemenPage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* 2. Alert Hasil Sukses / Gagal (Tombol Batal Disembunyikan) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText="" 
         cancelText=""
         showCancelButton={false}
+        autoClose={true} 
       />
     </div>
   );

@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { AnnualEvent } from '../types/annual-event.type';
@@ -21,92 +19,55 @@ import { Badge } from '../../../../components/ui/badge';
 
 interface AnnualEventTableProps {
   data: AnnualEvent[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onEdit: (item: AnnualEvent) => void;
   onAdd: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
+  categoryFilter: string;
+  onCategoryFilterChange: (val: string) => void;
+  startDateFilter: string;
+  endDateFilter: string;
+  onDateRangeChange: (start: string, end: string) => void;
 }
-
-const parseDateMs = (dateStr: string) => {
-  if (!dateStr) return 0;
-  const cleanStr = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-  const parts = cleanStr.split('-');
-  if (parts.length === 3 && parts[0].length === 2 && parts[2].length === 4) {
-    return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
-  }
-  return new Date(cleanStr).getTime();
-};
 
 export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   onEdit,
   onAdd,
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  categoryFilter,
+  onCategoryFilterChange,
+  startDateFilter,
+  endDateFilter,
+  onDateRangeChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(''); // '' | 'true' | 'false'
-  const [categoryFilter, setCategoryFilter] = useState<string>(''); // '' | 'true' | 'false'
-  const [startDateFilter, setStartDateFilter] = useState<string>('');
-  const [endDateFilter, setEndDateFilter] = useState<string>('');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
-
-  // Filter gabungan: Status, Kategori, dan Rentang Tanggal
-  const filteredData = useMemo(() => {
-    let result = data;
-
-    // Filter Status
-    if (statusFilter) {
-      const isFilterActive = statusFilter === 'true';
-      result = result.filter((item) => {
-        const rawActive = (item as any).is_active ?? (item as any).status;
-        const isActive = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
-        return isActive === isFilterActive;
-      });
-    }
-
-    // Filter Kategori (Nasional / Perusahaan)
-    if (categoryFilter) {
-      const isFilterHoliday = categoryFilter === 'true';
-      result = result.filter((item) => {
-        const rawHoliday = (item as any).is_national_holiday;
-        return Boolean(rawHoliday) === isFilterHoliday;
-      });
-    }
-
-    // Filter Rentang Tanggal
-    if (startDateFilter || endDateFilter) {
-      const filterStartMs = parseDateMs(startDateFilter);
-      const filterEndMs = parseDateMs(endDateFilter);
-
-      result = result.filter((item) => {
-        const itemStart = item.start_date || (item as any).event_date || (item as any).tanggal || '';
-        const itemEnd = item.end_date || itemStart;
-
-        const itemStartMs = parseDateMs(itemStart);
-        const itemEndMs = parseDateMs(itemEnd);
-
-        if (startDateFilter && endDateFilter) {
-          // Irisan rentang tanggal
-          return itemStartMs <= filterEndMs && itemEndMs >= filterStartMs;
-        }
-        if (startDateFilter) {
-          return itemEndMs >= filterStartMs;
-        }
-        if (endDateFilter) {
-          return itemStartMs <= filterEndMs;
-        }
-        return true;
-      });
-    }
-
-    return result;
-  }, [data, statusFilter, categoryFilter, startDateFilter, endDateFilter]);
 
   const isFiltered = Boolean(statusFilter || categoryFilter || startDateFilter || endDateFilter);
 
   const handleResetFilter = () => {
-    setStatusFilter('');
-    setCategoryFilter('');
-    setStartDateFilter('');
-    setEndDateFilter('');
+    onStatusFilterChange('');
+    onCategoryFilterChange('');
+    onDateRangeChange('', '');
   };
 
   const columns = useMemo<ColumnDef<AnnualEvent>[]>(
@@ -116,7 +77,7 @@ export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
           </span>
         ),
       },
@@ -208,21 +169,35 @@ export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
         ),
       },
     ],
-    [onEdit]
+    [onEdit, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -235,8 +210,8 @@ export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
           title="Event Tahunan"
           subtitle="Daftar kelola event tahunan LokaHR"
           icon={<Calendar className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
@@ -254,10 +229,7 @@ export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
                     <DateRangePicker
                       startDate={startDateFilter}
                       endDate={endDateFilter}
-                      onChange={(start, end) => {
-                        setStartDateFilter(start);
-                        setEndDateFilter(end);
-                      }}
+                      onChange={onDateRangeChange}
                       placeholder="Pilih Rentang Tanggal..."
                     />
                   ),
@@ -268,7 +240,7 @@ export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={categoryFilter}
-                      onChange={(val) => setCategoryFilter(val)}
+                      onChange={onCategoryFilterChange}
                       placeholder="Semua Kategori"
                       showSearch={false}
                       options={[
@@ -285,7 +257,7 @@ export const AnnualEventTable: React.FC<AnnualEventTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={statusFilter}
-                      onChange={(val) => setStatusFilter(val)}
+                      onChange={onStatusFilterChange}
                       placeholder="Semua Status"
                       showSearch={false}
                       options={[

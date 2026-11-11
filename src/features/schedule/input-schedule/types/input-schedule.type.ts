@@ -14,7 +14,9 @@ export interface InputSchedulePeriodItem {
   periodId: string;
   nip: string;
   name: string;
-  department?: string; // 👈 Tambahkan ini
+  department_id?: number | string;
+  department?: string;
+  sub_department_id?: number | string;
   subDept: string;
   workScheme: string;
   status: 'Aktif' | 'Nonaktif';

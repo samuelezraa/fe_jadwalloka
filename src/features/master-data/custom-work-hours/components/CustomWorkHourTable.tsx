@@ -1,9 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { CustomWorkHour } from '../types/custom-work-hour.type';
@@ -20,37 +18,60 @@ import { Badge } from '@/components/ui/badge';
 
 interface CustomWorkHourTableProps {
   data: CustomWorkHour[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onEdit: (item: CustomWorkHour) => void;
   onAdd: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
 }
 
 export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   onEdit,
   onAdd,
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(''); 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  const filteredData = useMemo(() => {
-    let result = data;
-    if (statusFilter) {
-      const isFilterActive = statusFilter === 'true';
-      result = result.filter((item) => {
-        const rawActive = (item as any).is_active ?? (item as any).status;
-        const isActive = Boolean(
-          rawActive === true || 
-          (rawActive as unknown as number) === 1 || 
-          rawActive === 'Aktif' || 
-          rawActive === 'true'
-        );
-        return isActive === isFilterActive;
-      });
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        filterWrapperRef.current &&
+        !filterWrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowStatusDropdown(false);
+      }
+    };
+
+    if (showStatusDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
-    return result;
-  }, [data, statusFilter]);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showStatusDropdown]);
 
   const isFiltered = Boolean(statusFilter);
 
@@ -151,31 +172,42 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
-
-
   return (
-    <div className="relative">
+    <div className="relative" ref={filterWrapperRef}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
-        
         <TableToolbar
           title="Custom Jam Kerja"
           subtitle="Daftar kelola custom jam kerja LokaHR"
           icon={<Clock className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showStatusDropdown}
           onToggleFilterDropdown={() => setShowStatusDropdown(!showStatusDropdown)}
           isFiltered={isFiltered}
@@ -184,7 +216,7 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
               isOpen={showStatusDropdown}
               onClose={() => setShowStatusDropdown(false)}
               isFiltered={isFiltered}
-              onReset={() => setStatusFilter('')}
+              onReset={() => onStatusFilterChange('')}
               fields={[
                 {
                   key: 'status',
@@ -192,7 +224,7 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={statusFilter}
-                      onChange={(val) => setStatusFilter(val)}
+                      onChange={(val) => onStatusFilterChange(val)}
                       placeholder="Semua Status"
                       showSearch={false}
                       options={[

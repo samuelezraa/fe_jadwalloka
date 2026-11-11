@@ -3,7 +3,7 @@ import { EmployeeForm } from './EmployeeForm';
 import { AppDialog } from '../../../../components/ui/AppDialog';
 import { PrimaryButton, CancelButton } from '../../../../components/ui/ActionButtons';
 import { FileSpreadsheet, Download } from 'lucide-react';
-import toast from 'react-hot-toast';
+
 import type { Employee } from '../types/employee.type';
 import type { EmployeeFormValues } from '../schemas/employee.schema';
 
@@ -12,6 +12,11 @@ interface EmployeeDialogProps {
   onClose: () => void;
   initialData?: Employee | null;
   onSubmit: (data: EmployeeFormValues) => void;
+  departemenList?: any[];
+  subDepartemenList?: any[];
+  posList?: any[];
+  gradeList?: any[];
+  schemeList?: any[];
 }
 
 export const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
@@ -19,6 +24,11 @@ export const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
   onClose,
   initialData,
   onSubmit,
+  departemenList,
+  subDepartemenList,
+  posList,
+  gradeList,
+  schemeList,
 }) => {
   const isEditMode = !!initialData;
 
@@ -33,6 +43,11 @@ export const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
         initialData={initialData}
         onSubmit={onSubmit}
         onCancel={onClose}
+        departemenList={departemenList}
+        subDepartemenList={subDepartemenList}
+        posList={posList}
+        gradeList={gradeList}
+        schemeList={schemeList}
       />
     </AppDialog>
   );
@@ -57,7 +72,6 @@ export const ImportEmployeeDialog: React.FC<ImportEmployeeDialogProps> = ({
     e.preventDefault();
     if (!selectedFile) return;
     onImport(selectedFile);
-    toast.success('Data karyawan berhasil diimport!');
     setSelectedFile(null);
     onClose();
   };
@@ -99,7 +113,7 @@ export const ImportEmployeeDialog: React.FC<ImportEmployeeDialogProps> = ({
         <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
-            onClick={onDownloadSample}
+            onClick={onDownloadSample} // 👈 Terhubung ke handler downloadSample
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />

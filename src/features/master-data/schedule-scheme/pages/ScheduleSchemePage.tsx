@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useScheduleScheme } from '../hooks/useScheduleScheme';
 import { ScheduleSchemeTable } from '../components/ScheduleSchemeTable';
 import { ScheduleSchemeDialog } from '../components/ScheduleSchemeDialog';
@@ -7,7 +7,18 @@ import type { ScheduleScheme } from '../types/schedule-scheme.type';
 import type { ScheduleSchemeFormValues } from '../schemas/schedule-scheme.schema';
 
 export const ScheduleSchemePage: React.FC = () => {
-  const { data: schemes = [], loading, addScheduleScheme, editScheduleScheme } = useScheduleScheme();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusQuery, setStatusQuery] = useState('');
+
+  const { 
+    data: schemes = [], 
+    meta,
+    setPage,
+    setPageSize,
+    loading, 
+    addScheduleScheme, 
+    editScheduleScheme 
+  } = useScheduleScheme(searchQuery, statusQuery);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ScheduleScheme | null>(null);
@@ -28,6 +39,16 @@ export const ScheduleSchemePage: React.FC = () => {
     variant: 'primary',
   });
 
+  // Auto-close alert sukses setelah 1.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen && alertConfig.variant === 'primary') {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen, alertConfig.variant]);
+
   const handleOpenAdd = () => {
     setSelectedItem(null);
     setIsDialogOpen(true);
@@ -40,7 +61,13 @@ export const ScheduleSchemePage: React.FC = () => {
 
   const handleSubmitForm = (formData: ScheduleSchemeFormValues) => {
     setPendingFormData(formData);
+    setIsDialogOpen(false);
     setIsConfirmOpen(true);
+  };
+
+  const handleCancelConfirm = () => {
+    setIsConfirmOpen(false);
+    setIsDialogOpen(true);
   };
 
   const handleConfirmSave = async () => {
@@ -75,6 +102,7 @@ export const ScheduleSchemePage: React.FC = () => {
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message || 'Gagal menyimpan data skema hari kerja.';
+      setIsDialogOpen(true);
       setAlertConfig({
         isOpen: true,
         title: 'Gagal Menyimpan!',
@@ -98,8 +126,15 @@ export const ScheduleSchemePage: React.FC = () => {
     <div className="space-y-6">
       <ScheduleSchemeTable
         data={Array.isArray(schemes) ? schemes : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         onAdd={handleOpenAdd}
         onEdit={handleOpenEdit}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusQuery}
+        onStatusFilterChange={setStatusQuery}
       />
 
       <ScheduleSchemeDialog
@@ -112,7 +147,7 @@ export const ScheduleSchemePage: React.FC = () => {
       {/* Dialog Konfirmasi Simpan */}
       <ConfirmAlertDialog
         isOpen={isConfirmOpen}
-        onClose={() => setIsConfirmOpen(false)}
+        onClose={handleCancelConfirm}
         onConfirm={handleConfirmSave}
         title={selectedItem ? 'Simpan Perubahan?' : 'Tambah Skema Hari Kerja?'}
         description={
@@ -125,17 +160,18 @@ export const ScheduleSchemePage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* Alert Hasil Sukses / Gagal */}
+      {/* Alert Hasil Sukses / Gagal (Auto-Close Tanpa Tombol OK) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText=""
         cancelText=""
         showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

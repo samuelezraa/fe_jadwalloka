@@ -1,49 +1,56 @@
 import React from 'react';
 import { useEmployeePresence } from '../hooks/useEmployeePresence';
 import { EmployeePresenceTable } from '../components/EmployeePresenceTable';
+import { employeePresenceService } from '../services/employee-presence.service';
 import toast from 'react-hot-toast';
 
 export const EmployeePresencePage: React.FC = () => {
-  const { data, loading } = useEmployeePresence();
+  const {
+    data,
+    grandTotalPax,
+    loading,
+    meta,
+    setPage,
+    setPageSize,
+    searchQuery,
+    setSearchQuery,
+    selectedPeriode,
+    setSelectedPeriode,
+    startDate,
+    endDate,
+    setStartDate,
+    setEndDate,
+  } = useEmployeePresence();
 
-  const handleExport = () => {
-    if (!data || data.length === 0) {
-      toast.error('Tidak ada data kehadiran karyawan untuk diexport.');
-      return;
-    }
-
-    const toastId = toast.loading('Menyiapkan dan mengunduh file export...');
+  const handleExport = async () => {
+    const toastId = toast.loading('Menyiapkan dan mengunduh file Excel...');
 
     try {
-      const headers = ['No', 'Departemen', 'Total Pax'];
+      const blob = await employeePresenceService.exportEmployeePresenceReport({
+        search: searchQuery,
+        selectedPeriode,
+        startDate,
+        endDate,
+      });
 
-      const csvRows = [
-        headers.join(','),
-        ...data.map((item, index) =>
-          [
-            index + 1,
-            `"${item.department || '-'}"`,
-            item.totalPax,
-          ].join(',')
-        ),
-      ];
-
-      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Laporan_Kehadiran_Karyawan_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute(
+        'download',
+        `Laporan_Kehadiran_Karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
 
       toast.success('File export kehadiran karyawan berhasil diunduh!', { id: toastId });
-    } catch (error) {
+    } catch (error: any) {
       toast.error('Gagal mengexport data kehadiran karyawan.', { id: toastId });
     }
   };
 
-  if (loading) {
+  if (loading && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500 text-xs animate-pulse">Memuat data Kehadiran Karyawan...</p>
@@ -53,7 +60,24 @@ export const EmployeePresencePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <EmployeePresenceTable data={data} onExport={handleExport} />
+      <EmployeePresenceTable
+        data={data}
+        grandTotalPax={grandTotalPax}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedPeriode={selectedPeriode}
+        onPeriodeChange={setSelectedPeriode}
+        startDate={startDate}
+        endDate={endDate}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
+        onExport={handleExport}
+      />
     </div>
   );
 };

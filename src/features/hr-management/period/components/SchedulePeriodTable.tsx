@@ -1,9 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { PeriodeJadwal } from '../types/schedule-period.type';
@@ -16,23 +14,36 @@ import { DataTable } from '@/components/ui/data-table';
 
 interface PeriodeJadwalTableProps {
   data: PeriodeJadwal[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
   onAddClick: () => void;
 }
 
 export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
-  data,
+  data = [],
+  meta,
+  setPage,
+  setPageSize,
+  searchQuery,
+  onSearchChange,
   onAddClick,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-
   const columns = useMemo<ColumnDef<PeriodeJadwal>[]>(
     () => [
       {
-        accessorKey: 'id',
-        header: 'ID',
-        cell: (info) => (
+        id: 'index',
+        header: '#',
+        cell: ({ row }) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {String(info.getValue())}
+            {row.index + 1 + (meta.current_page - 1) * meta.per_page}
           </span>
         ),
       },
@@ -73,19 +84,34 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
         ),
       },
     ],
-    []
+    [meta]
   );
 
   const table = useReactTable({
     data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) =>
+      onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -96,13 +122,9 @@ export const PeriodeJadwalTable: React.FC<PeriodeJadwalTableProps> = ({
         title="Periode Jadwal"
         subtitle="Daftar pengaturan periode kerja dan jadwal absensi"
         icon={<CalendarRange className="w-6 h-6" />}
-        searchValue={globalFilter ?? ''}
-        onSearchChange={setGlobalFilter}
-        actionButtons={
-          <AddButton onClick={onAddClick}>
-            Tambah
-          </AddButton>
-        }
+        searchValue={searchQuery ?? ''}
+        onSearchChange={onSearchChange}
+        actionButtons={<AddButton onClick={onAddClick}>Tambah</AddButton>}
       />
 
       <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">

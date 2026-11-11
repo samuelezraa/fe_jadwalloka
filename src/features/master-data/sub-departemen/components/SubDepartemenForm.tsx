@@ -63,11 +63,12 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
   }
 }, [initialData, reset]);
 
-  // Pemetaan opsi aman dengan fallback nilai code & name
 const departemenOptions = useMemo(() => {
   if (!Array.isArray(departemenList)) return [];
 
+  
   return departemenList
+    .filter((d) => Boolean(d.is_active)) // 👈 Filter hanya departemen aktif
     .map((d) => {
       const codeVal = d.code || (d as any).id || '';
       const nameVal = d.name || (d as any).departemen || '';

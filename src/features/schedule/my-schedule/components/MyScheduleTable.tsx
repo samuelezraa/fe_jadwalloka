@@ -1,10 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { MySchedule } from '../types/my-schedule.type';
@@ -21,9 +19,28 @@ import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
 
 interface MyScheduleTableProps {
   data: MySchedule[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   selectedPeriod: string;
   onPeriodChange: (period: string) => void;
-  onExport?: (period: string, selectedIds: string[]) => void; // Diubah agar menerima period juga
+  onExport?: (period: string, selectedIds: string[]) => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  deptFilter: string;
+  onDeptFilterChange: (val: string) => void;
+  subDeptFilter: string;
+  onSubDeptFilterChange: (val: string) => void;
+  gradeFilter: string;
+  onGradeFilterChange: (val: string) => void;
+  departemenList?: any[];
+  subDepartemenList?: any[];
+  gradeList?: any[];
 }
 
 const PERIODE_OPTIONS = [
@@ -33,17 +50,45 @@ const PERIODE_OPTIONS = [
 
 export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   data,
+  meta,
+  setPage,
+  setPageSize,
   selectedPeriod,
   onPeriodChange,
   onExport,
+  searchQuery,
+  onSearchChange,
+  deptFilter,
+  onDeptFilterChange,
+  subDeptFilter,
+  onSubDeptFilterChange,
+  gradeFilter,
+  onGradeFilterChange,
+  departemenList = [],
+  subDepartemenList = [],
+  gradeList = [],
 }) => {
   const navigate = useNavigate();
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [subDeptFilter, setSubDeptFilter] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (filterWrapperRef.current && !filterWrapperRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
 
   const checkPeriodeSelected = (actionCallback?: () => void) => {
     if (!selectedPeriod) {
@@ -54,31 +99,17 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
     return true;
   };
 
-  // Dynamic unique options for Sub Department and Grade
-  const uniqueSubDeptList = useMemo(() => {
-    return Array.from(new Set(data.map((item: any) => item.sub_department)));
-  }, [data]);
+  // Filter Sub Departemen berdasarkan Departemen yang dipilih
+  const filteredSubDepts = useMemo(() => {
+    if (!deptFilter) return subDepartemenList;
+    return subDepartemenList.filter((sub) => {
+      const subDeptId = sub.department_id ?? sub.department?.id;
+      return String(subDeptId) === String(deptFilter);
+    });
+  }, [subDepartemenList, deptFilter]);
 
-  const uniqueGradeList = useMemo(() => {
-    return Array.from(new Set(data.map((item: any) => item.grade).filter(Boolean)));
-  }, [data]);
+  const isFiltered = Boolean(deptFilter || subDeptFilter || gradeFilter);
 
-  // Filter Data based on Selected Period, Sub Department, and Grade
-  const filteredData = useMemo(() => {
-    if (!selectedPeriod) return [];
-    let result = data;
-    if (subDeptFilter) {
-      result = result.filter((item: any) => item.sub_department === subDeptFilter);
-    }
-    if (gradeFilter) {
-      result = result.filter((item: any) => item.grade === gradeFilter);
-    }
-    return result;
-  }, [data, selectedPeriod, subDeptFilter, gradeFilter]);
-
-  const isFiltered = Boolean(subDeptFilter || gradeFilter);
-
-  // Handle number click to redirect to Edit Schedule Page in Readonly mode
   const handleNumberClick = (id: string) => {
     checkPeriodeSelected(() => {
       navigate(`/schedule/input-schedule/edit/${id}?readonly=true`);
@@ -146,10 +177,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'off_days',
         header: 'Libur',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.off_days}
           </button>
         ),
@@ -158,10 +186,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'ph_days',
         header: 'PH',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.ph_days}
           </button>
         ),
@@ -170,10 +195,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'permit_days',
         header: 'Izin',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.permit_days}
           </button>
         ),
@@ -182,10 +204,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'alpha_days',
         header: 'Alfa',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.alpha_days}
           </button>
         ),
@@ -194,10 +213,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'sick_days',
         header: 'Sakit',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.sick_days}
           </button>
         ),
@@ -206,10 +222,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'leave_days',
         header: 'Cuti',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.leave_days}
           </button>
         ),
@@ -218,10 +231,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'late_days',
         header: 'Terlambat',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.late_days}
           </button>
         ),
@@ -230,10 +240,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'work_days',
         header: 'Masuk',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-medium text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-medium hover:underline cursor-pointer">
             {row.original.work_days}
           </button>
         ),
@@ -242,10 +249,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         accessorKey: 'total_days',
         header: 'Total Hari',
         cell: ({ row }) => (
-          <button
-            onClick={() => handleNumberClick(row.original.id)}
-            className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer"
-          >
+          <button onClick={() => handleNumberClick(row.original.id)} className="font-bold hover:underline cursor-pointer">
             {row.original.total_days}
           </button>
         ),
@@ -255,20 +259,34 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
       rowSelection,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -284,7 +302,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   };
 
   return (
-    <div className="relative space-y-4">
+    <div className="relative space-y-4" ref={filterWrapperRef}>
       {/* FILTER PERIODE UTAMA */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -309,13 +327,12 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
       {/* TABLE DATA UTAMA */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
-        {/* Header Toolbar */}
         <TableToolbar
           title="Jadwalku"
           subtitle="Ringkasan dan detail rekapitulasi jadwal kehadiran karyawan"
           icon={<CalendarDays className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
@@ -325,21 +342,40 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
               onReset={() => {
-                setSubDeptFilter('');
-                setGradeFilter('');
+                onDeptFilterChange('');
+                onSubDeptFilterChange('');
+                onGradeFilterChange('');
               }}
               fields={[
+                {
+                  key: 'department',
+                  label: 'Departemen',
+                  render: () => (
+                    <FormSelectSearch
+                      value={deptFilter}
+                      onChange={(val) => {
+                        onDeptFilterChange(val);
+                        onSubDeptFilterChange('');
+                      }}
+                      placeholder="Semua Departemen"
+                      options={[
+                        { id: '', label: 'Semua Departemen' },
+                        ...departemenList.map((d) => ({ id: String(d.id), label: d.name })),
+                      ]}
+                    />
+                  ),
+                },
                 {
                   key: 'sub_department',
                   label: 'Sub Departemen',
                   render: () => (
                     <FormSelectSearch
                       value={subDeptFilter}
-                      onChange={setSubDeptFilter}
+                      onChange={onSubDeptFilterChange}
                       placeholder="Semua Sub Dept"
                       options={[
                         { id: '', label: 'Semua Sub Dept' },
-                        ...uniqueSubDeptList.map((sd: any) => ({ id: sd, label: sd })),
+                        ...filteredSubDepts.map((sd) => ({ id: sd.name, label: sd.name })),
                       ]}
                     />
                   ),
@@ -350,11 +386,11 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                   render: () => (
                     <FormSelectSearch
                       value={gradeFilter}
-                      onChange={setGradeFilter}
+                      onChange={onGradeFilterChange}
                       placeholder="Semua Grade"
                       options={[
                         { id: '', label: 'Semua Grade' },
-                        ...uniqueGradeList.map((g: any) => ({ id: g, label: g })),
+                        ...gradeList.map((g) => ({ id: g.name || g, label: g.name || g })),
                       ]}
                     />
                   ),
@@ -381,12 +417,11 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
           </div>
         ) : (
           <>
-            {/* Pagination */}
             <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-800 relative">
               <DataPagination table={table} />
             </div>
 
-            {/* Mobile View: Cards */}
+            {/* 📱 MOBILE VIEW: CARDS (Hanya Muncul di Layar Kecil) */}
             <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
               {rows.length > 0 ? (
                 rows.map((row) => {
@@ -394,10 +429,10 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                   return (
                     <div
                       key={row.id}
-                      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3"
+                      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-sm space-y-3"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                        <span className="font-mono text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                           NIP: {item.nip}
                         </span>
                         <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
@@ -414,38 +449,38 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-1.5 text-center bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg text-[10px] border border-gray-100 dark:border-gray-800">
+                      <div className="grid grid-cols-4 gap-1.5 text-center bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl text-[10px] border border-gray-100 dark:border-gray-800">
                         <div>
-                          <span className="block text-gray-400 uppercase">Libur</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.off_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Libur</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.off_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">PH</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.ph_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">PH</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.ph_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">Izin</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.permit_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Izin</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.permit_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">Alfa</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.alpha_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Alfa</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.alpha_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">Sakit</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.sick_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Sakit</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.sick_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">Cuti</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.leave_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Cuti</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.leave_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">Telat</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.late_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Telat</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.late_days}</button>
                         </div>
                         <div>
-                          <span className="block text-gray-400 uppercase">Masuk</span>
-                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline">{item.work_days}</button>
+                          <span className="block text-gray-400 uppercase font-semibold">Masuk</span>
+                          <button onClick={() => handleNumberClick(item.id)} className="font-bold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{item.work_days}</button>
                         </div>
                       </div>
                     </div>
@@ -458,7 +493,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
               )}
             </div>
 
-            {/* Desktop View: DataTable */}
+            {/* 💻 DESKTOP VIEW: DATATABLE */}
             <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data jadwal ditemukan." />
           </>
         )}

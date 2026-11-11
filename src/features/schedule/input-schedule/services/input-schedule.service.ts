@@ -14,50 +14,87 @@ export interface WeeklyWorkHourPayload {
 export interface ScheduleResponse {
   data: InputSchedulePeriodItem[];
   summary: SchedulePeriodSummary;
+  meta: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
 }
 
 export const inputScheduleService = {
-  // Mendapatkan daftar jadwal & ringkasan berdasarkan periode
-  getScheduleByPeriod: async (period: string): Promise<ScheduleResponse> => {
-    const response = await api.get(`/schedule/input-schedule`, {
-      params: { period },
-    });
+  // 1. Ambil daftar jadwal per periode (Pagination Server-Side, Search & Filter)
+  getScheduleByPeriod: async (
+    period: string,
+    search?: string,
+    deptId?: string,
+    subDeptId?: string,
+    status?: string,
+    page = 1,
+    perPage = 10
+  ): Promise<ScheduleResponse> => {
+    const params = new URLSearchParams();
+    if (period) params.append('period', period);
+    if (search) params.append('search', search);
+    if (deptId) params.append('department_id', deptId);
+    if (subDeptId) params.append('sub_department_id', subDeptId);
+    if (status !== undefined && status !== '') params.append('status', status);
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+
+    const response = await api.get(`/schedule/input-schedule?${params.toString()}`);
     return response.data;
   },
 
-  // Mendapatkan detail jadwal harian karyawan berdasarkan ID untuk halaman edit
+  // 2. Detail jadwal harian karyawan untuk halaman edit
   getEmployeeScheduleDetail: async (id: string) => {
     const response = await api.get(`/schedule/input-schedule/edit/${id}`);
     return response.data;
   },
 
-  // Menyimpan / memperbarui rincian jadwal harian karyawan
-  updateEmployeeSchedule: async (id: string, payload: any) => {
+  // 3. Simpan perbaikan rincian jadwal harian karyawan
+  updateEmployeeSchedule: async (id: string, payload: { scheduleList: any[] }) => {
     const response = await api.put(`/schedule/input-schedule/edit/${id}`, payload);
     return response.data;
   },
 
-  // Mengatur jam kerja mingguan global
+  // 4. Ambil jam kerja mingguan global terkini dari database
+  getWeeklyWorkHours: async (): Promise<WeeklyWorkHourPayload> => {
+    const response = await api.get('/schedule/input-schedule/weekly-hours');
+    return response.data.data;
+  },
+
+  // 5. Setting jam kerja mingguan global
   setWeeklyWorkHours: async (payload: WeeklyWorkHourPayload) => {
-    const response = await api.post(`/schedule/input-schedule/weekly-hours`, payload);
+    const response = await api.post('/schedule/input-schedule/weekly-hours', payload);
     return response.data;
   },
 
-  // Import file Excel/CSV jadwal
+  // 6. Import file Excel/CSV jadwal
   importSchedule: async (file: File, period: string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('period', period);
-    const response = await api.post(`/schedule/input-schedule/import`, formData, {
+    const response = await api.post('/schedule/input-schedule/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
 
-  // Export data jadwal
+  // 7. Export file data jadwal
   exportSchedule: async (period: string) => {
-    const response = await api.get(`/schedule/input-schedule/export`, {
+    const response = await api.get('/schedule/input-schedule/export', {
       params: { period },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Mengunduh sample template file import jadwal kehadiran
+  downloadSample: async () => {
+    const response = await api.get('/schedule/input-schedule/sample', {
       responseType: 'blob',
     });
     return response.data;

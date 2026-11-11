@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGrade } from '../hooks/useGrade';
 import { GradeTable } from '../components/GradeTable';
 import { GradeDialog } from '../components/GradeDialog';
@@ -7,19 +7,26 @@ import type { Grade } from '../types/grade.type';
 import type { GradeFormValues } from '../schemas/grade.schema';
 
 export const GradePage: React.FC = () => {
-  const { grades, isLoading, createGrade, updateGrade } = useGrade();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusQuery, setStatusQuery] = useState('');
+
+  const { 
+    grades, 
+    meta,
+    setPage,
+    setPageSize,
+    isLoading, 
+    createGrade, 
+    updateGrade 
+  } = useGrade(searchQuery, statusQuery);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Grade | null>(null);
 
-  // Form Data sementara menunggu konfirmasi
   const [pendingFormData, setPendingFormData] = useState<GradeFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
-
-  // State Dialog Konfirmasi
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // State Alert Result (Sukses / Gagal)
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -31,6 +38,16 @@ export const GradePage: React.FC = () => {
     description: '',
     variant: 'primary',
   });
+
+  // Auto-close alert sukses setelah 1.5 detik
+  useEffect(() => {
+    if (alertConfig.isOpen && alertConfig.variant === 'primary') {
+      const timer = setTimeout(() => {
+        setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [alertConfig.isOpen, alertConfig.variant]);
 
   const handleOpenAdd = () => {
     setSelectedItem(null);
@@ -44,11 +61,13 @@ export const GradePage: React.FC = () => {
 
   const handleSubmitForm = (formData: GradeFormValues) => {
     setPendingFormData(formData);
+    setIsDialogOpen(false); // Tutup dialog form agar tidak bertumpuk
     setIsConfirmOpen(true);
   };
 
   const handleCancelConfirm = () => {
     setIsConfirmOpen(false);
+    setIsDialogOpen(true); // Buka kembali jika batal
   };
 
   const handleConfirmSave = async () => {
@@ -66,6 +85,7 @@ export const GradePage: React.FC = () => {
           data: {
             code: pendingFormData.code,
             name: pendingFormData.name,
+            level: Number(pendingFormData.level), // 🌟 Menyertakan level
             is_active: pendingFormData.is_active,
           },
         });
@@ -79,6 +99,7 @@ export const GradePage: React.FC = () => {
         await createGrade({
           code: pendingFormData.code,
           name: pendingFormData.name,
+          level: Number(pendingFormData.level), // 🌟 Menyertakan level agar tidak error required
           is_active: true,
         });
         setAlertConfig({
@@ -94,6 +115,7 @@ export const GradePage: React.FC = () => {
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message || 'Gagal menyimpan data Grade. Silakan coba lagi.';
+      setIsDialogOpen(true);
       setAlertConfig({
         isOpen: true,
         title: 'Gagal Menyimpan!',
@@ -115,14 +137,19 @@ export const GradePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabel Utama Grade */}
       <GradeTable
         data={Array.isArray(grades) ? grades : []}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         onAdd={handleOpenAdd}
         onEdit={handleOpenEdit}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusQuery}
+        onStatusFilterChange={setStatusQuery}
       />
 
-      {/* Modal Dialog Form */}
       <GradeDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
@@ -130,7 +157,6 @@ export const GradePage: React.FC = () => {
         onSubmit={handleSubmitForm}
       />
 
-      {/* 1. Dialog Pertanyaan Konfirmasi */}
       <ConfirmAlertDialog
         isOpen={isConfirmOpen}
         onClose={handleCancelConfirm}
@@ -146,17 +172,18 @@ export const GradePage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* 2. Alert Hasil Sukses / Gagal (Sama persis seperti PosPage) */}
+      {/* Alert Sukses/Gagal (Auto-Close Tanpa Tombol OK) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {}}
         title={alertConfig.title}
         description={alertConfig.description}
         variant={alertConfig.variant}
-        confirmText="OK"
+        confirmText=""
         cancelText=""
         showCancelButton={false}
+        autoClose={true}
       />
     </div>
   );

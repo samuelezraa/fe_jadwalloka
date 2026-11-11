@@ -1,15 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MyScheduleTable } from '../components/MyScheduleTable';
 import { useMySchedule } from '../hooks/useMySchedule';
 import { myScheduleService } from '../services/my-schedule.service';
 import { ConfirmAlertDialog } from '../../../../components/ui/ConfirmAlertDialog';
+import { api } from '@/lib/axios';
 import toast from 'react-hot-toast';
 
 export const MySchedulePage: React.FC = () => {
-  // State untuk periode aktif
   const [selectedPeriod, setSelectedPeriod] = useState<string>('2026-10');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [deptFilter, setDeptFilter] = useState<string>('');
+  const [subDeptFilter, setSubDeptFilter] = useState<string>('');
+  const [gradeFilter, setGradeFilter] = useState<string>('');
 
-  // State untuk Alert Dialog Sukses Export
+  const [departemens, setDepartemens] = useState<any[]>([]);
+  const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
+
+  // Fetch Master Data untuk Filter Popover
+  useEffect(() => {
+    const fetchMasters = async () => {
+      try {
+        const [deptRes, subDeptRes, gradeRes] = await Promise.all([
+          api.get('/departments'),
+          api.get('/sub-departments'),
+          api.get('/grades'),
+        ]);
+        setDepartemens(deptRes.data.data || deptRes.data || []);
+        setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
+        setGrades(gradeRes.data.data || gradeRes.data || []);
+      } catch (err) {
+        console.error('Gagal memuat master data filter:', err);
+      }
+    };
+    fetchMasters();
+  }, []);
+
+  const { 
+    data,
+    meta,
+    setPage,
+    setPageSize,
+    isLoading
+  } = useMySchedule(searchQuery, deptFilter, subDeptFilter, gradeFilter, selectedPeriod);
+
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -22,30 +56,19 @@ export const MySchedulePage: React.FC = () => {
     variant: 'primary',
   });
 
-  const { 
-    data,
-    isLoading
-  } = useMySchedule(selectedPeriod);
-
-  // Menerima period dan selectedIds dari MyScheduleTable
   const handleExport = async (period: string, selectedIds: string[]) => {
     const toastId = toast.loading('Menyiapkan dan mengunduh file export...');
     try {
-      // Mengirim 2 argumen: period dan selectedIds ke service
       const blob = await myScheduleService.exportMySchedule(period, selectedIds);
-
-      // Membuat objek URL untuk mendownload file di browser
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `rekap-jadwalku-${period}.csv`);
+     link.setAttribute('download', `rekap-jadwalku-${period}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
 
       toast.success('File export berhasil diunduh!', { id: toastId });
-
-      // Menampilkan dialog sukses
       setAlertConfig({
         isOpen: true,
         title: 'Export Berhasil!',
@@ -61,7 +84,7 @@ export const MySchedulePage: React.FC = () => {
     setAlertConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
-  if (isLoading) {
+  if (isLoading && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
@@ -73,15 +96,27 @@ export const MySchedulePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabel My Schedule */}
       <MyScheduleTable 
         data={data}
+        meta={meta}
+        setPage={setPage}
+        setPageSize={setPageSize}
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
-        onExport={handleExport} 
+        onExport={handleExport}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        deptFilter={deptFilter}
+        onDeptFilterChange={setDeptFilter}
+        subDeptFilter={subDeptFilter}
+        onSubDeptFilterChange={setSubDeptFilter}
+        gradeFilter={gradeFilter}
+        onGradeFilterChange={setGradeFilter}
+        departemenList={departemens}
+        subDepartemenList={subDepartemens}
+        gradeList={grades}
       />
 
-      {/* Alert Hasil Export Sukses */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={handleCloseAlert}

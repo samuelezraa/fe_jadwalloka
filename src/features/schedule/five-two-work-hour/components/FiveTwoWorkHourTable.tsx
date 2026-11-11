@@ -1,9 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
   type ColumnDef,
 } from '@tanstack/react-table';
 import type { FiveTwoWorkHourEmployee } from '../types/five-two-work-hour.type';
@@ -20,50 +18,90 @@ import {
 } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
-import { ImportJadwalDialog } from '../../../../components/ui/ImportJadwalDialog';
+import { ImportScheduleDialog } from '../../../../components/ui/ImportScheduleDialog';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
+import { Badge } from '../../../../components/ui/badge';
 
 interface FiveTwoWorkHourTableProps {
   data: FiveTwoWorkHourEmployee[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    from?: number | null;
+    to?: number | null;
+  };
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   onEdit: (item: FiveTwoWorkHourEmployee) => void;
-  onImport?: () => void;
+  onImport?: (file: File) => void;
   onExport?: () => void;
+  onDownloadSample?: () => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
+  deptFilter: string;
+  onDeptFilterChange: (val: string) => void;
+  subDeptFilter: string;
+  onSubDeptFilterChange: (val: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (val: string) => void;
+  departemenList?: any[];
+  subDepartemenList?: any[];
 }
 
 export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   data = [],
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  setPage,
+  setPageSize,
   onEdit,
   onImport,
   onExport,
+  onDownloadSample,
+  searchQuery,
+  onSearchChange,
+  deptFilter,
+  onDeptFilterChange,
+  subDeptFilter,
+  onSubDeptFilterChange,
+  statusFilter,
+  onStatusFilterChange,
+  departemenList = [],
+  subDepartemenList = [],
 }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [tipeFilter, setTipeFilter] = useState('');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const filterWrapperRef = useRef<HTMLDivElement>(null);
 
-  const getWorkHourType = (item: FiveTwoWorkHourEmployee) => {
-    return (
-      item.schedule_schemes?.[0]?.work_schedule_scheme?.name ||
-      item.work_hour_type ||
-      'Skema 5-2'
-    );
-  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        filterWrapperRef.current &&
+        !filterWrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
 
-  const uniqueTipe = useMemo(
-    () => Array.from(new Set(data.map((item) => getWorkHourType(item)).filter(Boolean))),
-    [data]
-  );
-
-  const filteredData = useMemo(() => {
-    let result = data;
-    if (tipeFilter) {
-      result = result.filter((item) => getWorkHourType(item) === tipeFilter);
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
-    return result;
-  }, [data, tipeFilter]);
 
-  const isFiltered = Boolean(tipeFilter);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
+  const filteredSubDepts = useMemo(() => {
+    if (!deptFilter) return subDepartemenList;
+    return subDepartemenList.filter((sub) => String(sub.department_id) === String(deptFilter));
+  }, [subDepartemenList, deptFilter]);
+
+  const isFiltered = Boolean(deptFilter || subDeptFilter || statusFilter);
 
   const columns = useMemo<ColumnDef<FiveTwoWorkHourEmployee>[]>(
     () => [
@@ -72,39 +110,50 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + info.table.getState().pagination.pageIndex * info.table.getState().pagination.pageSize}
+            {info.row.index + 1 + ((meta.current_page - 1) * meta.per_page)}
           </span>
         ),
       },
+   
       {
-        id: 'schedule_id',
-        header: 'ID Jadwal',
-        cell: ({ row }) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(row.original.id)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'name',
-        header: 'Nama Jadwal',
-        cell: (info) => (
-          <span className="font-bold text-gray-900 dark:text-gray-100">
-            {String(info.getValue() || '-')}
-          </span>
-        ),
-      },
-      {
-        id: 'work_hour_type',
-        header: 'Tipe Jam Kerja',
+        id: 'employee_id_code',
+        header: 'ID Karyawan',
         cell: ({ row }) => {
-          const typeName = getWorkHourType(row.original);
+          const item = row.original as any;
+          const empCode = item.employee_id_code || item.employee?.employee_id || item.employee_id || item.nip || '-';
           return (
-            <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-semibold">
-              {typeName}
+            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold">
+              {String(empCode)}
             </span>
           );
         },
+      },
+      {
+        accessorKey: 'employee_name',
+        header: 'Nama Karyawan',
+        cell: ({ row }) => (
+          <span className="font-bold text-gray-900 dark:text-gray-100 text-xs">
+            {String(row.original.employee_name || row.original.name || '-')}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'department_name',
+        header: 'Departemen',
+        cell: ({ row }) => (
+          <span className="text-gray-700 dark:text-gray-300 text-xs">
+            {String(row.original.department_name || row.original.department?.name || (row.original as any).department_name || '-')}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'sub_department_name',
+        header: 'Sub Departemen',
+        cell: ({ row }) => (
+          <span className="text-gray-700 dark:text-gray-300 text-xs">
+            {String(row.original.sub_department_name || row.original.sub_department?.name || (row.original as any).sub_department_name || '-')}
+          </span>
+        ),
       },
       {
         accessorKey: 'is_active',
@@ -112,15 +161,18 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         cell: (info) => {
           const active = info.getValue() !== false;
           return (
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                active
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-              }`}
-            >
-              {active ? 'Aktif' : 'Nonaktif'}
-            </span>
+            <div className="flex justify-center">
+              <Badge 
+                variant="outline"
+                className={
+                  active 
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                    : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3'
+                }
+              >
+                {active ? 'Aktif' : 'Non Aktif'}
+              </Badge>
+            </div>
           );
         },
       },
@@ -134,35 +186,49 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         ),
       },
     ],
-    [onEdit]
+    [onEdit, meta]
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: data,
     columns,
+    pageCount: meta.last_page,
+    manualPagination: true,
     state: {
-      globalFilter,
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: (meta.current_page ?? 1) - 1,
+        pageSize: meta.per_page ?? 10,
+      },
       columnVisibility,
     },
-    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (typeof updater === 'function') {
+        const newState = updater({
+          pageIndex: (meta.current_page ?? 1) - 1,
+          pageSize: meta.per_page ?? 10,
+        });
+        setPage(newState.pageIndex + 1);
+        setPageSize(newState.pageSize);
+      }
+    },
+    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
   });
 
   const rows = table.getRowModel().rows;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={filterWrapperRef}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
         
         <TableToolbar
           title="Jam Kerja (Skema 5-2)"
           subtitle="Daftar pengaturan jam kerja karyawan LokaHR"
           icon={<Clock className="w-6 h-6" />}
-          searchValue={globalFilter ?? ''}
-          onSearchChange={setGlobalFilter}
+          searchValue={searchQuery ?? ''}
+          onSearchChange={onSearchChange}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           isFiltered={isFiltered}
@@ -171,19 +237,58 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
               isOpen={showFilterDropdown}
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
-              onReset={() => setTipeFilter('')}
+              onReset={() => {
+                onDeptFilterChange('');
+                onSubDeptFilterChange('');
+                onStatusFilterChange('');
+              }}
               fields={[
                 {
-                  key: 'work_hour_type',
-                  label: 'Tipe Jam Kerja',
+                  key: 'department',
+                  label: 'Departemen',
                   render: () => (
                     <FormSelectSearch
-                      value={tipeFilter}
-                      onChange={setTipeFilter}
-                      placeholder="Semua Tipe"
+                      value={deptFilter}
+                      onChange={(val) => {
+                        onDeptFilterChange(val);
+                        onSubDeptFilterChange('');
+                      }}
+                      placeholder="Semua Departemen"
                       options={[
-                        { id: '', label: 'Semua Tipe' },
-                        ...uniqueTipe.map((t) => ({ id: t, label: t })),
+                        { id: '', label: 'Semua Departemen' },
+                        ...departemenList.map((d) => ({ id: String(d.id), label: d.name })),
+                      ]}
+                    />
+                  ),
+                },
+                {
+                  key: 'sub_department',
+                  label: 'Sub Departemen',
+                  render: () => (
+                    <FormSelectSearch
+                      value={subDeptFilter}
+                      onChange={(val) => onSubDeptFilterChange(val)}
+                      placeholder="Semua Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        ...filteredSubDepts.map((sd) => ({ id: String(sd.id), label: sd.name })),
+                      ]}
+                    />
+                  ),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: () => (
+                    <FormSelectSearch
+                      value={statusFilter}
+                      onChange={(val) => onStatusFilterChange(val)}
+                      placeholder="Semua Status"
+                      showSearch={false}
+                      options={[
+                        { id: '', label: 'Semua Status' },
+                        { id: 'true', label: 'Aktif' },
+                        { id: 'false', label: 'Non Aktif' },
                       ]}
                     />
                   ),
@@ -194,7 +299,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
           actionButtons={
             <div className="hidden md:flex items-center gap-2">
               <ImportIconButton onClick={() => setIsImportOpen(true)} />
-              <ExportIconButton onClick={onExport || (() => alert('Fitur Export Jadwal'))} />
+              <ExportIconButton onClick={onExport || (() => {})} />
             </div>
           }
         />
@@ -203,26 +308,49 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        {/* Mobile View */}
+        {/* 📱 TAMPILAN CARD MOBILE DATA (Hanya Muncul di Layar Kecil) */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
-              const typeName = getWorkHourType(item);
+              const active = item.is_active !== false;
+             // Ubah baris ini:
+              const nipCode = item.employee_id_code || item.employee?.employee_id || item.employee_id || item.nip || '-';
+              const empName = item.employee_name || item.name || '-';
+              const deptName = item.department_name || item.department?.name || (item as any).department_name || '-';
+              const subDeptName = item.sub_department_name || item.sub_department?.name || (item as any).sub_department_name || '-';
 
               return (
-                <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      ID: {item.id}
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-2xs space-y-3 transition-colors"
+                >
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                    <span className="font-mono text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                      ID: {nipCode}
                     </span>
-                    <span className="px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full text-[10px] font-semibold">
-                      {typeName}
-                    </span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        active
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-2.5 py-0.5 text-[10px]'
+                          : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-2.5 py-0.5 text-[10px]'
+                      }
+                    >
+                      {active ? 'Aktif' : 'Non Aktif'}
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.name || '-'}</p>
+
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {empName}
+                    </p>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                      <p><span className="font-medium text-gray-500">Dept:</span> {deptName}</p>
+                      <p><span className="font-medium text-gray-500">Sub Dept:</span> {subDeptName}</p>
+                    </div>
                   </div>
+
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />
                   </div>
@@ -236,26 +364,26 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
           )}
         </div>
 
-        {/* Desktop View DataTable */}
+        {/* 💻 TAMPILAN DESKTOP TABLE */}
         <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data jam kerja ditemukan." />
       </div>
 
       <MobileActionFabGroup
         onImport={() => setIsImportOpen(true)}
-        onExport={onExport || (() => alert('Fitur Export Jadwal'))}
+        onExport={onExport || (() => {})}
       />
 
-      <ImportJadwalDialog
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        onImport={(_file) => {
-          if (onImport) {
-            onImport();
-          } else {
-            alert('File berhasil diimport!');
-          }
-        }}
-      />
+      {/* Modal Dialog Import Bahasa Inggris */}
+     <ImportScheduleDialog
+      isOpen={isImportOpen}
+      onClose={() => setIsImportOpen(false)}
+      onImport={async (file) => {
+        if (onImport) {
+          await onImport(file);
+        }
+      }}
+      onDownloadSample={onDownloadSample}
+    />
     </div>
   );
 };

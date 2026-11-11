@@ -2,17 +2,20 @@ import { api } from '@/lib/axios';
 import type { Departemen } from '../types/departemen.type';
 import type { DepartemenFormValues } from '../schemas/departemen.schema';
 
-// In-memory cache agar perpindahan menu terasa instan (0 ms)
-let departemenCache: Departemen[] | null = null;
-
 export const departemenService = {
-  getAll: async (forceRefresh = false): Promise<Departemen[]> => {
-    if (departemenCache && !forceRefresh) {
-      return departemenCache;
-    }
-    const response = await api.get('/departments');
-    departemenCache = response.data.data;
-    return response.data.data;
+  getAll: async (search?: string, status?: string, page = 1, perPage = 10) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status !== undefined && status !== '') params.append('status', status);
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
+
+    const response = await api.get(`/departments?${params.toString()}`);
+    
+    return {
+      data: response.data.data,
+      meta: response.data.meta,
+    };
   },
 
   getById: async (id: number): Promise<Departemen> => {
@@ -22,18 +25,15 @@ export const departemenService = {
 
   create: async (data: DepartemenFormValues): Promise<Departemen> => {
     const response = await api.post('/departments', data);
-    departemenCache = null; // Invalidate cache
     return response.data.data;
   },
 
   update: async (id: number, data: DepartemenFormValues): Promise<Departemen> => {
     const response = await api.put(`/departments/${id}`, data);
-    departemenCache = null; // Invalidate cache
     return response.data.data;
   },
 
   delete: async (id: number): Promise<void> => {
     await api.delete(`/departments/${id}`);
-    departemenCache = null; // Invalidate cache
   },
 };
