@@ -137,18 +137,18 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
         cell: (info) => {
           const rawActive = (info.row.original as any).is_active ?? (info.row.original as any).status;
           const isAktif = Boolean(
-            rawActive === true || 
-            (rawActive as unknown as number) === 1 || 
-            rawActive === 'Aktif' || 
-            rawActive === 'true'
+            rawActive === true ||
+              (rawActive as unknown as number) === 1 ||
+              rawActive === 'Aktif' ||
+              rawActive === 'true'
           );
           return (
             <div className="flex justify-center">
-              <Badge 
+              <Badge
                 variant="outline"
                 className={
-                  isAktif 
-                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                  isAktif
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3'
                     : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3'
                 }
               >
@@ -194,10 +194,13 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
         setPageSize(newState.pageSize);
       }
     },
-    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
+    onGlobalFilterChange: (val) =>
+      onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const rows = table.getRowModel().rows;
 
   return (
     <div className="relative" ref={filterWrapperRef}>
@@ -245,7 +248,88 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data custom jam kerja ditemukan." />
+        {/* TAMPILAN CARD MOBILE DATA (Hanya Muncul di Layar Kecil) */}
+        <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
+          {rows.length > 0 ? (
+            rows.map((row) => {
+              const item = row.original;
+              const rawActive = (item as any).is_active ?? (item as any).status;
+              const isAktif = Boolean(
+                rawActive === true ||
+                  (rawActive as unknown as number) === 1 ||
+                  rawActive === 'Aktif' ||
+                  rawActive === 'true'
+              );
+              const codeLabel = String(item.code || item.id || `CUS00${row.index + 1}`);
+
+              return (
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-2xs space-y-3 transition-colors"
+                >
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                    <span className="font-mono text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                      {codeLabel}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        isAktif
+                          ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-2.5 py-0.5 text-[10px]'
+                          : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-2.5 py-0.5 text-[10px]'
+                      }
+                    >
+                      {isAktif ? 'Aktif' : 'Non Aktif'}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {item.work_scheme || '-'}
+                    </p>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                      <p>
+                        <span className="font-medium text-gray-500">Periode:</span>{' '}
+                        {item.start_date} ~ {item.end_date}
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-0.5">
+                        <span className="font-mono bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-[11px]">
+                          Masuk: {item.clock_in || '-'}
+                        </span>
+                        <span className="font-mono bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-[11px]">
+                          Toleransi: {item.tolerance || '00:05:00'}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="pt-0.5">
+                          <span className="font-medium text-gray-500">Ket:</span>{' '}
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                    <EditActionButton onClick={() => onEdit(item)} />
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-xs">
+              Tidak ada data custom jam kerja ditemukan.
+            </div>
+          )}
+        </div>
+
+        {/* TAMPILAN DESKTOP TABLE */}
+        <div className="hidden md:block">
+          <DataTable
+            table={table}
+            columnsLength={columns.length}
+            emptyMessage="Tidak ada data custom jam kerja ditemukan."
+          />
+        </div>
       </div>
 
       <MobileAddFab onClick={onAdd} title="Tambah Custom Jam Kerja" />

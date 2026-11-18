@@ -7,14 +7,15 @@ import {
 import type { FiveTwoWorkHourEmployee } from '../types/five-two-work-hour.type';
 import { DataPagination } from '../../../../components/DataPagination';
 import { Clock } from 'lucide-react';
+import { api } from '../../../../lib/axios';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
-import { 
-  EditActionButton, 
-  ImportIconButton, 
+import {
+  EditActionButton,
+  ImportIconButton,
   ExportIconButton,
-  MobileActionFabGroup
+  MobileActionFabGroup,
 } from '../../../../components/ui/ActionButtons';
 import { DataTable } from '../../../../components/ui/data-table';
 import { TableFilterPopover } from '../../../../components/ui/TableFilterPopover';
@@ -75,6 +76,34 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
+  const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
+  const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
+
+  useEffect(() => {
+    setAsyncDeptOptions(departemenList);
+  }, [departemenList]);
+
+  useEffect(() => {
+    setAsyncSubDeptOptions(subDepartemenList);
+  }, [subDepartemenList]);
+
+  const fetchFilterOptions = async (
+    endpoint: string,
+    query: string,
+    setter: Function,
+    extraParams = {}
+  ) => {
+    try {
+      const res = await api.get(`/${endpoint}`, {
+        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+      });
+      const items = res.data.data || res.data || [];
+      setter(items);
+    } catch (err) {
+      console.error(`Gagal memuat opsi ${endpoint}`, err);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (
@@ -96,11 +125,6 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  const filteredSubDepts = useMemo(() => {
-    if (!deptFilter) return subDepartemenList;
-    return subDepartemenList.filter((sub) => String(sub.department_id) === String(deptFilter));
-  }, [subDepartemenList, deptFilter]);
-
   const isFiltered = Boolean(deptFilter || subDeptFilter || statusFilter);
 
   const columns = useMemo<ColumnDef<FiveTwoWorkHourEmployee>[]>(
@@ -110,17 +134,21 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + ((meta.current_page - 1) * meta.per_page)}
+            {info.row.index + 1 + (meta.current_page - 1) * meta.per_page}
           </span>
         ),
       },
-   
       {
         id: 'employee_id_code',
         header: 'ID Karyawan',
         cell: ({ row }) => {
           const item = row.original as any;
-          const empCode = item.employee_id_code || item.employee?.employee_id || item.employee_id || item.nip || '-';
+          const empCode =
+            item.employee_id_code ||
+            item.employee?.employee_id ||
+            item.employee_id ||
+            item.nip ||
+            '-';
           return (
             <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold">
               {String(empCode)}
@@ -142,7 +170,12 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         header: 'Departemen',
         cell: ({ row }) => (
           <span className="text-gray-700 dark:text-gray-300 text-xs">
-            {String(row.original.department_name || row.original.department?.name || (row.original as any).department_name || '-')}
+            {String(
+              row.original.department_name ||
+                row.original.department?.name ||
+                (row.original as any).department_name ||
+                '-'
+            )}
           </span>
         ),
       },
@@ -151,7 +184,12 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         header: 'Sub Departemen',
         cell: ({ row }) => (
           <span className="text-gray-700 dark:text-gray-300 text-xs">
-            {String(row.original.sub_department_name || row.original.sub_department?.name || (row.original as any).sub_department_name || '-')}
+            {String(
+              row.original.sub_department_name ||
+                row.original.sub_department?.name ||
+                (row.original as any).sub_department_name ||
+                '-'
+            )}
           </span>
         ),
       },
@@ -162,11 +200,11 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
           const active = info.getValue() !== false;
           return (
             <div className="flex justify-center">
-              <Badge 
+              <Badge
                 variant="outline"
                 className={
-                  active 
-                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3' 
+                  active
+                    ? 'rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-semibold px-3'
                     : 'rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 font-semibold px-3'
                 }
               >
@@ -212,7 +250,8 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         setPageSize(newState.pageSize);
       }
     },
-    onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
+    onGlobalFilterChange: (val) =>
+      onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -222,7 +261,6 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   return (
     <div className="relative" ref={filterWrapperRef}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
-        
         <TableToolbar
           title="Jam Kerja (Skema 5-2)"
           subtitle="Daftar pengaturan jam kerja karyawan LokaHR"
@@ -252,11 +290,22 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                       onChange={(val) => {
                         onDeptFilterChange(val);
                         onSubDeptFilterChange('');
+                        fetchFilterOptions('sub-departments', '', setAsyncSubDeptOptions, {
+                          department_id: val,
+                        });
                       }}
+                      onSearchChange={(query) =>
+                        fetchFilterOptions('departments', query, setAsyncDeptOptions)
+                      }
                       placeholder="Semua Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList.map((d) => ({ id: String(d.id), label: d.name })),
+                        ...asyncDeptOptions
+                          .filter((d) => d.is_active !== false)
+                          .map((d) => ({
+                            id: String(d.id),
+                            label: d.name || d.departemen || '-',
+                          })),
                       ]}
                     />
                   ),
@@ -268,10 +317,51 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                     <FormSelectSearch
                       value={subDeptFilter}
                       onChange={(val) => onSubDeptFilterChange(val)}
-                      placeholder="Semua Sub Departemen"
+                      onSearchChange={(query) =>
+                        fetchFilterOptions('sub-departments', query, setAsyncSubDeptOptions, {
+                          department_id: deptFilter,
+                        })
+                      }
+                      placeholder={deptFilter ? 'Semua Sub Departemen' : 'Pilih Departemen dahulu'}
+                      disabled={!deptFilter}
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
-                        ...filteredSubDepts.map((sd) => ({ id: String(sd.id), label: sd.name })),
+                        ...asyncSubDeptOptions
+                          .filter((sub) => {
+                            const isActive =
+                              sub.is_active === undefined ||
+                              sub.is_active === null ||
+                              sub.is_active === true ||
+                              sub.is_active === 1;
+                            if (!isActive) return false;
+                            if (!deptFilter) return false;
+
+                            const rawDeptId =
+                              sub.department_id ??
+                              sub.departemen_id ??
+                              sub.department?.id ??
+                              sub.departemen?.id;
+
+                            if (rawDeptId === undefined || rawDeptId === null || rawDeptId === '') {
+                              return true;
+                            }
+
+                            const selectedDept = asyncDeptOptions.find(
+                              (d) => String(d.id) === String(deptFilter)
+                            );
+                            const selectedDeptCode = selectedDept?.code
+                              ? String(selectedDept.code)
+                              : '';
+
+                            return (
+                              String(rawDeptId) === String(deptFilter) ||
+                              (selectedDeptCode !== '' && String(rawDeptId) === selectedDeptCode)
+                            );
+                          })
+                          .map((sd) => ({
+                            id: String(sd.id),
+                            label: sd.name || sd.sub_departemen || '-',
+                          })),
                       ]}
                     />
                   ),
@@ -308,17 +398,29 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        {/* 📱 TAMPILAN CARD MOBILE DATA (Hanya Muncul di Layar Kecil) */}
+        {/* TAMPILAN CARD MOBILE DATA */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
               const item = row.original;
               const active = item.is_active !== false;
-             // Ubah baris ini:
-              const nipCode = item.employee_id_code || item.employee?.employee_id || item.employee_id || item.nip || '-';
+              const nipCode =
+                item.employee_id_code ||
+                item.employee?.employee_id ||
+                item.employee_id ||
+                item.nip ||
+                '-';
               const empName = item.employee_name || item.name || '-';
-              const deptName = item.department_name || item.department?.name || (item as any).department_name || '-';
-              const subDeptName = item.sub_department_name || item.sub_department?.name || (item as any).sub_department_name || '-';
+              const deptName =
+                item.department_name ||
+                item.department?.name ||
+                (item as any).department_name ||
+                '-';
+              const subDeptName =
+                item.sub_department_name ||
+                item.sub_department?.name ||
+                (item as any).sub_department_name ||
+                '-';
 
               return (
                 <div
@@ -342,12 +444,14 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                      {empName}
-                    </p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{empName}</p>
                     <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-                      <p><span className="font-medium text-gray-500">Dept:</span> {deptName}</p>
-                      <p><span className="font-medium text-gray-500">Sub Dept:</span> {subDeptName}</p>
+                      <p>
+                        <span className="font-medium text-gray-500">Dept:</span> {deptName}
+                      </p>
+                      <p>
+                        <span className="font-medium text-gray-500">Sub Dept:</span> {subDeptName}
+                      </p>
                     </div>
                   </div>
 
@@ -364,8 +468,12 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
           )}
         </div>
 
-        {/* 💻 TAMPILAN DESKTOP TABLE */}
-        <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data jam kerja ditemukan." />
+        {/* TAMPILAN DESKTOP TABLE */}
+        <DataTable
+          table={table}
+          columnsLength={columns.length}
+          emptyMessage="Tidak ada data jam kerja ditemukan."
+        />
       </div>
 
       <MobileActionFabGroup
@@ -373,17 +481,16 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
         onExport={onExport || (() => {})}
       />
 
-      {/* Modal Dialog Import Bahasa Inggris */}
-     <ImportScheduleDialog
-      isOpen={isImportOpen}
-      onClose={() => setIsImportOpen(false)}
-      onImport={async (file) => {
-        if (onImport) {
-          await onImport(file);
-        }
-      }}
-      onDownloadSample={onDownloadSample}
-    />
+      <ImportScheduleDialog
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImport={async (file) => {
+          if (onImport) {
+            await onImport(file);
+          }
+        }}
+        onDownloadSample={onDownloadSample}
+      />
     </div>
   );
 };

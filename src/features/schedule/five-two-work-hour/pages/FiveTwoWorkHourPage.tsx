@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useFiveTwoWorkHour } from '../hooks/useFiveTwoWorkHour';
+import { useDepartemen } from '../../../master-data/departemen/hooks/useDepartemen';
+import { useSubDepartemen } from '../../../master-data/sub-departemen/hooks/useSubDepartemen';
 import { FiveTwoWorkHourTable } from '../components/FiveTwoWorkHourTable';
 import { FiveTwoWorkHourDialog } from '../components/FiveTwoWorkHourDialog';
 import { ConfirmAlertDialog } from '@/components/ui/ConfirmAlertDialog';
 import { fiveTwoWorkHourService } from '../services/five-two-work-hour.service';
 import type { FiveTwoWorkHourEmployee } from '../types/five-two-work-hour.type';
 import type { FiveTwoWorkHourFormValues } from '../schemas/five-two-work-hour.schema';
-import { api } from '@/lib/axios';
 
 export const FiveTwoWorkHourPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,8 +15,11 @@ export const FiveTwoWorkHourPage: React.FC = () => {
   const [subDeptFilter, setSubDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  const [departemens, setDepartemens] = useState<any[]>([]);
-  const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
+
+
+  // Panggil langsung dari hook agar search & relasi departemen diambil dari backend
+const { departemens = [] } = useDepartemen('', 'true');
+  const { subDepartemens = [] } = useSubDepartemen('', '', 'true');
 
   const {
     schedules,
@@ -44,23 +48,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
     description: '',
     variant: 'primary',
   });
-
-  // Fetch Master Departemen & Sub Departemen untuk Dropdown Filter
-  useEffect(() => {
-    const fetchMasterData = async () => {
-      try {
-        const [deptRes, subDeptRes] = await Promise.all([
-          api.get('/departments'),
-          api.get('/sub-departments'),
-        ]);
-        setDepartemens(deptRes.data.data || deptRes.data || []);
-        setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
-      } catch (err) {
-        console.error('Gagal memuat master departemen:', err);
-      }
-    };
-    fetchMasterData();
-  }, []);
 
   // Auto-close Pop-up Berhasil/Gagal dalam 1.5 detik tanpa perlu tombol OK
   useEffect(() => {
@@ -99,7 +86,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
     }
   };
 
-  // Handler Download Sample Excel
   const handleDownloadSample = async () => {
     try {
       await fiveTwoWorkHourService.downloadSample();
@@ -113,8 +99,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
     }
   };
 
-  // Handler Import File
-// Handler Import File dengan Safety Catch
   const handleImportFile = async (file: File) => {
     try {
       await fiveTwoWorkHourService.importData(file);
@@ -126,7 +110,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
       });
       refetch();
     } catch (err: any) {
-      // Re-throw error agar ditangkap dan ditampilkan di ImportScheduleDialog
       throw err;
     }
   };
@@ -186,7 +169,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tabel Utama Jam Kerja (Skema 5-2) */}
       <FiveTwoWorkHourTable
         data={Array.isArray(schedules) ? schedules : []}
         meta={meta}
@@ -206,9 +188,9 @@ export const FiveTwoWorkHourPage: React.FC = () => {
         onStatusFilterChange={setStatusFilter}
         departemenList={departemens}
         subDepartemenList={subDepartemens}
+  
       />
 
-      {/* Modal Dialog Form Edit */}
       <FiveTwoWorkHourDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
@@ -216,7 +198,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
         onSubmit={handleSubmitForm}
       />
 
-      {/* 1. Dialog Pertanyaan Konfirmasi Simpan */}
       <ConfirmAlertDialog
         isOpen={isConfirmOpen}
         onClose={handleCancelConfirm}
@@ -228,7 +209,6 @@ export const FiveTwoWorkHourPage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* 2. Alert Hasil Sukses / Gagal (Otomatis Hilang Tanpa Tombol OK & Teks Hitam di Light Mode) */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}

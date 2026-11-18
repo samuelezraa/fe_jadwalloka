@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
+import { HrRoute } from './components/HrRoute';
 
 // ==========================================
 // 1. AUTHENTICATION
@@ -76,16 +77,17 @@ export default function App() {
           <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
 
           {/* JADWAL */}
-          {/* SCHEDULE */}
           <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
           <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
           <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
           <Route path="/schedule/my-schedule" element={<MySchedulePage />} />
 
-          {/* HR MANAGEMENT 🌟 */}
-          <Route path="/hr-management/period" element={<SchedulePeriodPage />} />
-          <Route path="/hr-management/employee-attendance" element={<EmployeeAttendancePage />} />
-          <Route path="/hr-management/employee-attendance/edit/:id" element={<EditEmployeeAttendancePage />} />
+          {/* HR MANAGEMENT 🌟 (Dilindungi oleh HrRoute) */}
+          <Route element={<HrRoute />}>
+            <Route path="/hr-management/period" element={<SchedulePeriodPage />} />
+            <Route path="/hr-management/employee-attendance" element={<EmployeeAttendancePage />} />
+            <Route path="/hr-management/employee-attendance/edit/:id" element={<EditEmployeeAttendancePage />} />
+          </Route>
 
           {/* LAPORAN */}
           <Route path="/reports/attendance" element={<AttendancePage />} />

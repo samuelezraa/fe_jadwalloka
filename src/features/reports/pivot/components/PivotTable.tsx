@@ -26,12 +26,7 @@ import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
 
 interface PivotTableProps {
   data: PivotData[];
-  meta: {
-    current_page: number;
-    last_page: number;
-    total: number;
-    per_page: number;
-  };
+  meta: any;
   setPage: (page: number) => void;
   setPageSize: (size: number) => void;
   searchQuery: string;
@@ -56,6 +51,7 @@ interface PivotTableProps {
   posList?: any[];
   gradeList?: any[];
   skemaList?: any[];
+  periodeList?: any[]; // 👈 Tambahkan ini
   onExport?: () => void;
 }
 
@@ -86,6 +82,7 @@ export const PivotTable: React.FC<PivotTableProps> = ({
   posList = [],
   gradeList = [],
   skemaList = [],
+  periodeList = [], // 👈 Tambahkan ini juga
   onExport,
 }) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -114,41 +111,40 @@ export const PivotTable: React.FC<PivotTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  // 🟢 1. Filter Sub Departemen Aktif Berdasarkan Departemen Terpilih
+// 🟢 1. Filter Sub Departemen Aktif Berdasarkan Departemen Terpilih (Aman dari Error)
   const filteredSubDepts = useMemo(() => {
-    if (!departemenFilter) return subDepartemenList;
+    if (!departemenFilter) return subDepartemenList || [];
 
-    const selectedDeptObj = departemenList.find((d) => {
-      const dId = typeof d === 'object' ? String(d?.id) : '';
+    const selectedDeptObj = (departemenList || []).find((d) => {
+      const dId = typeof d === 'object' && d !== null ? String(d?.id ?? '') : '';
       const dName = typeof d === 'string' ? d : String(d?.name || '');
       return dId === String(departemenFilter) || dName.toLowerCase() === String(departemenFilter).toLowerCase();
     });
 
-    if (!selectedDeptObj) return subDepartemenList;
+    if (!selectedDeptObj) return subDepartemenList || [];
 
-    return subDepartemenList.filter((sub) => {
-      if (selectedDeptObj.id !== undefined && sub.department_id !== undefined) {
+    return (subDepartemenList || []).filter((sub) => {
+      if (!sub) return false;
+      if (typeof selectedDeptObj === 'object' && selectedDeptObj?.id !== undefined && sub.department_id !== undefined) {
         return String(sub.department_id) === String(selectedDeptObj.id);
       }
       const subDeptParentName = sub.department?.name || sub.department_name;
-      if (subDeptParentName && selectedDeptObj.name) {
+      if (subDeptParentName && typeof selectedDeptObj === 'object' && selectedDeptObj?.name) {
         return String(subDeptParentName).toLowerCase() === String(selectedDeptObj.name).toLowerCase();
       }
       return true;
     });
   }, [subDepartemenList, departemenList, departemenFilter]);
 
-// 🟢 2. Filter POS Aktif Berdasarkan Sub Departemen / Departemen Terpilih
+  // 🟢 2. Filter POS Aktif Berdasarkan Sub Departemen / Departemen Terpilih (Aman dari Error)
   const filteredPosList = useMemo(() => {
-    let result = posList;
+    let result = posList || [];
 
-    // A. Jika Sub Departemen dipilih (misal: "Frontend Engineering")
     if (subDepartemenFilter) {
-      // Cari objek Sub Departemen terpilih dari master list
-      const selectedSubDeptObj = subDepartemenList.find((sd) => {
+      const selectedSubDeptObj = (subDepartemenList || []).find((sd) => {
         const sdName = typeof sd === 'string' ? sd : String(sd?.name || '');
-        const sdId = typeof sd === 'object' ? String(sd?.id) : '';
-        const sdCode = typeof sd === 'object' ? String(sd?.code || '') : '';
+        const sdId = typeof sd === 'object' && sd !== null ? String(sd?.id ?? '') : '';
+        const sdCode = typeof sd === 'object' && sd !== null ? String(sd?.code || '') : '';
         return (
           sdName.toLowerCase() === String(subDepartemenFilter).toLowerCase() ||
           sdId === String(subDepartemenFilter) ||
@@ -156,23 +152,21 @@ export const PivotTable: React.FC<PivotTableProps> = ({
         );
       });
 
-      const targetSubCode = selectedSubDeptObj?.code || null;
-      const targetSubId = selectedSubDeptObj?.id ? String(selectedSubDeptObj.id) : null;
+      const targetSubCode = typeof selectedSubDeptObj === 'object' ? selectedSubDeptObj?.code || null : null;
+      const targetSubId = typeof selectedSubDeptObj === 'object' ? selectedSubDeptObj?.id ? String(selectedSubDeptObj.id) : null : null;
       const targetSubName = String(subDepartemenFilter).toLowerCase();
 
       return result.filter((p) => {
-        // 1. Match via sub_department_code (misal: SUB001)
+        if (!p) return false;
         if (targetSubCode && p.sub_department_code) {
           if (String(p.sub_department_code) === String(targetSubCode)) return true;
         }
 
-        // 2. Match via sub_department_id
         const pSubId = p.sub_department_id ?? p.sub_department?.id;
         if (targetSubId && pSubId !== undefined && pSubId !== null) {
           if (String(pSubId) === targetSubId) return true;
         }
 
-        // 3. Match via Nama Sub Departemen
         const pSubName = p.sub_department?.name || p.sub_department_name || p.title;
         if (pSubName && targetSubName) {
           return String(pSubName).toLowerCase().includes(targetSubName);
@@ -182,12 +176,11 @@ export const PivotTable: React.FC<PivotTableProps> = ({
       });
     }
 
-    // B. Jika Sub Departemen BELUM dipilih tetapi Departemen dipilih (misal: "IT")
     if (departemenFilter) {
-      const selectedDeptObj = departemenList.find((d) => {
+      const selectedDeptObj = (departemenList || []).find((d) => {
         const dName = typeof d === 'string' ? d : String(d?.name || '');
-        const dId = typeof d === 'object' ? String(d?.id) : '';
-        const dCode = typeof d === 'object' ? String(d?.code || '') : '';
+        const dId = typeof d === 'object' && d !== null ? String(d?.id ?? '') : '';
+        const dCode = typeof d === 'object' && d !== null ? String(d?.code || '') : '';
         return (
           dName.toLowerCase() === String(departemenFilter).toLowerCase() ||
           dId === String(departemenFilter) ||
@@ -195,23 +188,21 @@ export const PivotTable: React.FC<PivotTableProps> = ({
         );
       });
 
-      const targetDeptCode = selectedDeptObj?.code || null;
-      const targetDeptId = selectedDeptObj?.id ? String(selectedDeptObj.id) : null;
+      const targetDeptCode = typeof selectedDeptObj === 'object' ? selectedDeptObj?.code || null : null;
+      const targetDeptId = typeof selectedDeptObj === 'object' ? selectedDeptObj?.id ? String(selectedDeptObj.id) : null : null;
       const targetDeptName = String(departemenFilter).toLowerCase();
 
       return result.filter((p) => {
-        // 1. Match via department_code
+        if (!p) return false;
         if (targetDeptCode && p.department_code) {
           if (String(p.department_code) === String(targetDeptCode)) return true;
         }
 
-        // 2. Match via department_id
         const pDeptId = p.department_id ?? p.department?.id;
         if (targetDeptId && pDeptId !== undefined && pDeptId !== null) {
           if (String(pDeptId) === targetDeptId) return true;
         }
 
-        // 3. Match via Nama Departemen
         const pDeptName = p.department?.name || p.department_name;
         if (pDeptName && targetDeptName) {
           return String(pDeptName).toLowerCase().includes(targetDeptName);
@@ -382,44 +373,53 @@ export const PivotTable: React.FC<PivotTableProps> = ({
                   onSkemaChange('');
                 }}
                 fields={[
+                 {
+                  key: 'periode',
+                  label: 'Periode',
+                  render: () => (
+                    <FormSelectSearch
+                      value={periodeFilter}
+                      onChange={onPeriodeChange}
+                      placeholder="Semua Periode"
+                      options={[
+                        { id: '', label: 'Semua Periode' },
+                        ...(periodeList || []).map((p) => ({
+                          // 🟢 Gunakan properti string secara spesifik, pastikan tidak merender objek `p` langsung
+                          id: String(p.code || p.idPeriode || p.id || ''),
+                          label: String(p.name || p.periode || p.code || 'Periode'),
+                        })),
+                      ]}
+                    />
+                  ),
+                },
                   {
-                    key: 'periode',
-                    label: 'Periode',
-                    render: () => (
-                      <FormSelectSearch
-                        value={periodeFilter}
-                        onChange={onPeriodeChange}
-                        placeholder="Semua Periode"
-                        options={[
-                          { id: '', label: 'Semua Periode' },
-                          { id: '2026-09', label: 'September 2026' },
-                          { id: '2026-10', label: 'Oktober 2026' },
-                        ]}
-                      />
-                    ),
-                  },
-                  {
-                    key: 'departemen',
-                    label: 'Departemen',
-                    render: () => (
-                      <FormSelectSearch
-                        value={departemenFilter}
-                        onChange={(val) => {
-                          onDepartemenChange(val);
-                          onSubDepartemenChange(''); // Reset Sub Departemen
-                          onPosChange('');           // Reset POS
-                        }}
-                        placeholder="Semua Departemen"
-                        options={[
-                          { id: '', label: 'Semua Departemen' },
-                          ...departemenList.map((d) => ({
+                  key: 'departemen',
+                  label: 'Departemen',
+                  render: () => (
+                    <FormSelectSearch
+                      value={departemenFilter}
+                      onChange={(val) => {
+                        onDepartemenChange(val);
+                        onSubDepartemenChange(''); // Reset Sub Departemen
+                        onPosChange('');           // Reset POS
+                      }}
+                      placeholder="Semua Departemen"
+                      options={[
+                        { id: '', label: 'Semua Departemen' },
+                        ...departemenList
+                          .filter((d) => {
+                            // 🟢 Pastikan hanya departemen aktif yang lolos
+                            const isActive = d.is_active === undefined || d.is_active === true || d.is_active === 1 || d.is_active === '1';
+                            return isActive;
+                          })
+                          .map((d) => ({
                             id: d.name || d,
                             label: d.name || d,
                           })),
-                        ]}
-                      />
-                    ),
-                  },
+                      ]}
+                    />
+                  ),
+                },
                  {
                   key: 'sub_departemen',
                   label: 'Sub Departemen',
@@ -428,15 +428,21 @@ export const PivotTable: React.FC<PivotTableProps> = ({
                       value={subDepartemenFilter}
                       onChange={(val) => {
                         onSubDepartemenChange(val);
-                        onPosChange(''); // Reset pilihan POS saat Sub Departemen diubah
+                        onPosChange(''); 
                       }}
                       placeholder="Semua Sub Departemen"
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
-                        ...filteredSubDepts.map((sd) => ({
-                          id: sd.name || sd,
-                          label: sd.name || sd,
-                        })),
+                        ...filteredSubDepts
+                          .filter((sd) => {
+                            // 🟢 Pastikan hanya sub departemen aktif yang lolos
+                            const isActive = sd.is_active === undefined || sd.is_active === true || sd.is_active === 1 || sd.is_active === '1';
+                            return isActive;
+                          })
+                          .map((sd) => ({
+                            id: sd.name || sd,
+                            label: sd.name || sd,
+                          })),
                       ]}
                     />
                   ),

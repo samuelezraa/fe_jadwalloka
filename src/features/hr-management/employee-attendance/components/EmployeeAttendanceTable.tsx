@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,6 +15,7 @@ import { TableFilterPopover } from '@/components/ui/TableFilterPopover';
 import { EditActionButton } from '@/components/ui/ActionButtons';
 import { DataTable } from '@/components/ui/data-table';
 import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
+import { api } from '@/lib/axios'; // 👈 Import axios instance
 
 interface EmployeeAttendanceTableProps {
   data: HrManagementItem[];
@@ -33,11 +34,6 @@ interface EmployeeAttendanceTableProps {
   onSubDeptChange: (sd: string) => void;
 }
 
-const PERIODE_OPTIONS = [
-  { id: '2026-10', label: 'Oktober 2026 (2026-10-01 — 2026-10-31)' },
-  { id: '2026-11', label: 'November 2026 (2026-11-01 — 2026-11-30)' },
-];
-
 export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = ({
   data,
   selectedPeriode,
@@ -55,6 +51,58 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
 }) => {
   const navigate = useNavigate();
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  
+  // State untuk menampung data master periode dari API (menyala/sesuai dengan halaman Periode)
+ const [periodeList, setPeriodeList] = useState<{ id: string; label: string }[]>([]);
+
+  useEffect(() => {
+    const fetchPeriods = async () => {
+      try {
+        const res = await api.get('/periods', { params: { status: 'true', per_page: 50 } });
+        const items = res.data?.data || res.data || [];
+
+        const mapped = (Array.isArray(items) ? items : [])
+          .filter((p: any) => (p.isActive ?? p.is_active) !== false)
+          .map((p: any) => {
+            // 🟢 Ambil tanggal awal atau kode periode lalu ambil substring 'YYYY-MM' nya
+            // agar nilainya menjadi '2026-10' yang sesuai dengan database employee_attendances
+            const rawDate = p.tanggalAwal ?? p.start_date ?? p.code ?? '';
+            let periodCode = String(p.code ?? p.idPeriode ?? '');
+            
+            if (rawDate && rawDate.length >= 7) {
+              // Jika format tanggal YYYY-MM-DD atau DD-MM-YYYY, ubah ke YYYY-MM
+              if (rawDate.includes('-')) {
+                const parts = rawDate.split('-');
+                if (parts[0].length === 4) {
+                  periodCode = `${parts[0]}-${parts[1]}`; // YYYY-MM
+                } else if (parts[2]?.length === 4) {
+                  periodCode = `${parts[2]}-${parts[1]}`; // YYYY-MM dari DD-MM-YYYY
+                }
+              }
+            }
+
+            const name = p.periode ?? p.name ?? periodCode;
+            const startDate = p.tanggalAwal ?? p.start_date ?? '';
+            const endDate = p.tanggalAkhir ?? p.end_date ?? '';
+
+            const dateRange =
+              startDate && endDate && startDate !== '-' && endDate !== '-'
+                ? ` (${startDate} — ${endDate})`
+                : '';
+
+            return {
+              id: periodCode.trim() !== '' ? periodCode : String(p.idPeriode ?? p.id ?? ''),
+              label: `${name}${dateRange}`,
+            };
+          });
+
+        setPeriodeList(mapped);
+      } catch (err) {
+        console.error('Gagal memuat master periode:', err);
+      }
+    };
+    fetchPeriods();
+  }, []);
 
   const handleResetFilters = () => {
     onDeptChange('');
@@ -84,12 +132,12 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
     action: true,
   });
 
- const columns = useMemo<ColumnDef<HrManagementItem>[]>(
+  const columns = useMemo<ColumnDef<HrManagementItem>[]>(
     () => [
       { accessorKey: 'employeeId', header: 'ID Karyawan' },
       { accessorKey: 'nip', header: 'NIP' },
       {
-        accessorKey: 'name', // 🟢 Ubah dari 'nama' menjadi 'name'
+        accessorKey: 'name',
         header: 'Nama',
         cell: (info) => (
           <span className="font-bold text-gray-900 dark:text-gray-100">
@@ -97,13 +145,13 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
           </span>
         ),
       },
-      { accessorKey: 'department', header: 'Departemen' }, // 🟢 Pastikan ini juga 'department' jika sebelumnya 'departemen'
+      { accessorKey: 'department', header: 'Departemen' },
       { accessorKey: 'subDepartment', header: 'Sub Departemen' },
       { accessorKey: 'pos', header: 'POS' },
       { accessorKey: 'grade', header: 'Grade' },
-      { accessorKey: 'workScheme', header: 'Skema Kerja' }, // 🟢 Pastikan ini 'workScheme'
+      { accessorKey: 'workScheme', header: 'Skema Kerja' },
       {
-        accessorKey: 'totalWorkDays', // 🟢 Ubah dari 'totalMasuk' menjadi 'totalWorkDays'
+        accessorKey: 'totalWorkDays',
         header: 'Total Masuk',
         cell: (info) => (
           <span className="font-semibold text-emerald-600 dark:text-emerald-400">
@@ -111,7 +159,7 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
           </span>
         ),
       },
-      { accessorKey: 'totalPeriodDays', header: 'Total Hari' }, // 🟢 Ubah dari 'totalHari' menjadi 'totalPeriodDays'
+      { accessorKey: 'totalPeriodDays', header: 'Total Hari' },
       {
         id: 'action',
         header: 'Action',
@@ -165,14 +213,14 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
             Pilih Periode HR:
           </span>
         </div>
-        <div className="w-full md:w-80">
+      <div className="w-full md:w-80">
           <FormSelectSearch
             value={selectedPeriode}
             onChange={(val) => onPeriodeChange(val)}
             placeholder="-- Pilih Periode Berjalan --"
             options={[
               { id: '', label: '-- Pilih Periode Berjalan --' },
-              ...PERIODE_OPTIONS,
+              ...periodeList,
             ]}
           />
         </div>
@@ -184,7 +232,10 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
           subtitle="Kelola rincian data kehadiran & jadwal HR LokaHR"
           icon={<Users className="w-6 h-6" />}
           searchValue={searchQuery ?? ''}
-          onSearchChange={onSearchChange}
+          onSearchChange={(val) => {
+            onSearchChange(val);
+            setPage(1);
+          }}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
           filterDropdownContent={
@@ -216,18 +267,36 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
                 {
                   key: 'subDepartemen',
                   label: 'Sub Departemen',
-                  render: () => (
-                    <FormSelectSearch
-                      value={filterSubDept}
-                      onChange={(val) => onSubDeptChange(val)}
-                      placeholder="Semua Sub Departemen"
-                      options={[
-                        { id: '', label: 'Semua Sub Departemen' },
-                        { id: 'Frontend Engineering', label: 'Frontend Engineering' },
-                        { id: 'Backend Engineering', label: 'Backend Engineering' },
-                      ]}
-                    />
-                  ),
+                  render: () => {
+                    let availableSubDepts = [
+                      { id: 'Frontend Engineering', label: 'Frontend Engineering' },
+                      { id: 'Backend Engineering', label: 'Backend Engineering' },
+                    ];
+
+                    if (filterDept === 'HRD') {
+                      availableSubDepts = [
+                        { id: 'Recruiting & Talent Acquisition', label: 'Recruiting & Talent Acquisition' },
+                        { id: 'Payroll & Benefits', label: 'Payroll & Benefits' },
+                      ];
+                    } else if (filterDept === 'Operasional') {
+                      availableSubDepts = [
+                        { id: 'Logistik & Gudang', label: 'Logistik & Gudang' },
+                        { id: 'Customer Service', label: 'Customer Service' },
+                      ];
+                    }
+
+                    return (
+                      <FormSelectSearch
+                        value={filterSubDept}
+                        onChange={(val) => onSubDeptChange(val)}
+                        placeholder="Semua Sub Departemen"
+                        options={[
+                          { id: '', label: 'Semua Sub Departemen' },
+                          ...availableSubDepts,
+                        ]}
+                      />
+                    );
+                  },
                 },
               ]}
             />
@@ -260,7 +329,7 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
               <DataTable table={table} columnsLength={columns.length} emptyMessage="Tidak ada data Absensi Karyawan ditemukan." />
             </div>
 
-           {/* TAMPILAN MOBILE */}
+            {/* TAMPILAN MOBILE */}
             <div className="block md:hidden p-4 space-y-3">
               {data.length === 0 ? (
                 <p className="text-center text-xs text-gray-500 py-6">Tidak ada data Absensi Karyawan ditemukan.</p>
@@ -272,11 +341,11 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.name}</h3> {/* 🟢 item.name */}
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.name}</h3>
                         <p className="font-mono text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">NIP: {item.nip} | ID: {item.employeeId}</p>
                       </div>
                       <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono text-[10px] rounded-lg">
-                        {item.workScheme} {/* 🟢 item.workScheme */}
+                        {item.workScheme}
                       </span>
                     </div>
 

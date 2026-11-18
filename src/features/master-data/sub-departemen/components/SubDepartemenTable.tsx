@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-table';
 import type { SubDepartemen } from '../types/sub-departemen.type';
 import type { Departemen } from '../../departemen/types/departemen.type';
+import { departemenService } from '../../departemen/services/departemen.service'; // 👈 Import departemen service
 import { DataPagination } from '../../../../components/DataPagination';
 import { Building2 } from 'lucide-react';
 
@@ -57,6 +58,26 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
   const filterWrapperRef = useRef<HTMLDivElement>(null);
+
+  // 🟢 State untuk backend search pada filter departemen
+  const [deptSearchQuery, setDeptSearchQuery] = useState('');
+  const [filteredDeptOptions, setFilteredDeptOptions] = useState<Departemen[]>(departemenList);
+
+  useEffect(() => {
+    const fetchDeptSearch = async () => {
+      try {
+        const res = await departemenService.getAll(deptSearchQuery, '', 1, 50);
+        setFilteredDeptOptions(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchDeptSearch();
+  }, [deptSearchQuery]);
+
+  useEffect(() => {
+    setFilteredDeptOptions(departemenList);
+  }, [departemenList]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -232,6 +253,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
               onReset={() => {
                 onDeptFilterChange('');
                 onStatusFilterChange('');
+                setDeptSearchQuery('');
               }}
               fields={[
                 {
@@ -242,10 +264,11 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
                       value={selectedDeptFilter}
                       onChange={(val) => onDeptFilterChange(val)}
                       placeholder="Semua Departemen"
+                      onSearchChange={(query) => setDeptSearchQuery(query)} // 👈 Backend Search Debounce
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList
-                          .filter((d) => Boolean(d.is_active)) // 👈 Filter hanya departemen aktif
+                        ...filteredDeptOptions
+                          .filter((d) => Boolean(d.is_active))
                           .map((d) => ({ 
                             id: d.code || (d as any).id, 
                             label: d.name || (d as any).departemen 

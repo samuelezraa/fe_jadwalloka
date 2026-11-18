@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { customWorkHourSchema, type CustomWorkHourFormValues } from '../schemas/custom-work-hour.schema';
@@ -26,6 +26,7 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
 }) => {
   const isEditMode = !!initialData;
   const [schemeOptions, setSchemeOptions] = useState<{ id: string; label: string }[]>([]);
+  const hasMatchedInitialScheme = useRef(false);
 
   const {
     register,
@@ -51,68 +52,63 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
   const startDateValue = watch('start_date');
   const endDateValue = watch('end_date');
 
-  // Load opsi Skema Hari Kerja dari Backend Master Data (Hanya yang Aktif)
-  useEffect(() => {
-    const fetchSchemes = async () => {
-      try {
-        const response = await api.get('/work-schedule-schemes');
-        const list = response.data.data || response.data || [];
-        
-        // 💡 Filter hanya skema yang aktif
-        const activeSchemes = list.filter((item: any) => {
-          const rawActive = item.is_active ?? item.status;
-          return Boolean(
-            rawActive === true || 
-            rawActive === 1 || 
-            rawActive === 'Aktif' || 
-            rawActive === 'true' || 
+  // Fungsi ambil opsi Skema Hari Kerja dari Backend (dipakai saat awal & saat search diketik)
+  const fetchSchemes = useCallback(async (query: string = '') => {
+    try {
+      const response = await api.get('/work-schedule-schemes', {
+        params: {
+          search: query,
+          status: 'true',
+          per_page: 20,
+        },
+      });
+      const list = response.data.data || response.data || [];
+
+      const activeSchemes = list.filter((item: any) => {
+        const rawActive = item.is_active ?? item.status;
+        return Boolean(
+          rawActive === true ||
+            rawActive === 1 ||
+            rawActive === 'Aktif' ||
+            rawActive === 'true' ||
             rawActive === undefined
-          );
-        });
+        );
+      });
 
-        const options = activeSchemes.map((item: any) => ({
-          id: item.name || item.code || String(item.id),
-          label: item.name ? `${item.name} (${item.code || ''})`.trim() : item.code,
-        }));
-        setSchemeOptions(options);
-      } catch (error) {
-        console.error('Gagal memuat skema hari kerja:', error);
-        toast.error('Gagal memuat daftar skema hari kerja');
-      }
-    };
+      const options = activeSchemes.map((item: any) => ({
+        id: item.name || item.code || String(item.id),
+        label: item.name ? `${item.name} (${item.code || ''})`.trim() : item.code,
+      }));
 
-    fetchSchemes();
+      setSchemeOptions(options);
+    } catch (error) {
+      console.error('Gagal memuat skema hari kerja:', error);
+      toast.error('Gagal memuat daftar skema hari kerja');
+    }
   }, []);
 
-  // Sync data saat initialData atau schemeOptions berubah
+  // Load opsi awal saat form pertama kali dibuka
   useEffect(() => {
+    fetchSchemes('');
+  }, [fetchSchemes]);
+
+  // Reset form hanya saat initialData berubah (buka modal Tambah / Edit)
+  useEffect(() => {
+    hasMatchedInitialScheme.current = false;
+
     if (initialData) {
       const rawActive = (initialData as any).is_active ?? (initialData as any).status;
       const isActiveBoolean = Boolean(
-        rawActive === true || 
-        (rawActive as unknown as number) === 1 || 
-        rawActive === 'Aktif' || 
-        rawActive === 'true'
+        rawActive === true ||
+          (rawActive as unknown as number) === 1 ||
+          rawActive === 'Aktif' ||
+          rawActive === 'true'
       );
-
-      let matchedScheme = initialData.work_scheme || '';
-      if (schemeOptions.length > 0 && matchedScheme) {
-        const found = schemeOptions.find(
-          (opt) =>
-            opt.id === matchedScheme ||
-            opt.label === matchedScheme ||
-            opt.label.toLowerCase().includes(matchedScheme.toLowerCase()) ||
-            matchedScheme.toLowerCase().includes(opt.id.toLowerCase())
-        );
-        if (found) {
-          matchedScheme = found.id;
-        }
-      }
 
       reset({
         start_date: initialData.start_date || '',
         end_date: initialData.end_date || '',
-        work_scheme: matchedScheme,
+        work_scheme: initialData.work_scheme || '',
         clock_in: initialData.clock_in || '12:00:00',
         tolerance: initialData.tolerance || '00:05:00',
         description: initialData.description || '',
@@ -129,7 +125,31 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
         is_active: true,
       });
     }
-  }, [initialData, schemeOptions, reset]);
+  }, [initialData, reset]);
+
+  // Cocokkan nilai awal work_scheme saat Edit setelah opsi pertama kali selesai dimuat dari backend
+  useEffect(() => {
+    if (
+      initialData &&
+      initialData.work_scheme &&
+      schemeOptions.length > 0 &&
+      !hasMatchedInitialScheme.current
+    ) {
+      const target = initialData.work_scheme;
+      const found = schemeOptions.find(
+        (opt) =>
+          opt.id === target ||
+          opt.label === target ||
+          opt.label.toLowerCase().includes(target.toLowerCase()) ||
+          target.toLowerCase().includes(opt.id.toLowerCase())
+      );
+
+      if (found) {
+        setValue('work_scheme', found.id);
+      }
+      hasMatchedInitialScheme.current = true;
+    }
+  }, [initialData, schemeOptions, setValue]);
 
   return (
     <form onSubmit={handleSubmit((data) => onSubmit(data))} className="space-y-4">
@@ -153,7 +173,7 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
         )}
       </div>
 
-      {/* 2. Field Skema Hari Kerja */}
+      {/* 2. Field Skema Hari Kerja (Async Search Backend) */}
       <Controller
         name="work_scheme"
         control={control}
@@ -162,6 +182,7 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
             label="Skema Hari Kerja"
             value={field.value}
             onChange={field.onChange}
+            onSearchChange={(query) => fetchSchemes(query)}
             placeholder="Pilih Skema Hari Kerja"
             options={schemeOptions}
             error={errors.work_scheme?.message}

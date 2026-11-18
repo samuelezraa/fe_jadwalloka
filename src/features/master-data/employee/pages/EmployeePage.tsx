@@ -117,16 +117,22 @@ export const EmployeePage: React.FC = () => {
     await bulkResetPassword(ids);
   };
 
-  // Menerima parameter selectedIds
-  const handleExportData = async (selectedIds?: (string | number)[]) => {
+const handleExportData = async (selectedIds?: (string | number)[]) => {
     try {
       toast.loading('Mengunduh data karyawan...');
-      const blobData = await employeeService.exportData(selectedIds);
-      const blob = new Blob([blobData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blobData = await employeeService.exportData(selectedIds, {
+        search: searchQuery,
+        department_id: deptFilter,
+        sub_department_id: subDeptFilter,
+        position_id: posFilter,
+        grade_id: gradeFilter,
+        status: statusFilter,
+      });
+      const blob = new Blob([blobData], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `data-karyawan-${new Date().toISOString().split('T')[0]}.xlsx`);
+      link.setAttribute('download', `data-karyawan-${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -142,11 +148,11 @@ export const EmployeePage: React.FC = () => {
     try {
       toast.loading('Mengunduh templat sample...');
       const blobData = await employeeService.downloadSample(); 
-      const blob = new Blob([blobData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const blob = new Blob([blobData], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'template-import-karyawan.xlsx');
+      link.setAttribute('download', 'template-import-karyawan.csv');
       document.body.appendChild(link);
       link.click();
       link.remove();

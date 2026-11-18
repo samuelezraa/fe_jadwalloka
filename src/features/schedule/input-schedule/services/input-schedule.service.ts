@@ -83,18 +83,31 @@ export const inputScheduleService = {
     return response.data;
   },
 
-  // 7. Export file data jadwal
-  exportSchedule: async (period: string) => {
+// 7. Export file data jadwal (mendukung filter periode, search, dept, subDept, dan status)
+  exportSchedule: async (
+    period: string,
+    search?: string,
+    deptId?: string,
+    subDeptId?: string,
+    status?: string
+  ) => {
+    const params: Record<string, string> = {};
+    if (period) params.period = period;
+    if (search) params.search = search;
+    if (deptId) params.department_id = deptId;
+    if (subDeptId) params.sub_department_id = subDeptId;
+    if (status !== undefined && status !== '') params.status = status;
+
     const response = await api.get('/schedule/input-schedule/export', {
-      params: { period },
+      params,
       responseType: 'blob',
     });
     return response.data;
   },
 
-  // Mengunduh sample template file import jadwal kehadiran
-  downloadSample: async () => {
+ downloadSample: async (period?: string) => {
     const response = await api.get('/schedule/input-schedule/sample', {
+      params: period ? { period } : {},
       responseType: 'blob',
     });
     return response.data;

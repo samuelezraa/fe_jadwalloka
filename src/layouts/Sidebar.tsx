@@ -18,6 +18,15 @@ interface SidebarProps {
   onCloseMobile: () => void;
 }
 
+const getUser = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
   const [openMaster, setOpenMaster] = useState(false);
   const [openJadwal, setOpenJadwal] = useState(false);
@@ -27,12 +36,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
   const location = useLocation();
   const navigate = useNavigate();
 
+  const user = getUser();
+  const isHr = user?.role === 'HR' || user?.department === 'HR' || user?.is_hr === true;
+
   const isMasterActive = location.pathname.startsWith('/master-data');
   const isJadwalActive = location.pathname.startsWith('/jadwal');
   const isHrManagementActive = location.pathname.startsWith('/hr-management');
   const isLaporanActive = location.pathname.startsWith('/laporan');
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     onCloseMobile();
     navigate('/login');
   };
@@ -195,8 +209,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             )}
           </div>
 
-         
-
           {/* Laporan Dropdown */}
           <div className="relative group">
             <div
@@ -240,44 +252,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             )}
           </div>
 
-
- {/* HR Management Dropdown 🌟 */}
-          <div className="relative group">
-            <div
-              onClick={() => {
-                if (!isCollapsed || isMobileOpen) {
-                  setOpenHrManagement(!openHrManagement);
-                }
-              }}
-              className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                isHrManagementActive 
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
-                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-              } ${
-                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Users className="w-5 h-5 shrink-0" />
-                {(!isCollapsed || isMobileOpen) && <span>HR Management</span>}
+          {/* HR Management Dropdown 🌟 (Hanya tampil jika user adalah HR) */}
+          {isHr && (
+            <div className="relative group">
+              <div
+                onClick={() => {
+                  if (!isCollapsed || isMobileOpen) {
+                    setOpenHrManagement(!openHrManagement);
+                  }
+                }}
+                className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
+                  isHrManagementActive 
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                    : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                } ${
+                  isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 shrink-0" />
+                  {(!isCollapsed || isMobileOpen) && <span>HR Management</span>}
+                </div>
+                {(!isCollapsed || isMobileOpen) && (
+                  openHrManagement ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+                )}
               </div>
-              {(!isCollapsed || isMobileOpen) && (
-                openHrManagement ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+
+              {openHrManagement && (!isCollapsed || isMobileOpen) && (
+                <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
+                  <NavLink to="/hr-management/period" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Periode</span>
+                  </NavLink>
+                  <NavLink to="/hr-management/employee-attendance" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Absensi Karyawan</span>
+                  </NavLink>
+                </div>
               )}
             </div>
-
-            {openHrManagement && (!isCollapsed || isMobileOpen) && (
-              <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
-                <NavLink to="/hr-management/period" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Periode</span>
-                </NavLink>
-                <NavLink to="/hr-management/employee-attendance" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Absensi Karyawan</span>
-                </NavLink>
-              </div>
-            )}
-          </div>
-
+          )}
 
           {/* Log History */}
           <NavLink

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePivot } from '../hooks/usePivot';
 import { PivotTable } from '../components/PivotTable';
 import { pivotService } from '../services/pivot.service';
+import { api } from '@/lib/axios';
 import toast from 'react-hot-toast';
 
 export const PivotPage: React.FC = () => {
@@ -35,6 +36,23 @@ export const PivotPage: React.FC = () => {
     gradeList,
     skemaList,
   } = usePivot();
+
+ // State untuk Master Data Periode Aktif
+  const [periodeList, setPeriodeList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPeriods = async () => {
+      try {
+        const res = await api.get('/periods', { params: { status: 'true', per_page: 50 } });
+        const rawPeriods = res.data?.data || res.data || [];
+        // 🟢 Hanya ambil periode yang aktif
+        setPeriodeList(rawPeriods.filter((p: any) => p.is_active !== false && p.is_active !== 0 && p.is_active !== '0'));
+      } catch (err) {
+        console.error('Gagal memuat master periode:', err);
+      }
+    };
+    fetchPeriods();
+  }, []);
 
   const handleExport = async () => {
     const toastId = toast.loading('Menyiapkan dan mengunduh file Excel...');
@@ -109,6 +127,7 @@ export const PivotPage: React.FC = () => {
         posList={posList}
         gradeList={gradeList}
         skemaList={skemaList}
+        periodeList={periodeList} // 👈 Masukkan periodeList ke PivotTable
         onExport={handleExport}
       />
     </div>

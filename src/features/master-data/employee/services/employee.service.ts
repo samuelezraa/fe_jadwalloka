@@ -49,11 +49,30 @@ export const employeeService = {
     return true;
   },
 
-  exportData: async (ids?: (string | number)[]) => {
+  exportData: async (
+    ids?: (string | number)[],
+    filters?: {
+      search?: string;
+      department_id?: string;
+      sub_department_id?: string;
+      position_id?: string;
+      grade_id?: string;
+      status?: string;
+    }
+  ) => {
     const params = new URLSearchParams();
     if (ids && ids.length > 0) {
       params.append('ids', ids.join(','));
     }
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.department_id) params.append('department_id', filters.department_id);
+    if (filters?.sub_department_id) params.append('sub_department_id', filters.sub_department_id);
+    if (filters?.position_id) params.append('position_id', filters.position_id);
+    if (filters?.grade_id) params.append('grade_id', filters.grade_id);
+    if (filters?.status !== undefined && filters?.status !== '') {
+      params.append('status', filters.status);
+    }
+
     const response = await api.get(`/employees/export?${params.toString()}`, { responseType: 'blob' });
     return response.data;
   },

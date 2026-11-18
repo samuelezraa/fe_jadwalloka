@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { posSchema, type PosFormValues } from '../schemas/pos.schema';
 import type { Pos } from '../types/pos.type';
 import type { Departemen } from '../../departemen/types/departemen.type';
 import type { SubDepartemen } from '../../sub-departemen/types/sub-departemen.type';
+import { departemenService } from '../../departemen/services/departemen.service';
+import { subDepartemenService } from '../../sub-departemen/services/sub-departemen.service';
 
 // Reusable UI Components
 import { FormInput } from '../../../../components/ui/FormInput';
@@ -49,6 +51,53 @@ export const PosForm: React.FC<PosFormProps> = ({
 
   const selectedDepartmentCode = watch('department_code');
 
+  // 🟢 State untuk Backend Search Debounce pada Form
+  const [formDeptSearchQuery, setFormDeptSearchQuery] = useState('');
+  const [formDeptOptions, setFormDeptOptions] = useState<Departemen[]>(departemenList);
+
+  const [formSubDeptSearchQuery, setFormSubDeptSearchQuery] = useState('');
+  const [formSubDeptOptions, setFormSubDeptOptions] = useState<SubDepartemen[]>(subDepartemenList);
+
+  useEffect(() => {
+    const fetchDept = async () => {
+      try {
+        const res = await departemenService.getAll(formDeptSearchQuery, '', 1, 50);
+        setFormDeptOptions(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchDept();
+  }, [formDeptSearchQuery]);
+
+  useEffect(() => {
+    setFormDeptOptions(departemenList);
+  }, [departemenList]);
+
+  useEffect(() => {
+    const fetchSubDept = async () => {
+      if (!selectedDepartmentCode) {
+        setFormSubDeptOptions([]);
+        return;
+      }
+      try {
+        const res = await subDepartemenService.getAll(formSubDeptSearchQuery, selectedDepartmentCode, '', 1, 50);
+        setFormSubDeptOptions(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchSubDept();
+  }, [formSubDeptSearchQuery, selectedDepartmentCode]);
+
+  useEffect(() => {
+    if (!selectedDepartmentCode) {
+      setFormSubDeptOptions([]);
+    } else {
+      setFormSubDeptOptions(subDepartemenList);
+    }
+  }, [subDepartemenList, selectedDepartmentCode]);
+
   useEffect(() => {
     if (initialData) {
       const rawActive = (initialData as any).is_active ?? (initialData as any).status;
@@ -76,9 +125,9 @@ export const PosForm: React.FC<PosFormProps> = ({
 
   // Options Departemen dengan format ID(Departemen) -> DP001(IT)
   const departmentOptions = useMemo(() => {
-    if (!Array.isArray(departemenList)) return [];
+    if (!Array.isArray(formDeptOptions)) return [];
 
-    return departemenList
+    return formDeptOptions
       .map((d) => {
         const codeVal = d.code || String(d.id || '');
         const nameVal = d.name || (d as any).departemen || '';
@@ -88,16 +137,17 @@ export const PosForm: React.FC<PosFormProps> = ({
         };
       })
       .filter((opt) => opt.id !== '');
-  }, [departemenList]);
+  }, [formDeptOptions]);
 
-  // Filter Sub Departemen Berdasarkan Departemen yang Terpilih
+  // Filter Sub Departemen Berdasarkan Departemen yang Terpilih & Backend Search
   const filteredSubDepartmentList = useMemo(() => {
-    if (!selectedDepartmentCode) return subDepartemenList;
-    return subDepartemenList.filter((sub) => {
+    if (!selectedDepartmentCode || !Array.isArray(formSubDeptOptions)) return [];
+    return formSubDeptOptions.filter((sub) => {
+      if (!Boolean(sub.is_active)) return false;
       const parentCode = sub.department_code || (sub as any).departemen_id;
       return String(parentCode) === String(selectedDepartmentCode);
     });
-  }, [subDepartemenList, selectedDepartmentCode]);
+  }, [formSubDeptOptions, selectedDepartmentCode]);
 
   // Options Sub Departemen dengan format ID(Sub Departemen) -> SUB001(Aplikasi & System)
   const subDepartmentOptions = useMemo(() => {
@@ -127,16 +177,17 @@ export const PosForm: React.FC<PosFormProps> = ({
             value={field.value}
             onChange={(val) => {
               field.onChange(val);
-              setValue('sub_department_code', '');
+              setValue('sub_department_code', ''); // Reset sub departemen saat departemen diubah
             }}
             placeholder="-- Pilih Departemen --"
+            onSearchChange={(query) => setFormDeptSearchQuery(query)}
             options={departmentOptions}
             error={errors.department_code?.message}
           />
         )}
       />
 
-      {/* 2. Select Sub Departemen */}
+      {/* 2. Select Sub Departemen (Disabled jika departemen belum dipilih) */}
       <Controller
         name="sub_department_code"
         control={control}
@@ -145,7 +196,9 @@ export const PosForm: React.FC<PosFormProps> = ({
             label="Sub Departemen"
             value={field.value}
             onChange={field.onChange}
-            placeholder="-- Pilih Sub Departemen --"
+            placeholder={selectedDepartmentCode ? '-- Pilih Sub Departemen --' : '-- Pilih Departemen Terlebih Dahulu --'}
+            disabled={!selectedDepartmentCode} // 👈 Dinonaktifkan jika departemen kosong
+            onSearchChange={(query) => setFormSubDeptSearchQuery(query)}
             options={subDepartmentOptions}
             error={errors.sub_department_code?.message}
           />

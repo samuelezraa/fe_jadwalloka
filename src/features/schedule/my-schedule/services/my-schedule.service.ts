@@ -1,6 +1,13 @@
 import { api } from '@/lib/axios';
 import type { MySchedule } from '../types/my-schedule.type';
 
+export interface MyScheduleExportFilters {
+  search?: string;
+  department_id?: string;
+  sub_department?: string;
+  grade?: string;
+}
+
 export const myScheduleService = {
   getMyScheduleList: async (
     period: string,
@@ -37,10 +44,18 @@ export const myScheduleService = {
     };
   },
 
-  exportMySchedule: async (period: string, selectedIds: string[]) => {
+  exportMySchedule: async (
+    period: string,
+    selectedIds: string[],
+    filters?: MyScheduleExportFilters
+  ) => {
     const response = await api.post(
       '/schedule/jadwalku/export',
-      { period, ids: selectedIds },
+      {
+        period,
+        ids: selectedIds,
+        ...filters,
+      },
       { responseType: 'blob' }
     );
     return response.data;

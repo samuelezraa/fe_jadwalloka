@@ -8,6 +8,7 @@ import {
 import type { AttendanceReport } from '../types/attendance.type';
 import { DataPagination } from '@/components/DataPagination';
 import { FileText } from 'lucide-react';
+import { api } from '@/lib/axios';
 
 // Reusable UI Components
 import { TableToolbar } from '@/components/ui/TableToolbar';
@@ -81,6 +82,39 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
 
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
+  const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
+  const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
+  const [asyncGradeOptions, setAsyncGradeOptions] = useState<any[]>(gradeList);
+
+  useEffect(() => {
+    setAsyncDeptOptions(departemenList);
+  }, [departemenList]);
+
+  useEffect(() => {
+    setAsyncSubDeptOptions(subDepartemenList);
+  }, [subDepartemenList]);
+
+  useEffect(() => {
+    setAsyncGradeOptions(gradeList);
+  }, [gradeList]);
+
+  const fetchFilterOptions = async (
+    endpoint: string,
+    query: string,
+    setter: Function,
+    extraParams = {}
+  ) => {
+    try {
+      const res = await api.get(`/${endpoint}`, {
+        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+      });
+      const items = res.data?.data || res.data || [];
+      setter(Array.isArray(items) ? items : []);
+    } catch (err) {
+      console.error(`Gagal memuat opsi ${endpoint}`, err);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (filterWrapperRef.current && !filterWrapperRef.current.contains(event.target as Node)) {
@@ -99,32 +133,15 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-
-  const filteredSubDepts = useMemo(() => {
-    // 1. Jika belum memilih Departemen, tampilkan semua Sub Dept yang aktif
-    if (!deptFilter) return subDepartemenList;
-
-    // 2. Cari objek departemen terpilih berdasarkan ID atau Nama ("IT")
-    const selectedDeptObj = departemenList.find((d) => {
-      const dId = String(d.id);
+  // Cari objek departemen terpilih (karena deptFilter di AttendanceTable menyimpan nama/ID departemen)
+  const selectedDeptObj = useMemo(() => {
+    if (!deptFilter) return null;
+    return asyncDeptOptions.find((d) => {
+      const dId = String(d.id ?? '');
       const dName = String(d.name || d);
       return dId === String(deptFilter) || dName === String(deptFilter);
     });
-
-    // 3. Filter sub departemen berdasarkan department_id atau nama relasi departemen
-    return subDepartemenList.filter((sub) => {
-      // Cocokkan via ID Departemen (misal: sub.department_id === selectedDeptObj.id)
-      if (selectedDeptObj?.id && sub.department_id !== undefined) {
-        return String(sub.department_id) === String(selectedDeptObj.id);
-      }
-      // Fallback cocokkan via nama departemen relasi (misal: sub.department?.name === 'IT')
-      const subDeptParentName = sub.department?.name || sub.department_name;
-      if (subDeptParentName && selectedDeptObj?.name) {
-        return String(subDeptParentName).toLowerCase() === String(selectedDeptObj.name).toLowerCase();
-      }
-      return true;
-    });
-  }, [subDepartemenList, departemenList, deptFilter]);
+  }, [asyncDeptOptions, deptFilter]);
 
   const isFiltered = Boolean(
     dateRange.startDate || dateRange.endDate || deptFilter || subDeptFilter || gradeFilter
@@ -256,11 +273,26 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                         onChange={(val) => {
                           onDeptFilterChange(val);
                           onSubDeptFilterChange('');
+                          const matchedDept = asyncDeptOptions.find(
+                            (d) => String(d.name || d) === String(val) || String(d.id) === String(val)
+                          );
+                          fetchFilterOptions('sub-departments', '', setAsyncSubDeptOptions, {
+                            department_id: matchedDept?.id ?? val,
+                            department_code: matchedDept?.code ?? '',
+                          });
                         }}
+                        onSearchChange={(query) =>
+                          fetchFilterOptions('departments', query, setAsyncDeptOptions)
+                        }
                         placeholder="Semua Departemen"
                         options={[
                           { id: '', label: 'Semua Departemen' },
-                          ...departemenList.map((d) => ({ id: d.name || d, label: d.name || d })),
+                          ...asyncDeptOptions
+                            .filter((d) => d.is_active !== false && d.is_active !== 0 && d.is_active !== '0')
+                            .map((d) => ({
+                              id: d.name || d,
+                              label: d.name || d,
+                            })),
                         ]}
                       />
                     ),
@@ -272,10 +304,42 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                       <FormSelectSearch
                         value={subDeptFilter}
                         onChange={onSubDeptFilterChange}
-                        placeholder="Semua Sub Dept"
+                        onSearchChange={(query) =>
+                          fetchFilterOptions('sub-departments', query, setAsyncSubDeptOptions, {
+                            department_id: selectedDeptObj?.id ?? '',
+                            department_code: selectedDeptObj?.code ?? '',
+                          })
+                        }
+                        placeholder={deptFilter ? 'Semua Sub Dept' : 'Pilih Departemen dahulu'}
+                        disabled={!deptFilter}
                         options={[
                           { id: '', label: 'Semua Sub Dept' },
-                          ...filteredSubDepts.map((sd) => ({ id: sd.name || sd, label: sd.name || sd })),
+                          ...asyncSubDeptOptions
+                            .filter((sub) => {
+                              const isActive =
+                                sub.is_active === undefined ||
+                                sub.is_active === null ||
+                                sub.is_active === true ||
+                                sub.is_active === 1;
+                              if (!isActive) return false;
+                              if (!deptFilter) return false;
+
+                              if (selectedDeptObj?.id && sub.department_id !== undefined) {
+                                return String(sub.department_id) === String(selectedDeptObj.id);
+                              }
+                              const subDeptParentName = sub.department?.name || sub.department_name;
+                              if (subDeptParentName && selectedDeptObj?.name) {
+                                return (
+                                  String(subDeptParentName).toLowerCase() ===
+                                  String(selectedDeptObj.name).toLowerCase()
+                                );
+                              }
+                              return true;
+                            })
+                            .map((sd) => ({
+                              id: sd.name || sd,
+                              label: sd.name || sd,
+                            })),
                         ]}
                       />
                     ),
@@ -287,10 +351,18 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                       <FormSelectSearch
                         value={gradeFilter}
                         onChange={onGradeFilterChange}
+                        onSearchChange={(query) =>
+                          fetchFilterOptions('grades', query, setAsyncGradeOptions)
+                        }
                         placeholder="Semua Grade"
                         options={[
                           { id: '', label: 'Semua Grade' },
-                          ...gradeList.map((g) => ({ id: g.name || g, label: g.name || g })),
+                          ...asyncGradeOptions
+                            .filter((g) => typeof g === 'string' || (g.is_active !== false && g.is_active !== 0))
+                            .map((g) => ({
+                              id: g.name || g,
+                              label: g.name || g,
+                            })),
                         ]}
                       />
                     ),

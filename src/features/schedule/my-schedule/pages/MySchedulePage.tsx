@@ -7,7 +7,7 @@ import { api } from '@/lib/axios';
 import toast from 'react-hot-toast';
 
 export const MySchedulePage: React.FC = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('2026-10');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [deptFilter, setDeptFilter] = useState<string>('');
   const [subDeptFilter, setSubDeptFilter] = useState<string>('');
@@ -17,14 +17,15 @@ export const MySchedulePage: React.FC = () => {
   const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
 
-  // Fetch Master Data untuk Filter Popover
+  // Fetch Master Data Aktif untuk Filter Popover
   useEffect(() => {
     const fetchMasters = async () => {
       try {
+        const activeParams = { params: { status: 'true', per_page: 50 } };
         const [deptRes, subDeptRes, gradeRes] = await Promise.all([
-          api.get('/departments'),
-          api.get('/sub-departments'),
-          api.get('/grades'),
+          api.get('/departments', activeParams),
+          api.get('/sub-departments', activeParams),
+          api.get('/grades', activeParams),
         ]);
         setDepartemens(deptRes.data.data || deptRes.data || []);
         setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
@@ -59,14 +60,20 @@ export const MySchedulePage: React.FC = () => {
   const handleExport = async (period: string, selectedIds: string[]) => {
     const toastId = toast.loading('Menyiapkan dan mengunduh file export...');
     try {
-      const blob = await myScheduleService.exportMySchedule(period, selectedIds);
+      const blob = await myScheduleService.exportMySchedule(period, selectedIds, {
+        search: searchQuery,
+        department_id: deptFilter,
+        sub_department: subDeptFilter,
+        grade: gradeFilter,
+      });
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-     link.setAttribute('download', `rekap-jadwalku-${period}.xlsx`);
+      link.setAttribute('download', `rekap-jadwalku-${period}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       toast.success('File export berhasil diunduh!', { id: toastId });
       setAlertConfig({

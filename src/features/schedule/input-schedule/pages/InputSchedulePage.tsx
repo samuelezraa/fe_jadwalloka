@@ -68,11 +68,17 @@ export const InputSchedulePage: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
+ const handleExport = async () => {
     if (!selectedPeriod) return;
     const toastId = toast.loading('Menyiapkan file ekspor...');
     try {
-      const blob = await inputScheduleService.exportSchedule(selectedPeriod);
+      const blob = await inputScheduleService.exportSchedule(
+        selectedPeriod,
+        searchQuery,
+        deptFilter,
+        subDeptFilter,
+        statusFilter
+      );
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
@@ -80,6 +86,7 @@ export const InputSchedulePage: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
       toast.success('File berhasil diunduh.', { id: toastId });
     } catch (err: any) {
       toast.error('Gagal mengekspor data jadwal.', { id: toastId });
@@ -135,10 +142,11 @@ export const InputSchedulePage: React.FC = () => {
         subDepartemenList={subDepartemens}
       />
 
-      <ImportScheduleDialog
+     <ImportScheduleDialog
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImport={handleExecuteImport}
+        selectedPeriod={selectedPeriod}
       />
 
       <WeeklyWorkHourSettingDialog

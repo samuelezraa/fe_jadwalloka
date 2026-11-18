@@ -39,12 +39,10 @@ export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
       return;
     }
 
-    const confirmButtonBgClass =
-      variant === 'danger'
-        ? 'bg-red-600 hover:bg-red-700'
-        : variant === 'warning'
-        ? 'bg-[#d97706] hover:bg-[#b45309]'
-        : 'bg-[#059669] hover:bg-[#047857]';
+   const confirmButtonBgClass =
+  variant === 'danger'
+    ? 'bg-red-600 hover:bg-red-700'
+    : 'bg-[#107254] hover:bg-[#0d5c43]';
 
     const iconType =
       variant === 'danger'
@@ -85,7 +83,7 @@ export const ConfirmAlertDialog: React.FC<ConfirmAlertDialogProps> = ({
         icon: 'my-2 scale-90',
         confirmButton: `px-5 py-2 ${confirmButtonBgClass} text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]`,
         cancelButton:
-          'px-5 py-2 bg-[#6c757d] hover:bg-[#5a6268] text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]',
+        'px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-medium text-xs rounded-lg shadow-xs transition-colors min-w-[85px]',
         actions: autoClose ? 'hidden' : 'flex items-center justify-center gap-3 pt-3',
       },
     }).then((result) => {

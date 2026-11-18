@@ -8,6 +8,7 @@ import type { InputSchedulePeriodItem, SchedulePeriodSummary } from '../types/in
 import { DataPagination } from '../../../../components/DataPagination';
 import { CalendarCheck, Settings, Calendar, AlertCircle, Building2, User, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '../../../../lib/axios';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
@@ -50,11 +51,6 @@ interface InputScheduleTableProps {
   subDepartemenList?: any[];
 }
 
-const PERIODE_OPTIONS = [
-  { id: '2026-10', label: 'Oktober 2026 (2026-10-01 — 2026-10-31)' },
-  { id: '2026-11', label: 'November 2026 (2026-11-01 — 2026-11-30)' },
-];
-
 export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
   data = [],
   meta = { current_page: 1, last_page: 1, total: 0, per_page: 10 },
@@ -81,6 +77,71 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
   const [columnVisibility, setColumnVisibility] = useState({});
   const filterWrapperRef = useRef<HTMLDivElement>(null);
 
+  const [periodOptions, setPeriodOptions] = useState<{ id: string; label: string }[]>([]);
+  const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
+  const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
+
+  const fetchPeriods = async (query = '') => {
+    try {
+      const res = await api.get('/periods', {
+        params: { search: query, per_page: 50 },
+      });
+      const items = res.data?.data || res.data || [];
+
+      const mapped = (Array.isArray(items) ? items : [])
+        .filter((p: any) => (p.isActive ?? p.is_active) !== false)
+        .map((p: any) => {
+          const code = String(p.idPeriode ?? p.code ?? p.id ?? '');
+          const name = p.periode ?? p.name ?? code;
+          const startDate = p.tanggalAwal ?? p.start_date ?? '';
+          const endDate = p.tanggalAkhir ?? p.end_date ?? '';
+
+          const dateRange =
+            startDate && endDate && startDate !== '-' && endDate !== '-'
+              ? ` (${startDate} — ${endDate})`
+              : '';
+
+          return {
+            id: code,
+            label: `${name}${dateRange}`,
+          };
+        });
+
+      setPeriodOptions(mapped);
+    } catch (err) {
+      console.error('Gagal memuat master periode:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPeriods();
+  }, []);
+
+  useEffect(() => {
+    setAsyncDeptOptions(departemenList);
+  }, [departemenList]);
+
+  useEffect(() => {
+    setAsyncSubDeptOptions(subDepartemenList);
+  }, [subDepartemenList]);
+
+  const fetchFilterOptions = async (
+    endpoint: string,
+    query: string,
+    setter: Function,
+    extraParams = {}
+  ) => {
+    try {
+      const res = await api.get(`/${endpoint}`, {
+        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+      });
+      const items = res.data.data || res.data || [];
+      setter(items);
+    } catch (err) {
+      console.error(`Gagal memuat opsi ${endpoint}`, err);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (filterWrapperRef.current && !filterWrapperRef.current.contains(event.target as Node)) {
@@ -105,16 +166,6 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
     if (actionCallback) actionCallback();
     return true;
   };
-  
-  // Filter Sub Departemen secara presisi berdasarkan Departemen yang dipilih
-  const filteredSubDepts = useMemo(() => {
-    if (!deptFilter) return subDepartemenList;
-
-    return subDepartemenList.filter((sub) => {
-      const subDeptId = sub.department_id ?? sub.department?.id ?? sub.departmentId;
-      return String(subDeptId) === String(deptFilter);
-    });
-  }, [subDepartemenList, deptFilter]);
 
   const isFiltered = Boolean(deptFilter || subDeptFilter || statusFilter);
 
@@ -230,15 +281,16 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
             Pilih Periode Jadwal:
           </span>
         </div>
-        <div className="w-full md:w-72">
+        <div className="w-full md:w-80">
           <FormSelectSearch
             value={selectedPeriod}
             onChange={(val) => {
               onPeriodChange(val);
               if (val) toast.success('Data periode berhasil dimuat.');
             }}
+            onSearchChange={(query) => fetchPeriods(query)}
             placeholder="-- Pilih Periode Berjalan --"
-            options={[{ id: '', label: '-- Pilih Periode Berjalan --' }, ...PERIODE_OPTIONS]}
+            options={[{ id: '', label: '-- Pilih Periode Berjalan --' }, ...periodOptions]}
           />
         </div>
       </div>
@@ -274,11 +326,22 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
                       onChange={(val) => {
                         onDeptFilterChange(val);
                         onSubDeptFilterChange('');
+                        fetchFilterOptions('sub-departments', '', setAsyncSubDeptOptions, {
+                          department_id: val,
+                        });
                       }}
+                      onSearchChange={(query) =>
+                        fetchFilterOptions('departments', query, setAsyncDeptOptions)
+                      }
                       placeholder="Semua Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList.map((d) => ({ id: String(d.id), label: d.name })),
+                        ...asyncDeptOptions
+                          .filter((d) => d.is_active !== false)
+                          .map((d) => ({
+                            id: String(d.id),
+                            label: d.name || d.departemen || '-',
+                          })),
                       ]}
                     />
                   ),
@@ -290,10 +353,52 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
                     <FormSelectSearch
                       value={subDeptFilter}
                       onChange={(val) => onSubDeptFilterChange(val)}
-                      placeholder="Semua Sub Departemen"
+                      onSearchChange={(query) =>
+                        fetchFilterOptions('sub-departments', query, setAsyncSubDeptOptions, {
+                          department_id: deptFilter,
+                        })
+                      }
+                      placeholder={deptFilter ? 'Semua Sub Departemen' : 'Pilih Departemen dahulu'}
+                      disabled={!deptFilter}
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
-                        ...filteredSubDepts.map((sd) => ({ id: String(sd.id), label: sd.name || sd.sub_department_name })),
+                        ...asyncSubDeptOptions
+                          .filter((sub) => {
+                            const isActive =
+                              sub.is_active === undefined ||
+                              sub.is_active === null ||
+                              sub.is_active === true ||
+                              sub.is_active === 1;
+                            if (!isActive) return false;
+                            if (!deptFilter) return false;
+
+                            const rawDeptId =
+                              sub.department_id ??
+                              sub.departemen_id ??
+                              sub.department?.id ??
+                              sub.departemen?.id ??
+                              sub.departmentId;
+
+                            if (rawDeptId === undefined || rawDeptId === null || rawDeptId === '') {
+                              return true;
+                            }
+
+                            const selectedDept = asyncDeptOptions.find(
+                              (d) => String(d.id) === String(deptFilter)
+                            );
+                            const selectedDeptCode = selectedDept?.code
+                              ? String(selectedDept.code)
+                              : '';
+
+                            return (
+                              String(rawDeptId) === String(deptFilter) ||
+                              (selectedDeptCode !== '' && String(rawDeptId) === selectedDeptCode)
+                            );
+                          })
+                          .map((sd) => ({
+                            id: String(sd.id),
+                            label: sd.name || sd.sub_department_name || sd.sub_departemen || '-',
+                          })),
                       ]}
                     />
                   ),

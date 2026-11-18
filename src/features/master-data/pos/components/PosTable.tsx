@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,6 +7,8 @@ import {
 import type { Pos } from '../types/pos.type';
 import type { Departemen } from '../../departemen/types/departemen.type';
 import type { SubDepartemen } from '../../sub-departemen/types/sub-departemen.type';
+import { departemenService } from '../../departemen/services/departemen.service';
+import { subDepartemenService } from '../../sub-departemen/services/sub-departemen.service';
 import { DataPagination } from '../../../../components/DataPagination';
 import { Building2 } from 'lucide-react';
 import { FormSelectSearch } from '../../../../components/ui/FormSelectSearch';
@@ -62,6 +64,47 @@ export const PosTable: React.FC<PosTableProps> = ({
 }) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
+
+  // 🟢 State untuk Backend Search Debounce pada Filter
+  const [deptSearchQuery, setDeptSearchQuery] = useState('');
+  const [filteredDeptOptions, setFilteredDeptOptions] = useState<Departemen[]>(departemenList);
+
+  const [subDeptSearchQuery, setSubDeptSearchQuery] = useState('');
+  const [filteredSubDeptOptions, setFilteredSubDeptOptions] = useState<SubDepartemen[]>(subDepartemenList);
+
+  // Fetch Departemen dengan Backend Search
+  useEffect(() => {
+    const fetchDept = async () => {
+      try {
+        const res = await departemenService.getAll(deptSearchQuery, '', 1, 50);
+        setFilteredDeptOptions(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchDept();
+  }, [deptSearchQuery]);
+
+  useEffect(() => {
+    setFilteredDeptOptions(departemenList);
+  }, [departemenList]);
+
+  // Fetch Sub Departemen dengan Backend Search
+  useEffect(() => {
+    const fetchSubDept = async () => {
+      try {
+        const res = await subDepartemenService.getAll(subDeptSearchQuery, selectedDeptFilter, '', 1, 50);
+        setFilteredSubDeptOptions(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchSubDept();
+  }, [subDeptSearchQuery, selectedDeptFilter]);
+
+  useEffect(() => {
+    setFilteredSubDeptOptions(subDepartemenList);
+  }, [subDepartemenList]);
 
   const getDepartmentName = (param?: Pos | string | null) => {
     if (!param) return '-';
@@ -227,6 +270,8 @@ export const PosTable: React.FC<PosTableProps> = ({
                 onDeptFilterChange('');
                 onSubDeptFilterChange('');
                 onStatusFilterChange('');
+                setDeptSearchQuery('');
+                setSubDeptSearchQuery('');
               }}
               fields={[
                 {
@@ -240,9 +285,10 @@ export const PosTable: React.FC<PosTableProps> = ({
                         onSubDeptFilterChange('');
                       }}
                       placeholder="Pilih Departemen"
+                      onSearchChange={(query) => setDeptSearchQuery(query)} // 👈 Backend Search Debounce
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        ...departemenList
+                        ...filteredDeptOptions
                           .filter((d) => Boolean(d.is_active))
                           .map((d) => ({
                             id: String(d.code || d.id),
@@ -260,9 +306,10 @@ export const PosTable: React.FC<PosTableProps> = ({
                       value={selectedSubDeptFilter}
                       onChange={(val) => onSubDeptFilterChange(val)}
                       placeholder="Pilih Sub Departemen"
+                      onSearchChange={(query) => setSubDeptSearchQuery(query)} // 👈 Backend Search Debounce
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
-                        ...subDepartemenList
+                        ...filteredSubDeptOptions
                           .filter((sub) => {
                             if (!Boolean(sub.is_active)) return false;
                             if (!selectedDeptFilter) return true;

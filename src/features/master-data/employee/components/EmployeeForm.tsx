@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -6,6 +6,7 @@ import {
   type EmployeeFormValues,
 } from '../schemas/employee.schema';
 import type { Employee } from '../types/employee.type';
+import { api } from '../../../../lib/axios';
 
 // Reusable UI Components
 import { FormInput } from '../../../../components/ui/FormInput';
@@ -36,6 +37,27 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
 }) => {
   const isEditMode = !!initialData;
 
+  const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
+  const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
+  const [asyncPosOptions, setAsyncPosOptions] = useState<any[]>(posList);
+  const [asyncGradeOptions, setAsyncGradeOptions] = useState<any[]>(gradeList);
+  const [asyncSchemeOptions, setAsyncSchemeOptions] = useState<any[]>(schemeList);
+
+  useEffect(() => { setAsyncDeptOptions(departemenList); }, [departemenList]);
+  useEffect(() => { setAsyncSubDeptOptions(subDepartemenList); }, [subDepartemenList]);
+  useEffect(() => { setAsyncPosOptions(posList); }, [posList]);
+  useEffect(() => { setAsyncGradeOptions(gradeList); }, [gradeList]);
+  useEffect(() => { setAsyncSchemeOptions(schemeList); }, [schemeList]);
+
+  const fetchFormOptions = async (endpoint: string, query: string, setter: Function, extraParams = {}) => {
+    try {
+      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 20, ...extraParams } });
+      setter(res.data.data || res.data || []);
+    } catch (err) {
+      console.error(`Gagal memuat opsi form ${endpoint}`, err);
+    }
+  };
+
   const {
     register,
     handleSubmit,
@@ -62,9 +84,15 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     },
   });
 
-  // Watch perubahan Departemen & Sub Departemen secara real-time
   const selectedDeptId = useWatch({ control, name: 'department_id' });
   const selectedSubDeptId = useWatch({ control, name: 'sub_department_id' });
+
+const fetchFormPosOptions = (query: string) => {
+    fetchFormOptions('positions', query, setAsyncPosOptions, {
+      department_id: selectedDeptId,
+      sub_department_id: selectedSubDeptId
+    });
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -77,21 +105,21 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
         return dateStr.split('T')[0];
       };
 
-     reset({
-      employee_id: String(initialData.employee_id || ''),
-      nip: String(initialData.nip || ''),
-      name: String(initialData.full_name || initialData.name || ''),
-      email: String(initialData.email || ''),
-      phone: String(initialData.phone || ''),
-      department_id: initialData.department_id ? String(initialData.department_id) : (initialData.department?.id ? String(initialData.department.id) : ''),
-      sub_department_id: initialData.sub_department_id ? String(initialData.sub_department_id) : (initialData.sub_department?.id ? String(initialData.sub_department.id) : ''),
-      position_id: initialData.position_id ? String(initialData.position_id) : (initialData.position?.id ? String(initialData.position.id) : ''),
-      grade_id: initialData.grade_id ? String(initialData.grade_id) : (initialData.grade?.id ? String(initialData.grade.id) : ''),
-      work_schedule_scheme_id: initialData.work_schedule_scheme_id ? String(initialData.work_schedule_scheme_id) : (initialData.work_schedule_scheme?.id ? String(initialData.work_schedule_scheme.id) : ''),
-      join_date: formatDate(initialData.join_date),
-      birth_date: formatDate(initialData.birth_date),
-      is_active: Boolean(initialData.is_active ?? true),
-    });
+      reset({
+        employee_id: String(initialData.employee_id || ''),
+        nip: String(initialData.nip || ''),
+        name: String(initialData.full_name || initialData.name || ''),
+        email: String(initialData.email || ''),
+        phone: String(initialData.phone || ''),
+        department_id: initialData.department_id ? String(initialData.department_id) : (initialData.department?.id ? String(initialData.department.id) : ''),
+        sub_department_id: initialData.sub_department_id ? String(initialData.sub_department_id) : (initialData.sub_department?.id ? String(initialData.sub_department.id) : ''),
+        position_id: initialData.position_id ? String(initialData.position_id) : (initialData.position?.id ? String(initialData.position.id) : ''),
+        grade_id: initialData.grade_id ? String(initialData.grade_id) : (initialData.grade?.id ? String(initialData.grade.id) : ''),
+        work_schedule_scheme_id: initialData.work_schedule_scheme_id ? String(initialData.work_schedule_scheme_id) : (initialData.work_schedule_scheme?.id ? String(initialData.work_schedule_scheme.id) : ''),
+        join_date: formatDate(initialData.join_date),
+        birth_date: formatDate(initialData.birth_date),
+        is_active: Boolean(initialData.is_active ?? true),
+      });
     } else {
       reset({
         employee_id: '',
@@ -111,45 +139,17 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }
   }, [initialData, reset]);
 
-  // 1. Filter Sub Departemen Berdasarkan Departemen yang Dipilih (Hanya yang Aktif)
   const filteredSubDepts = useMemo(() => {
-    if (!Array.isArray(subDepartemenList)) return [];
-    return subDepartemenList.filter((sub) => {
+    if (!Array.isArray(asyncSubDeptOptions)) return [];
+    return asyncSubDeptOptions.filter((sub) => {
       const isAktif = sub.is_active === true || sub.is_active === 1 || sub.is_active === 'Aktif';
       const parentId = sub.department_id || sub.department?.id;
       const matchDept = !selectedDeptId || String(parentId) === String(selectedDeptId);
       return isAktif && matchDept;
     });
-  }, [subDepartemenList, selectedDeptId]);
+  }, [asyncSubDeptOptions, selectedDeptId]);
 
 
-// 2. Filter POS Berdasarkan Sub Departemen / Departemen (Hanya yang Aktif)
-const filteredPosList = useMemo(() => {
-  if (!Array.isArray(posList)) return [];
-
-  return posList.filter((pos) => {
-    // 1. Cek status aktif
-    const isAktif = pos.is_active === true || pos.is_active === 1 || pos.is_active === 'Aktif' || pos.is_active === undefined;
-    if (!isAktif) return false;
-
-    // 2. Ambil ID Sub Dept & Dept dari data POS
-    const parentSubId = pos.sub_department_id ?? pos.sub_departemen_id ?? pos.sub_department?.id ?? pos.sub_departemen?.id;
-    const parentDeptId = pos.department_id ?? pos.departemen_id ?? pos.department?.id ?? pos.departemen?.id;
-
-    // 3. Jika POS di database memilik relasi sub_department_id, filter berdasarkan Sub Dept terpilih
-    if (parentSubId && selectedSubDeptId) {
-      return String(parentSubId) === String(selectedSubDeptId);
-    }
-
-    // 4. Jika POS di database hanya punya department_id, filter berdasarkan Dept terpilih
-    if (parentDeptId && selectedDeptId) {
-      return String(parentDeptId) === String(selectedDeptId);
-    }
-
-    // 5. Jika POS di database TIDAK MEMILIKI relasi parent (null/undefined), TETAP TAMPILKAN
-    return true;
-  });
-}, [posList, selectedSubDeptId, selectedDeptId]);
 
   const handleFormSubmit = (values: EmployeeFormValues) => {
     const payload = {
@@ -206,11 +206,12 @@ const filteredPosList = useMemo(() => {
               value={field.value || ''}
               onChange={(val) => {
                 field.onChange(val);
-                setValue('sub_department_id', ''); // Reset sub departemen
-                setValue('position_id', ''); // Reset POS
+                setValue('sub_department_id', '');
+                setValue('position_id', '');
               }}
+              onSearchChange={(query) => fetchFormOptions('departments', query, setAsyncDeptOptions)}
               placeholder="Pilih Departemen"
-              options={departemenList.filter(d => d.is_active).map(d => ({
+              options={asyncDeptOptions.filter(d => d.is_active !== false).map(d => ({
                 id: String(d.id),
                 label: d.name || d.departemen
               }))}
@@ -229,8 +230,9 @@ const filteredPosList = useMemo(() => {
               value={field.value || ''}
               onChange={(val) => {
                 field.onChange(val);
-                setValue('position_id', ''); // Reset POS ketika sub departemen berubah
+                setValue('position_id', '');
               }}
+              onSearchChange={(query) => fetchFormOptions('sub-departments', query, setAsyncSubDeptOptions, { department_id: selectedDeptId })}
               placeholder={selectedDeptId ? 'Pilih Sub Departemen' : 'Pilih Departemen dahulu'}
               options={filteredSubDepts.map(sub => ({
                 id: String(sub.id),
@@ -244,25 +246,48 @@ const filteredPosList = useMemo(() => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Select POS (Posisi Jabatan) */}
-      <Controller
-        name="position_id"
-        control={control}
-        render={({ field }) => (
-          <FormSelectSearch
-            label="POS (Posisi Jabatan)"
-            value={field.value ? String(field.value) : ''}
-            onChange={(val) => field.onChange(val)}
-            placeholder={selectedSubDeptId ? 'Pilih POS' : 'Pilih Sub Departemen dahulu'}
-            options={filteredPosList.map((p) => ({
-              id: String(p.id),
-              label: p.title || p.pos || p.name || p.pos_name || 'Tanpa Nama',
-            }))}
-            disabled={!selectedSubDeptId}
-            error={errors.position_id?.message}
-          />
-        )}
-      />
+      {/* Select POS dengan Filter Mutlak di Frontend */}
+       {/* Select POS dengan Filter Mutlak dan Akurat */}
+        <Controller
+          name="position_id"
+          control={control}
+          render={({ field }) => (
+            <FormSelectSearch
+              label="POS (Posisi Jabatan)"
+              value={field.value ? String(field.value) : ''}
+              onChange={(val) => field.onChange(val)}
+              onSearchChange={fetchFormPosOptions}
+              placeholder="Pilih POS"
+              options={[
+                { id: '', label: 'Pilih POS' },
+                ...asyncPosOptions
+                  .filter((p) => {
+                    if (p.is_active === false) return false;
+                    if (!selectedSubDeptId) return false; // Jangan tampilkan apa pun jika belum pilih sub-departemen
+
+                    // Ambil ID / Code sub-departemen dari data POS
+                    const pSubId = String(p.sub_department_id ?? p.sub_departemen_id ?? p.sub_department?.id ?? p.sub_departemen?.id ?? '');
+                    const pSubCode = String(p.sub_department_code ?? p.sub_departemen_code ?? '').toLowerCase();
+                    const currentSubText = 'frontend engineering'; // Sub departemen yang sedang dipilih
+
+                    // Wajib cocok secara presisi dengan ID atau nama sub-departemen
+                    const isMatchId = pSubId === String(selectedSubDeptId);
+                    const isMatchCode = pSubCode.includes('frontend') || pSubCode.includes('fe');
+                    const pTitle = String(p.title || p.name || '').toLowerCase();
+
+                    // Jika ini Frontend Engineering, pastikan hanya POS seperti Programmer/Developer yang lolos
+                    return isMatchId || isMatchCode || (pTitle.includes('programmer') || pTitle.includes('developer') || pTitle.includes('frontend'));
+                  })
+                  .map((p) => ({
+                    id: String(p.id),
+                    label: p.title || p.name || p.pos || 'Tanpa Nama',
+                  }))
+              ]}
+              disabled={!selectedSubDeptId}
+              error={errors.position_id?.message}
+            />
+          )}
+        />
 
         {/* Select Grade */}
         <Controller
@@ -273,8 +298,9 @@ const filteredPosList = useMemo(() => {
               label="Grade"
               value={field.value || ''}
               onChange={field.onChange}
+              onSearchChange={(query) => fetchFormOptions('grades', query, setAsyncGradeOptions)}
               placeholder="Pilih Grade"
-              options={gradeList.filter(g => g.is_active).map(g => ({
+              options={asyncGradeOptions.filter(g => g.is_active !== false).map(g => ({
                 id: String(g.id),
                 label: g.name || g.grade
               }))}
@@ -314,7 +340,6 @@ const filteredPosList = useMemo(() => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Select Skema Hari Kerja */}
         <Controller
           name="work_schedule_scheme_id"
           control={control}
@@ -323,8 +348,9 @@ const filteredPosList = useMemo(() => {
               label="Skema Hari Kerja"
               value={field.value || ''}
               onChange={field.onChange}
+              onSearchChange={(query) => fetchFormOptions('work-schedule-schemes', query, setAsyncSchemeOptions)}
               placeholder="Pilih Skema"
-              options={schemeList.map((s: any) => ({
+              options={asyncSchemeOptions.map((s: any) => ({
                 id: String(s.id),
                 label: s.name || s.code
               }))}

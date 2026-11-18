@@ -45,20 +45,22 @@ export const attendanceService = {
   },
 
 
-  exportAttendanceReport: async (params: AttendanceParams = {}): Promise<Blob> => {
-  const searchParams = new URLSearchParams();
+ exportAttendanceReport: async (params: AttendanceParams = {}): Promise<Blob> => {
+    const searchParams = new URLSearchParams();
 
-  if (params.search) searchParams.append('search', params.search);
-  if (params.startDate) searchParams.append('start_date', params.startDate);
-  if (params.endDate) searchParams.append('end_date', params.endDate);
-  if (params.dept) searchParams.append('dept', params.dept);
-  if (params.subDept) searchParams.append('sub_dept', params.subDept);
-  if (params.grade) searchParams.append('grade', params.grade);
+    if (params.search) searchParams.append('search', params.search);
+    if (params.startDate) searchParams.append('start_date', params.startDate);
+    if (params.endDate) searchParams.append('end_date', params.endDate);
+    if (params.dept) searchParams.append('dept', params.dept);
+    if (params.subDept) searchParams.append('sub_dept', params.subDept);
+    if (params.grade) searchParams.append('grade', params.grade);
 
-  const response = await api.get(`/attendance-log-details/export?${searchParams.toString()}`, {
-    responseType: 'blob',
-  });
+    const response = await api.get(`/attendance-log-details/export?${searchParams.toString()}`, {
+      responseType: 'blob',
+    });
 
-  return response.data;
-},
+    return response.data;
+  },
+
+
 };

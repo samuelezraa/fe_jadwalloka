@@ -8,6 +8,7 @@ import type { Employee } from '../types/employee.type';
 import { DataPagination } from '../../../../components/DataPagination';
 import { Users, Download, Upload, KeyRound, ToggleLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '../../../../lib/axios';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
@@ -41,9 +42,8 @@ interface EmployeeTableProps {
   onBulkResetPassword: (selectedIds: (string | number)[]) => void;
   onDownloadSample?: () => void;
   onImportData?: () => void;
-  onExportData?: (selectedIds?: (string | number)[]) => void; // 👈 Menerima parameter selectedIds
+  onExportData?: (selectedIds?: (string | number)[]) => void;
   
-  // Props Master Data untuk Filter
   departemenList?: any[];
   subDepartemenList?: any[];
   posList?: any[];
@@ -96,6 +96,35 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
+  const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
+  const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
+  const [asyncPosOptions, setAsyncPosOptions] = useState<any[]>(posList);
+  const [asyncGradeOptions, setAsyncGradeOptions] = useState<any[]>(gradeList);
+
+  useEffect(() => { setAsyncDeptOptions(departemenList); }, [departemenList]);
+  useEffect(() => { setAsyncSubDeptOptions(subDepartemenList); }, [subDepartemenList]);
+  useEffect(() => { setAsyncPosOptions(posList); }, [posList]);
+  useEffect(() => { setAsyncGradeOptions(gradeList); }, [gradeList]);
+
+  const fetchFilterOptions = async (endpoint: string, query: string, setter: Function, extraParams = {}) => {
+    try {
+      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 20, ...extraParams } });
+      const items = res.data.data || res.data || [];
+      setter(items);
+    } catch (err) {
+      console.error(`Gagal memuat opsi ${endpoint}`, err);
+    }
+  };
+
+ // 🟢 Paksa ambil nilai sub-departemen terbaru saat fetch POS
+  const fetchPosOptions = (query: string) => {
+    // Ambil elemen select sub-departemen atau state aktifnya langsung
+    fetchFilterOptions('positions', query, setAsyncPosOptions, {
+      department_id: deptFilter,
+      sub_department_id: subDeptFilter || (document.querySelector('input[name*="sub"]') as HTMLInputElement)?.value
+    });
+  };
+
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     'No. Telepon': false,
     'Skema Hari Kerja': false,
@@ -107,19 +136,14 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (
-        filterWrapperRef.current &&
-        !filterWrapperRef.current.contains(event.target as Node)
-      ) {
+      if (filterWrapperRef.current && !filterWrapperRef.current.contains(event.target as Node)) {
         setShowFilterDropdown(false);
       }
     };
-
     if (showFilterDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
@@ -263,14 +287,20 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         id: 'Umur',
         header: () => <span className="block leading-tight text-center text-xs">Umur<br/>(Thn)</span>,
         size: 75,
-        cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300 text-xs text-center block font-mono">{row.original.age_years ?? '-'}</span>,
+        cell: ({ row }) => {
+          const val = row.original.age_years;
+          return <span className="text-gray-700 dark:text-gray-300 text-xs text-center block font-mono">{val !== null && val !== undefined ? Math.floor(Number(val)) : '-'}</span>;
+        },
       },
       {
         accessorKey: 'work_duration_months',
         id: 'Lama Bekerja',
         header: () => <span className="block leading-tight text-center text-xs">Lama Kerja<br/>(Bln)</span>,
         size: 85,
-        cell: ({ row }) => <span className="text-gray-700 dark:text-gray-300 text-xs text-center block font-mono">{row.original.work_duration_months ?? '-'}</span>,
+        cell: ({ row }) => {
+          const val = row.original.work_duration_months;
+          return <span className="text-gray-700 dark:text-gray-300 text-xs text-center block font-mono">{val !== null && val !== undefined ? Math.floor(Number(val)) : '-'}</span>;
+        },
       },
       {
         accessorKey: 'is_active',
@@ -375,11 +405,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                         onChange={(val) => {
                           onDeptFilterChange(val);
                           onSubDeptFilterChange('');
+                          onPosFilterChange('');
                         }}
+                        onSearchChange={(query) => fetchFilterOptions('departments', query, setAsyncDeptOptions)}
                         placeholder="Semua Departemen"
                         options={[
                           { id: '', label: 'Semua Departemen' },
-                          ...departemenList.filter(d => d.is_active).map(d => ({
+                          ...asyncDeptOptions.filter(d => d.is_active !== false).map(d => ({
                             id: String(d.id),
                             label: d.name || d.departemen
                           }))
@@ -393,15 +425,25 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     render: () => (
                       <FormSelectSearch
                         value={subDeptFilter}
-                        onChange={onSubDeptFilterChange}
+                        onChange={(val) => {
+                          onSubDeptFilterChange(val);
+                          onPosFilterChange('');
+                        }}
+                        onSearchChange={(query) => fetchFilterOptions('sub-departments', query, setAsyncSubDeptOptions, { department_id: deptFilter })}
                         placeholder="Semua Sub Departemen"
                         options={[
                           { id: '', label: 'Semua Sub Departemen' },
-                          ...subDepartemenList
-                            .filter(sub => sub.is_active && (!deptFilter || String(sub.department_id || sub.department_code) === String(deptFilter)))
+                          ...asyncSubDeptOptions
+                            .filter(sub => {
+                              const isActive = sub.is_active === undefined || sub.is_active === null || sub.is_active === true || sub.is_active === 1;
+                              if (!isActive) return false;
+                              if (!deptFilter) return true;
+                              const subDeptId = String(sub.department_id || sub.department?.id || sub.department_code || '');
+                              return subDeptId === String(deptFilter);
+                            })
                             .map(sub => ({
                               id: String(sub.id),
-                              label: sub.name || sub.sub_departemen
+                              label: sub.name || sub.sub_departemen || '-'
                             }))
                         ]}
                       />
@@ -414,13 +456,25 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       <FormSelectSearch
                         value={posFilter}
                         onChange={onPosFilterChange}
+                        onSearchChange={fetchPosOptions}
                         placeholder="Semua POS"
+                        disabled={false}
                         options={[
                           { id: '', label: 'Semua POS' },
-                          ...posList.filter(p => p.is_active).map(p => ({
-                            id: String(p.id),
-                            label: p.title || p.name
-                          }))
+                          ...asyncPosOptions
+                            .filter(p => {
+                              if (p.is_active === false) return false;
+                              // Jika subDeptFilter aktif, pastikan POS cocok dengan sub-departemen tersebut (baik kode, id, atau namanya)
+                              if (subDeptFilter) {
+                                const pSub = String(p.sub_department_code || p.sub_department_id || '');
+                                return pSub.toLowerCase().includes(subDeptFilter.toLowerCase()) || pSub === '';
+                              }
+                              return true;
+                            })
+                            .map((p) => ({
+                              id: String(p.id),
+                              label: p.title || p.name || p.pos || 'Tanpa Nama',
+                            }))
                         ]}
                       />
                     ) 
@@ -432,10 +486,11 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       <FormSelectSearch
                         value={gradeFilter}
                         onChange={onGradeFilterChange}
+                        onSearchChange={(query) => fetchFilterOptions('grades', query, setAsyncGradeOptions)}
                         placeholder="Semua Grade"
                         options={[
                           { id: '', label: 'Semua Grade' },
-                          ...gradeList.filter(g => g.is_active).map(g => ({
+                          ...asyncGradeOptions.filter(g => g.is_active !== false).map(g => ({
                             id: String(g.id),
                             label: g.name || g.grade
                           }))
@@ -493,7 +548,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                       label: 'Export Data',
                       icon: <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
                       variant: 'emerald',
-                      onClick: () => onExportData?.(selectedIds), // 👈 Kirim selectedIds ke handler export
+                      onClick: () => onExportData?.(selectedIds),
                     },
                     {
                       key: 'status',
@@ -520,7 +575,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        {/* TABEL VIEW (DESKTOP) */}
         <div className="hidden md:block">
           <DataTable
             table={table}
@@ -529,7 +583,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           />
         </div>
 
-        {/* CARDS VIEW (MOBILE) */}
         <div className="block md:hidden divide-y divide-gray-100 dark:divide-gray-800">
           {data.length === 0 ? (
             <div className="p-8 text-center text-xs text-gray-500">
@@ -608,7 +661,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
       <MobileAddFab onClick={onAdd} title="Tambah Karyawan" />
 
-      {/* Confirm Alert Dialog Reset Password */}
       <ConfirmAlertDialog
         isOpen={showResetConfirm}
         onClose={() => setShowResetConfirm(false)}
@@ -624,7 +676,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         variant="warning"
       />
 
-      {/* Confirm Alert Dialog Status */}
       <ConfirmAlertDialog
         isOpen={showStatusConfirm}
         onClose={() => setShowStatusConfirm(false)}

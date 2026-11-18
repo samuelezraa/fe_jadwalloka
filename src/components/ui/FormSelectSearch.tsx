@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from './popover';
 import {
@@ -24,7 +24,9 @@ interface FormSelectSearchProps {
   error?: string;
   disabled?: boolean;
   className?: string;
-  showSearch?: boolean; // 👈 Prop baru untuk menyembunyikan/menampilkan input pencarian
+  showSearch?: boolean;
+  onSearchChange?: (query: string) => void;
+  debounceTime?: number;
 }
 
 export const FormSelectSearch: React.FC<FormSelectSearchProps> = ({
@@ -36,10 +38,38 @@ export const FormSelectSearch: React.FC<FormSelectSearchProps> = ({
   error,
   disabled = false,
   className = '',
-  showSearch = true, // 👈 Default bernilai true
+  showSearch = true,
+  onSearchChange,
+  debounceTime = 400,
 }) => {
   const [open, setOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const selectedOption = options.find((opt) => opt.id === value);
+
+  // 🟢 Perbaikan tipe data timer agar kompatibel dengan browser/Vite
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInputChange = (keyword: string) => {
+    setSearchText(keyword);
+
+    if (onSearchChange) {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      searchTimeoutRef.current = setTimeout(() => {
+        onSearchChange(keyword);
+      }, debounceTime);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="w-full space-y-0.5" onClick={(e) => e.stopPropagation()}>
@@ -80,10 +110,14 @@ export const FormSelectSearch: React.FC<FormSelectSearchProps> = ({
             onClick={(e) => e.stopPropagation()} 
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <Command className="w-full">
-              {/* 👈 Sembunyikan input cari data jika showSearch === false */}
+            <Command className="w-full" shouldFilter={!onSearchChange}>
               {showSearch && (
-                <CommandInput placeholder="Cari data disini..." className="text-xs h-8" />
+                <CommandInput 
+                  placeholder="Cari data disini..." 
+                  className="text-xs h-8"
+                  value={searchText}
+                  onValueChange={handleInputChange}
+                />
               )}
               
               <CommandList className="w-full max-h-48 overflow-y-auto">

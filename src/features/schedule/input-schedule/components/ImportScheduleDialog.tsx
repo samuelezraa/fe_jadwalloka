@@ -8,12 +8,14 @@ interface ImportScheduleDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (file: File) => void;
+  selectedPeriod?: string;
 }
 
 export const ImportScheduleDialog: React.FC<ImportScheduleDialogProps> = ({
   isOpen,
   onClose,
   onImport,
+  selectedPeriod,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -39,14 +41,18 @@ export const ImportScheduleDialog: React.FC<ImportScheduleDialogProps> = ({
     const toastId = toast.loading('Mengunduh sample template...');
     setIsDownloading(true);
     try {
-      const blob = await inputScheduleService.downloadSample();
+      const blob = await inputScheduleService.downloadSample(selectedPeriod);
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'sample-template-import-schedule.xlsx');
+      link.setAttribute(
+        'download',
+        `sample-template-import-schedule${selectedPeriod ? `-${selectedPeriod}` : ''}.xlsx`
+      );
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
       toast.success('Sample template berhasil diunduh!', { id: toastId });
     } catch (error) {
       toast.error('Gagal mengunduh sample template.', { id: toastId });

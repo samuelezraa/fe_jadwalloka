@@ -38,32 +38,33 @@ export const useAttendance = () => {
   const [subDeptFilter, setSubDeptFilter] = useState<string>('');
   const [gradeFilter, setGradeFilter] = useState<string>('');
 
-  // Fetch Master Data (Dept, Sub Dept, Grade) untuk Filter
-// Di useAttendance.ts
-useEffect(() => {
-  const fetchMasterData = async () => {
-    try {
-      const [deptRes, subDeptRes, gradeRes] = await Promise.all([
-        api.get('/departments'),
-        api.get('/sub-departments'),
-        api.get('/grades'),
-      ]);
+ 
+// Fetch Master Data (Dept, Sub Dept, Grade) untuk Filter
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const activeParams = { params: { status: 'true', per_page: 50 } };
+        const [deptRes, subDeptRes, gradeRes] = await Promise.all([
+          api.get('/departments', activeParams),
+          api.get('/sub-departments', activeParams),
+          api.get('/grades', activeParams),
+        ]);
 
-      const rawDepts = deptRes.data?.data || deptRes.data || [];
-      const rawSubDepts = subDeptRes.data?.data || subDeptRes.data || [];
-      const rawGrades = gradeRes.data?.data || gradeRes.data || [];
+        const rawDepts = deptRes.data?.data || deptRes.data || [];
+        const rawSubDepts = subDeptRes.data?.data || subDeptRes.data || [];
+        const rawGrades = gradeRes.data?.data || gradeRes.data || [];
 
-      // 🟢 HANYA AMBIL DATA YANG AKTIF (is_active !== false)
-      setDepartemenList(rawDepts.filter((d: any) => d.is_active !== false));
-      setSubDepartemenList(rawSubDepts.filter((sd: any) => sd.is_active !== false));
-      setGradeList(rawGrades.filter((g: any) => g.is_active !== false));
-    } catch (err) {
-      console.error('Gagal memuat master data filter:', err);
-    }
-  };
+        // 🟢 HANYA AMBIL DATA YANG AKTIF (is_active !== false)
+        setDepartemenList(rawDepts.filter((d: any) => d.is_active !== false && d.is_active !== 0 && d.is_active !== '0'));
+        setSubDepartemenList(rawSubDepts.filter((sd: any) => sd.is_active !== false && sd.is_active !== 0 && sd.is_active !== '0'));
+        setGradeList(rawGrades.filter((g: any) => g.is_active !== false && g.is_active !== 0 && g.is_active !== '0'));
+      } catch (err) {
+        console.error('Gagal memuat master data filter:', err);
+      }
+    };
 
-  fetchMasterData();
-}, []);
+    fetchMasterData();
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {

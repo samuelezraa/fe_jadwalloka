@@ -11,7 +11,7 @@ export const useInputSchedule = (
   statusFilter = ''
 ) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedPeriod = searchParams.get('period') || '2026-10';
+  const selectedPeriod = searchParams.get('period') || '';
 
   const setSelectedPeriod = (period: string) => {
     if (period) {
@@ -39,7 +39,7 @@ export const useInputSchedule = (
 
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const fetchScheduleData = useCallback(async () => {
     if (!selectedPeriod) {

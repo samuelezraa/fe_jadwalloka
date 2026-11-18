@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom'; // 🟢 Tambahkan useLocation
 import { ArrowLeft, Clock } from 'lucide-react';
 import {
   useReactTable,
@@ -34,6 +34,11 @@ interface DailyScheduleDetail {
 export const EditEmployeeSchedulePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation(); // 🟢 Ambil informasi URL location
+
+  // 🟢 Deteksi apakah mode readonly aktif berdasarkan query parameter (?readonly=true)
+  const searchParams = new URLSearchParams(location.search);
+  const isReadonly = searchParams.get('readonly') === 'true';
 
   // State Loading & Data
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -72,7 +77,6 @@ export const EditEmployeeSchedulePage: React.FC = () => {
     variant: 'primary',
   });
 
-  // Fetch data detail dari Backend saat halaman dimuat
   const fetchDetail = async () => {
     if (!id) return;
     setIsLoading(true);
@@ -95,7 +99,6 @@ export const EditEmployeeSchedulePage: React.FC = () => {
     fetchDetail();
   }, [id]);
 
-  // 💡 Auto-close Pop-up Berhasil/Gagal dalam 1.5 detik tanpa perlu tombol OK
   useEffect(() => {
     if (alertConfig.isOpen) {
       const timer = setTimeout(() => {
@@ -107,18 +110,18 @@ export const EditEmployeeSchedulePage: React.FC = () => {
   }, [alertConfig.isOpen]);
 
   const handleFieldChange = (rowId: string, field: keyof DailyScheduleDetail, value: any) => {
+    if (isReadonly) return; // Blokir perubahan jika readonly
     setScheduleList((prev) =>
       prev.map((item) => (item.id === rowId ? { ...item, [field]: value } : item))
     );
   };
 
   const handleConfirmSave = async () => {
-    if (!id) return;
+    if (!id || isReadonly) return;
     setIsConfirmOpen(false);
     setIsSubmittingApi(true);
 
     try {
-      // Kirim data update ke backend
       await inputScheduleService.updateEmployeeSchedule(id, { scheduleList });
 
       setAlertConfig({
@@ -157,6 +160,7 @@ export const EditEmployeeSchedulePage: React.FC = () => {
       header: 'Kehadiran',
       cell: ({ row }) => (
         <div className="w-32">
+          {/* 🟢 Disable FormSelect jika dalam mode readonly */}
           <FormSelect
             value={row.original.attendanceStatus}
             onValueChange={(val) => handleFieldChange(row.original.id, 'attendanceStatus', val)}
@@ -166,6 +170,7 @@ export const EditEmployeeSchedulePage: React.FC = () => {
               { value: 'PH', label: 'PH' },
               { value: 'Cuti', label: 'Cuti' },
             ]}
+            disabled={isReadonly} 
           />
         </div>
       ),
@@ -174,12 +179,13 @@ export const EditEmployeeSchedulePage: React.FC = () => {
       accessorKey: 'scheduledCheckIn',
       header: () => <div className="text-center">Jam Datang Jadwal</div>,
       cell: ({ row }) => (
-        <div className="w-28 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 focus-within:bg-white dark:focus-within:bg-gray-900 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all [&_input::-webkit-calendar-picker-indicator]:hidden">
+        <div className={`w-28 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 ${isReadonly ? 'opacity-70 cursor-not-allowed' : ''}`}>
           <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0 mr-1 pointer-events-none" />
           <FormTimeInput
             value={row.original.scheduledCheckIn}
             onChange={(newVal) => handleFieldChange(row.original.id, 'scheduledCheckIn', newVal)}
             className="text-center font-mono font-medium tracking-wide w-full"
+            disabled={isReadonly} // 🟢 Disable input jam jika readonly
           />
         </div>
       ),
@@ -188,12 +194,13 @@ export const EditEmployeeSchedulePage: React.FC = () => {
       accessorKey: 'scheduledCheckOut',
       header: () => <div className="text-center">Jam Pulang Jadwal</div>,
       cell: ({ row }) => (
-        <div className="w-28 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 focus-within:bg-white dark:focus-within:bg-gray-900 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all [&_input::-webkit-calendar-picker-indicator]:hidden">
+        <div className={`w-28 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 ${isReadonly ? 'opacity-70 cursor-not-allowed' : ''}`}>
           <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0 mr-1 pointer-events-none" />
           <FormTimeInput
             value={row.original.scheduledCheckOut}
             onChange={(newVal) => handleFieldChange(row.original.id, 'scheduledCheckOut', newVal)}
             className="text-center font-mono font-medium tracking-wide w-full"
+            disabled={isReadonly} // 🟢 Disable input jam jika readonly
           />
         </div>
       ),
@@ -233,10 +240,10 @@ export const EditEmployeeSchedulePage: React.FC = () => {
         </button>
         <div>
           <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            Edit Jadwal Karyawan
+            {isReadonly ? 'Detail Rincian Jadwal Karyawan' : 'Edit Jadwal Karyawan'}
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Kelola rincian jadwal harian karyawan per periode
+            {isReadonly ? 'Menampilkan rekapitulasi rincian jadwal harian (Read-only)' : 'Kelola rincian jadwal harian karyawan per periode'}
           </p>
         </div>
       </div>
@@ -244,12 +251,17 @@ export const EditEmployeeSchedulePage: React.FC = () => {
       {/* Header Card & Statistik Reusable */}
       <EmployeeScheduleHeaderCard employeeInfo={employeeInfo} />
 
-      {/* Container Edit Jadwal */}
+      {/* Container Tabel Jadwal */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xs overflow-visible w-full max-w-full min-w-0">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <h3 className="text-xs font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
-            Edit Jadwal Karyawan
+            {isReadonly ? 'Rincian Jadwal (Read-Only)' : 'Edit Jadwal Karyawan'}
           </h3>
+          {isReadonly && (
+            <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-full text-[10px] font-semibold">
+              Mode Lihat Saja (Read-Only)
+            </span>
+          )}
         </div>
 
         <DataTable 
@@ -258,10 +270,13 @@ export const EditEmployeeSchedulePage: React.FC = () => {
           showOnMobile={true} 
         />
 
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-          <CancelButton onClick={() => navigate(-1)} />
-          <SaveButton onClick={() => setIsConfirmOpen(true)} />
-        </div>
+        {/* 🟢 Sembunyikan footer tombol Simpan jika mode readonly aktif */}
+        {!isReadonly && (
+          <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+            <CancelButton onClick={() => navigate(-1)} />
+            <SaveButton onClick={() => setIsConfirmOpen(true)} />
+          </div>
+        )}
       </div>
 
       {/* Dialog Konfirmasi Simpan */}
@@ -276,7 +291,7 @@ export const EditEmployeeSchedulePage: React.FC = () => {
         isLoading={isSubmittingApi}
       />
 
-      {/* Alert Hasil Sukses / Gagal (Otomatis Hilang Tanpa Tombol OK & Teks Hitam di Light Mode) */}
+      {/* Alert Hasil Sukses / Gagal */}
       <ConfirmAlertDialog
         isOpen={alertConfig.isOpen}
         onClose={() => setAlertConfig((prev) => ({ ...prev, isOpen: false }))}
