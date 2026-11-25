@@ -1,19 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { PivotData } from '../types/pivot.type';
 import { pivotService } from '../services/pivot.service';
-import { api } from '@/lib/axios';
 import toast from 'react-hot-toast';
 
 export const usePivot = () => {
   const [data, setData] = useState<PivotData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
-  // State Master Data List Filter (Hanya mengambil data aktif)
-  const [departemenList, setDepartemenList] = useState<any[]>([]);
-  const [subDepartemenList, setSubDepartemenList] = useState<any[]>([]);
-  const [posList, setPosList] = useState<any[]>([]);
-  const [gradeList, setGradeList] = useState<any[]>([]);
-  const [skemaList, setSkemaList] = useState<any[]>([]);
 
   // State Server-Side Pagination
   const [page, setPage] = useState<number>(1);
@@ -23,11 +15,15 @@ export const usePivot = () => {
     last_page: number;
     total: number;
     per_page: number;
+    from?: number | null;
+    to?: number | null;
   }>({
     current_page: 1,
     last_page: 1,
     total: 0,
-    per_page: 10,
+    per_page: 25,
+    from: null,
+    to: null,
   });
 
   // State Server-Side Search & Filter
@@ -41,34 +37,20 @@ export const usePivot = () => {
   const [gradeFilter, setGradeFilter] = useState<string>('');
   const [skemaFilter, setSkemaFilter] = useState<string>('');
 
-  // Fetch Master Data yang Aktif (is_active !== false)
+  // Reset ke halaman 1 setiap kali parameter pencarian/filter berubah (seperti usePos.ts)
   useEffect(() => {
-    const fetchMasterData = async () => {
-      try {
-       // Di usePivot.ts
-      const [deptRes, subDeptRes, posRes, gradeRes, skemaRes] = await Promise.all([
-        api.get('/departments?all=true'),
-        api.get('/sub-departments?all=true'),
-        api.get('/positions?all=true'), // 👈 Mengambil seluruh master data POS yang aktif
-        api.get('/grades?all=true'),
-        api.get('/work-schedule-schemes?all=true'),
-      ]);
-
-        const filterActive = (arr: any[]) =>
-          (arr || []).filter((item: any) => item.is_active !== false);
-
-        setDepartemenList(filterActive(deptRes.data?.data || deptRes.data));
-        setSubDepartemenList(filterActive(subDeptRes.data?.data || subDeptRes.data));
-        setPosList(filterActive(posRes.data?.data || posRes.data));
-        setGradeList(filterActive(gradeRes.data?.data || gradeRes.data));
-        setSkemaList(filterActive(skemaRes.data?.data || skemaRes.data));
-      } catch (err) {
-        console.error('Gagal memuat master data filter pivot:', err);
-      }
-    };
-
-    fetchMasterData();
-  }, []);
+    setPage(1);
+  }, [
+    searchQuery,
+    periodeFilter,
+    startDateFilter,
+    endDateFilter,
+    departemenFilter,
+    subDepartemenFilter,
+    posFilter,
+    gradeFilter,
+    skemaFilter,
+  ]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -138,11 +120,6 @@ export const usePivot = () => {
     setGradeFilter,
     skemaFilter,
     setSkemaFilter,
-    departemenList,
-    subDepartemenList,
-    posList,
-    gradeList,
-    skemaList,
     refetch: fetchData,
   };
 };

@@ -28,7 +28,6 @@ export const InputSchedulePage: React.FC = () => {
     meta,
     setPage,
     setPageSize,
-    isLoading,
     refetch,
   } = useInputSchedule(searchQuery, deptFilter, subDeptFilter, statusFilter);
 
@@ -82,7 +81,7 @@ export const InputSchedulePage: React.FC = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `schedule-period-${selectedPeriod}.xlsx`);
+      link.setAttribute('download', `schedule-period-${selectedPeriod}.csv`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -106,15 +105,7 @@ export const InputSchedulePage: React.FC = () => {
     }
   };
 
-  if (isLoading && (!data || data.length === 0)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
-          Memuat data Jadwal...
-        </p>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="space-y-6">

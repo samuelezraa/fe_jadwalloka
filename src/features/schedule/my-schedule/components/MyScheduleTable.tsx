@@ -44,6 +44,21 @@ interface MyScheduleTableProps {
   gradeList?: any[];
 }
 
+const LOCKED_ROLE_DEPT_MAP: Record<string, string> = {
+  SALES: 'Sales',
+  MANAGEMENT: 'Management',
+  IT: 'IT',
+};
+
+const getStoredUser = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   data,
   meta,
@@ -75,10 +90,48 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
   const [asyncGradeOptions, setAsyncGradeOptions] = useState<any[]>(gradeList);
 
+  const currentUser = useMemo(() => getStoredUser(), []);
+  const roleUpper = String(currentUser?.role ?? '').trim().toUpperCase();
+  const isDepartmentLocked = roleUpper in LOCKED_ROLE_DEPT_MAP;
+
+  const lockedDeptId = useMemo(() => {
+    if (!isDepartmentLocked) return '';
+
+    const explicitDeptId =
+      currentUser?.department_id ??
+      (typeof currentUser?.department === 'object' ? currentUser?.department?.id : '');
+
+    if (explicitDeptId !== undefined && explicitDeptId !== null && String(explicitDeptId) !== '') {
+      return String(explicitDeptId);
+    }
+
+    const explicitDeptName =
+      typeof currentUser?.department === 'string'
+        ? currentUser.department.trim()
+        : String(currentUser?.department?.name ?? '').trim();
+
+    const targetName = (explicitDeptName || LOCKED_ROLE_DEPT_MAP[roleUpper] || '')
+      .trim()
+      .toLowerCase();
+
+    const matchedDept = asyncDeptOptions.find((d) => {
+      const dName = String(d.name || d.departemen || '').trim().toLowerCase();
+      return targetName !== '' && (dName === targetName || dName.includes(targetName));
+    });
+
+    return matchedDept ? String(matchedDept.id) : '';
+  }, [isDepartmentLocked, currentUser, roleUpper, asyncDeptOptions]);
+
+  useEffect(() => {
+    if (isDepartmentLocked && lockedDeptId && deptFilter !== lockedDeptId) {
+      onDeptFilterChange(lockedDeptId);
+    }
+  }, [isDepartmentLocked, lockedDeptId, deptFilter, onDeptFilterChange]);
+
   const fetchPeriods = async (query = '') => {
     try {
       const res = await api.get('/periods', {
-        params: { search: query, per_page: 50 },
+        params: { search: query, per_page: 25 },
       });
       const items = res.data?.data || res.data || [];
 
@@ -131,7 +184,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   ) => {
     try {
       const res = await api.get(`/${endpoint}`, {
-        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+        params: { search: query, per_page: 25, status: 'true', ...extraParams },
       });
       const items = res.data?.data || res.data || [];
       setter(Array.isArray(items) ? items : []);
@@ -165,11 +218,44 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
     return true;
   };
 
-  const isFiltered = Boolean(deptFilter || subDeptFilter || gradeFilter);
+  const isFiltered = Boolean((!isDepartmentLocked && deptFilter) || subDeptFilter || gradeFilter);
+  const activeDeptValue = isDepartmentLocked ? lockedDeptId || deptFilter : deptFilter;
 
   const handleNumberClick = (id: string) => {
     checkPeriodeSelected(() => {
       navigate(`/schedule/input-schedule/edit/${id}?readonly=true`);
+    });
+  };
+
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
+  const handleExportSingleRow = async (item: MySchedule) => {
+    checkPeriodeSelected(async () => {
+      try {
+        setExportingId(item.id);
+        const toastId = toast.loading(`Mengekspor jadwal ${item.name}...`);
+
+        const response = await api.get(`/schedule/jadwalku/${item.id}/export`, {
+          params: { period: selectedPeriod },
+          responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        const safeName = String(item.name || item.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+        link.href = url;
+        link.setAttribute('download', `rekap-jadwal-${safeName}-${selectedPeriod}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast.success(`Jadwal ${item.name} berhasil diunduh.`, { id: toastId });
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || `Gagal mengekspor jadwal ${item.name}.`);
+      } finally {
+        setExportingId(null);
+      }
     });
   };
 
@@ -195,13 +281,17 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
         ),
       },
       {
-        accessorKey: 'nip',
-        header: 'NIP',
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
-            {String(info.getValue())}
-          </span>
-        ),
+        id: 'employee_id',
+        header: 'ID',
+        cell: ({ row }) => {
+          const item = row.original as any;
+          const empId = item.employee_id || item.nip || '-';
+          return (
+            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs">
+              {String(empId)}
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'name',
@@ -311,8 +401,28 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
           </button>
         ),
       },
+      // 👇 KOLOM PALING KANAN (AKSI)
+      {
+        id: 'actions',
+        header: 'Aksi',
+        cell: ({ row }) => {
+          const item = row.original;
+          const isExportingThis = exportingId === item.id;
+
+          return (
+            <div className="flex justify-center">
+              <ExportIconButton
+                disabled={isExportingThis}
+                onClick={() => handleExportSingleRow(item)}
+                title={isExportingThis ? `Mengekspor ${item.name}...` : `Export jadwal ${item.name}`}
+                className="p-2"
+              />
+            </div>
+          );
+        },
+      },
     ],
-    [selectedPeriod]
+    [selectedPeriod, exportingId]
   );
 
   const table = useReactTable({
@@ -324,7 +434,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
       rowSelection,
@@ -335,7 +445,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);
@@ -400,7 +510,9 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
               onReset={() => {
-                onDeptFilterChange('');
+                if (!isDepartmentLocked) {
+                  onDeptFilterChange('');
+                }
                 onSubDeptFilterChange('');
                 onGradeFilterChange('');
               }}
@@ -410,8 +522,10 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                   label: 'Departemen',
                   render: () => (
                     <FormSelectSearch
-                      value={deptFilter}
+                      value={activeDeptValue}
+                      disabled={isDepartmentLocked}
                       onChange={(val) => {
+                        if (isDepartmentLocked) return;
                         onDeptFilterChange(val);
                         onSubDeptFilterChange('');
                         fetchFilterOptions('sub-departments', '', setAsyncSubDeptOptions, {
@@ -443,11 +557,11 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                       onChange={onSubDeptFilterChange}
                       onSearchChange={(query) =>
                         fetchFilterOptions('sub-departments', query, setAsyncSubDeptOptions, {
-                          department_id: deptFilter,
+                          department_id: activeDeptValue,
                         })
                       }
-                      placeholder={deptFilter ? 'Semua Sub Dept' : 'Pilih Departemen dahulu'}
-                      disabled={!deptFilter}
+                      placeholder={activeDeptValue ? 'Semua Sub Dept' : 'Pilih Departemen dahulu'}
+                      disabled={!activeDeptValue}
                       options={[
                         { id: '', label: 'Semua Sub Dept' },
                         ...asyncSubDeptOptions
@@ -458,7 +572,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                               sub.is_active === true ||
                               sub.is_active === 1;
                             if (!isActive) return false;
-                            if (!deptFilter) return false;
+                            if (!activeDeptValue) return false;
 
                             const rawDeptId =
                               sub.department_id ??
@@ -472,14 +586,14 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                             }
 
                             const selectedDept = asyncDeptOptions.find(
-                              (d) => String(d.id) === String(deptFilter)
+                              (d) => String(d.id) === String(activeDeptValue)
                             );
                             const selectedDeptCode = selectedDept?.code
                               ? String(selectedDept.code)
                               : '';
 
                             return (
-                              String(rawDeptId) === String(deptFilter) ||
+                              String(rawDeptId) === String(activeDeptValue) ||
                               (selectedDeptCode !== '' && String(rawDeptId) === selectedDeptCode)
                             );
                           })

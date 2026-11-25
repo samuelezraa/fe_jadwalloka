@@ -42,7 +42,7 @@ interface SubDepartemenTableProps {
 
 export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
   data = [],
-  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 25, from: null, to: null },
   setPage,
   setPageSize,
   departemenList = [],
@@ -137,7 +137,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 25)}
           </span>
         ),
       },
@@ -211,7 +211,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -219,7 +219,7 @@ export const SubDepartemenTable: React.FC<SubDepartemenTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);

@@ -59,7 +59,7 @@ export const CustomWorkHourForm: React.FC<CustomWorkHourFormProps> = ({
         params: {
           search: query,
           status: 'true',
-          per_page: 20,
+          per_page: 25,
         },
       });
       const list = response.data.data || response.data || [];

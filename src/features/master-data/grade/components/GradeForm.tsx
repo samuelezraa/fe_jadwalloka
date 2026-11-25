@@ -11,12 +11,16 @@ import { SaveButton, CancelButton } from '@/components/ui/ActionButtons';
 
 interface GradeFormProps {
   initialData?: Grade | null;
+  existingGrades?: Grade[];
+  serverCodeError?: string | null;
   onSubmit: (data: GradeFormValues) => void;
   onCancel: () => void;
 }
 
 export const GradeForm: React.FC<GradeFormProps> = ({
   initialData,
+  existingGrades = [],
+  serverCodeError,
   onSubmit,
   onCancel,
 }) => {
@@ -27,6 +31,7 @@ export const GradeForm: React.FC<GradeFormProps> = ({
     handleSubmit,
     reset,
     control,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<GradeFormValues>({
     resolver: zodResolver(gradeSchema) as any,
@@ -61,22 +66,59 @@ export const GradeForm: React.FC<GradeFormProps> = ({
     }
   }, [initialData, reset]);
 
+  // Tampilkan error dari backend (422) jika ID Grade bentrok di halaman paginasi lain
+  useEffect(() => {
+    if (serverCodeError) {
+      setError('code', {
+        type: 'server',
+        message: serverCodeError,
+      });
+    }
+  }, [serverCodeError, setError]);
+
+  const handleFormSubmit = (data: GradeFormValues) => {
+    const normalizedCode = data.code.trim().toUpperCase();
+
+    if (!isEditMode) {
+      const isDuplicate = existingGrades.some(
+        (item) =>
+          String(item.code || (item as any).kode_grade || '')
+            .trim()
+            .toUpperCase() === normalizedCode
+      );
+
+      if (isDuplicate) {
+        setError('code', {
+          type: 'manual',
+          message: `ID Grade "${normalizedCode}" sudah digunakan, silakan gunakan ID lain.`,
+        });
+        return;
+      }
+    }
+
+    onSubmit({
+      ...data,
+      code: normalizedCode,
+    });
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* 1. ID Grade */}
       <div>
         <FormInput
           label="ID Grade"
           {...register('code')}
           disabled={isEditMode}
-          placeholder="Contoh: LV001"
+          maxLength={6}
+          placeholder="Contoh: GR001"
           error={errors.code?.message}
         />
-        {isEditMode && (
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-            ID Grade tidak dapat diubah.
-          </p>
-        )}
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          {isEditMode
+            ? 'ID Grade tidak dapat diubah.'
+            : 'Format: GR diikuti 1 sampai 4 digit angka (contoh: GR1, GR01, GR8888).'}
+        </p>
       </div>
 
       {/* 2. Nama Grade */}

@@ -70,20 +70,32 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   }, [showFilterDropdown, onToggleFilterDropdown]);
 
   return (
-    <div className="p-4 md:p-5 border-b border-gray-100 dark:border-gray-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative" ref={filterRef}>
-      
+    <div
+      className="p-4 md:p-5 border-b border-gray-100 dark:border-gray-800 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 relative"
+      ref={filterRef}
+    >
       {/* Bagian Kiri: Judul dan Subtitle */}
-      <div className="flex items-start gap-3">
-        {icon && <div className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">{icon}</div>}
-        <div className="flex flex-col">
-          <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">{title}</h2>
-          {subtitle && <p className="text-[11px] md:text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>}
+      <div className="flex items-start gap-3 min-w-0">
+        {icon && (
+          <div className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+            {icon}
+          </div>
+        )}
+        <div className="flex flex-col min-w-0">
+          <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="text-[11px] md:text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Bagian Kanan: Kolom Pencarian dan Tombol Aksi */}
-      <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-        <div className="relative flex items-center w-full md:w-80">
+      <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end min-w-0">
+        <div className="relative flex items-center w-full sm:w-72 shrink-0">
           <span className="absolute left-3.5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
             <Search className="w-4 h-4" />
           </span>
@@ -98,7 +110,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
           {/* Tombol Filter Bulat */}
           {onToggleFilterDropdown && (
             <div className="absolute right-1 flex items-center">
-              <FilterButton 
+              <FilterButton
                 onClick={onToggleFilterDropdown}
                 isActive={showFilterDropdown}
                 isFiltered={isFiltered}
@@ -108,7 +120,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
 
           {/* Kontainer Popover Filter */}
           {showFilterDropdown && filterDropdownContent && (
-            <div className="absolute right-0 top-full mt-2 z-30 w-auto p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-visible">
+            <div className="absolute left-0 xl:left-auto xl:right-0 top-full mt-2 z-30 w-auto max-w-[calc(100vw-2rem)] p-3 bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-visible">
               {filterDropdownContent}
             </div>
           )}
@@ -116,12 +128,11 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
 
         {/* Tombol Aksi / Tambah di Desktop */}
         {actionButtons && (
-          <div className="shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 max-w-full">
             {actionButtons}
           </div>
         )}
       </div>
-
     </div>
   );
 };

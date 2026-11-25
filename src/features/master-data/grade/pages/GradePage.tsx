@@ -22,6 +22,7 @@ export const GradePage: React.FC = () => {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Grade | null>(null);
+  const [serverCodeError, setServerCodeError] = useState<string | null>(null);
 
   const [pendingFormData, setPendingFormData] = useState<GradeFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
@@ -51,15 +52,18 @@ export const GradePage: React.FC = () => {
 
   const handleOpenAdd = () => {
     setSelectedItem(null);
+    setServerCodeError(null);
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (item: Grade) => {
     setSelectedItem(item);
+    setServerCodeError(null);
     setIsDialogOpen(true);
   };
 
   const handleSubmitForm = (formData: GradeFormValues) => {
+    setServerCodeError(null);
     setPendingFormData(formData);
     setIsDialogOpen(false); // Tutup dialog form agar tidak bertumpuk
     setIsConfirmOpen(true);
@@ -85,7 +89,7 @@ export const GradePage: React.FC = () => {
           data: {
             code: pendingFormData.code,
             name: pendingFormData.name,
-            level: Number(pendingFormData.level), // 🌟 Menyertakan level
+            level: Number(pendingFormData.level),
             is_active: pendingFormData.is_active,
           },
         });
@@ -99,7 +103,7 @@ export const GradePage: React.FC = () => {
         await createGrade({
           code: pendingFormData.code,
           name: pendingFormData.name,
-          level: Number(pendingFormData.level), // 🌟 Menyertakan level agar tidak error required
+          level: Number(pendingFormData.level),
           is_active: true,
         });
         setAlertConfig({
@@ -112,9 +116,15 @@ export const GradePage: React.FC = () => {
 
       setPendingFormData(null);
       setSelectedItem(null);
+      setServerCodeError(null);
     } catch (error: any) {
+      const codeError = error?.response?.data?.errors?.code?.[0] || null;
       const errorMessage =
-        error?.response?.data?.message || 'Gagal menyimpan data Grade. Silakan coba lagi.';
+        codeError ||
+        error?.response?.data?.message ||
+        'Gagal menyimpan data Grade. Silakan coba lagi.';
+
+      setServerCodeError(codeError);
       setIsDialogOpen(true);
       setAlertConfig({
         isOpen: true,
@@ -152,8 +162,13 @@ export const GradePage: React.FC = () => {
 
       <GradeDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setServerCodeError(null);
+        }}
         initialData={selectedItem}
+        existingGrades={Array.isArray(grades) ? grades : []}
+        serverCodeError={serverCodeError}
         onSubmit={handleSubmitForm}
       />
 

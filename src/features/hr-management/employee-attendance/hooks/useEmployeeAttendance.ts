@@ -18,11 +18,11 @@ export const useEmployeeAttendance = () => {
     current_page: 1,
     last_page: 1,
     total: 0,
-    per_page: 10,
+    per_page: 25,
   });
 
 const [selectedPeriode, setSelectedPeriode] = useState<string>(() => {
-    return sessionStorage.getItem('hr_selected_periode') || '2026-10'; // 👈 Default ke '2026-10'
+    return sessionStorage.getItem('hr_selected_periode') || '';
   });
 
   const fetchAttendances = useCallback(async () => {

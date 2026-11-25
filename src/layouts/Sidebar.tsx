@@ -37,12 +37,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
   const navigate = useNavigate();
 
   const user = getUser();
-  const isHr = user?.role === 'HR' || user?.department === 'HR' || user?.is_hr === true;
+  const roleUpper = String(user?.role ?? '').trim().toUpperCase();
+  const deptUpper = String(
+    typeof user?.department === 'string' ? user.department : user?.department?.name ?? ''
+  ).trim().toUpperCase();
+
+  const isHr = roleUpper === 'HR' || deptUpper === 'HR' || deptUpper === 'HRD' || user?.is_hr === true;
+  const isSalesOrManagement = roleUpper === 'SALES' || roleUpper === 'MANAGEMENT';
 
   const isMasterActive = location.pathname.startsWith('/master-data');
-  const isJadwalActive = location.pathname.startsWith('/jadwal');
+  const isJadwalActive = location.pathname.startsWith('/schedule') || location.pathname.startsWith('/jadwal');
   const isHrManagementActive = location.pathname.startsWith('/hr-management');
-  const isLaporanActive = location.pathname.startsWith('/laporan');
+  const isLaporanActive = location.pathname.startsWith('/reports') || location.pathname.startsWith('/laporan');
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -114,60 +120,62 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             {(!isCollapsed || isMobileOpen) && <span>Dashboard</span>}
           </NavLink>
 
-          {/* Master Data Dropdown */}
-          <div className="relative group">
-            <div
-              onClick={() => {
-                if (!isCollapsed || isMobileOpen) {
-                  setOpenMaster(!openMaster);
-                }
-              }}
-              className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                isMasterActive 
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
-                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-              } ${
-                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Database className="w-5 h-5 shrink-0" />
-                {(!isCollapsed || isMobileOpen) && <span>Master Data</span>}
+          {/* Master Data Dropdown (Disembunyikan untuk SALES & MANAGEMENT) */}
+          {!isSalesOrManagement && (
+            <div className="relative group">
+              <div
+                onClick={() => {
+                  if (!isCollapsed || isMobileOpen) {
+                    setOpenMaster(!openMaster);
+                  }
+                }}
+                className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
+                  isMasterActive 
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                    : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                } ${
+                  isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Database className="w-5 h-5 shrink-0" />
+                  {(!isCollapsed || isMobileOpen) && <span>Master Data</span>}
+                </div>
+                {(!isCollapsed || isMobileOpen) && (
+                  openMaster ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+                )}
               </div>
-              {(!isCollapsed || isMobileOpen) && (
-                openMaster ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+
+              {openMaster && (!isCollapsed || isMobileOpen) && (
+                <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
+                  <NavLink to="/master-data/departemen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Departemen</span>
+                  </NavLink>
+                  <NavLink to="/master-data/sub-departemen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Sub Departemen</span>
+                  </NavLink>
+                  <NavLink to="/master-data/pos" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>POS</span>
+                  </NavLink>
+                  <NavLink to="/master-data/grade" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Grade</span>
+                  </NavLink>
+                  <NavLink to="/master-data/schedule-scheme" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Skema Hari Kerja</span>
+                  </NavLink>
+                  <NavLink to="/master-data/annual-event" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Event Tahunan</span>
+                  </NavLink>
+                  <NavLink to="/master-data/employee" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Data Karyawan</span>
+                  </NavLink>
+                  <NavLink to="/master-data/custom-work-hours" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Custom Jam Kerja</span>
+                  </NavLink>
+                </div>
               )}
             </div>
-
-            {openMaster && (!isCollapsed || isMobileOpen) && (
-              <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
-                <NavLink to="/master-data/departemen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Departemen</span>
-                </NavLink>
-                <NavLink to="/master-data/sub-departemen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Sub Departemen</span>
-                </NavLink>
-                <NavLink to="/master-data/pos" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>POS</span>
-                </NavLink>
-                <NavLink to="/master-data/grade" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Grade</span>
-                </NavLink>
-                <NavLink to="/master-data/schedule-scheme" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Skema Hari Kerja</span>
-                </NavLink>
-                <NavLink to="/master-data/annual-event" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Event Tahunan</span>
-                </NavLink>
-                <NavLink to="/master-data/employee" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Data Karyawan</span>
-                </NavLink>
-                <NavLink to="/master-data/custom-work-hours" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Custom Jam Kerja</span>
-                </NavLink>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Jadwal Dropdown */}
           <div className="relative group">
@@ -199,9 +207,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/schedule/five-two-work-hour" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Jam Kerja (Skema 52)</span>
                 </NavLink>
-                <NavLink to="/schedule/input-schedule" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Input Jadwal</span>
-                </NavLink>
+                {!isSalesOrManagement && (
+                  <NavLink to="/schedule/input-schedule" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Input Jadwal</span>
+                  </NavLink>
+                )}
                 <NavLink to="/schedule/my-schedule" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Jadwalku</span>
                 </NavLink>
@@ -209,50 +219,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             )}
           </div>
 
-          {/* Laporan Dropdown */}
-          <div className="relative group">
-            <div
-              onClick={() => {
-                if (!isCollapsed || isMobileOpen) {
-                  setOpenLaporan(!openLaporan);
-                }
-              }}
-              className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                isLaporanActive 
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
-                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-              } ${
-                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 shrink-0" />
-                {(!isCollapsed || isMobileOpen) && <span>Laporan</span>}
+          {/* Laporan Dropdown (Disembunyikan untuk SALES & MANAGEMENT) */}
+          {!isSalesOrManagement && (
+            <div className="relative group">
+              <div
+                onClick={() => {
+                  if (!isCollapsed || isMobileOpen) {
+                    setOpenLaporan(!openLaporan);
+                  }
+                }}
+                className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
+                  isLaporanActive 
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                    : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                } ${
+                  isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 shrink-0" />
+                  {(!isCollapsed || isMobileOpen) && <span>Laporan</span>}
+                </div>
+                {(!isCollapsed || isMobileOpen) && (
+                  openLaporan ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+                )}
               </div>
-              {(!isCollapsed || isMobileOpen) && (
-                openLaporan ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+
+              {openLaporan && (!isCollapsed || isMobileOpen) && (
+                <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
+                  <NavLink to="/reports/attendance" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Absensi</span>
+                  </NavLink>
+                  <NavLink to="/reports/pivot" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Pivot</span>
+                  </NavLink>
+                  <NavLink to="/reports/employee-presence" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                    <span>Kehadiran Karyawan</span>
+                  </NavLink>
+                </div>
               )}
             </div>
+          )}
 
-            {openLaporan && (!isCollapsed || isMobileOpen) && (
-              <div className="flex flex-col py-1 bg-white dark:bg-gray-900">
-                <NavLink to="/reports/attendance" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Absensi</span>
-                </NavLink>
-                <NavLink to="/reports/pivot" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Pivot</span>
-                </NavLink>
-                <NavLink to="/reports/komplimen" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Komplimen</span>
-                </NavLink>
-                <NavLink to="/reports/employee-presence" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                  <span>Kehadiran Karyawan</span>
-                </NavLink>
-              </div>
-            )}
-          </div>
-
-          {/* HR Management Dropdown 🌟 (Hanya tampil jika user adalah HR) */}
+          {/* HR Management Dropdown (Hanya tampil jika user adalah HR) */}
           {isHr && (
             <div className="relative group">
               <div
@@ -291,24 +300,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             </div>
           )}
 
-          {/* Log History */}
-          <NavLink
-            to="/log-history"
-            onClick={onCloseMobile}
-            className={({ isActive }) =>
-              `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
-                isActive 
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
-                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-              } ${
-                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
-              }`
-            }
-            title={isCollapsed && !isMobileOpen ? "Log History" : ""}
-          >
-            <History className="w-5 h-5 shrink-0" />
-            {(!isCollapsed || isMobileOpen) && <span>Log History</span>}
-          </NavLink>
+          {/* Log History (Disembunyikan untuk SALES & MANAGEMENT) */}
+          {!isSalesOrManagement && (
+            <NavLink
+              to="/log-history"
+              onClick={onCloseMobile}
+              className={({ isActive }) =>
+                `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
+                  isActive 
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                    : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                } ${
+                  isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
+                }`
+              }
+              title={isCollapsed && !isMobileOpen ? "Log History" : ""}
+            >
+              <History className="w-5 h-5 shrink-0" />
+              {(!isCollapsed || isMobileOpen) && <span>Log History</span>}
+            </NavLink>
+          )}
 
         </nav>
 

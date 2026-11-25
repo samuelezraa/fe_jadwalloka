@@ -38,7 +38,7 @@ interface CustomWorkHourTableProps {
 
 export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
   data = [],
-  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 25, from: null, to: null },
   setPage,
   setPageSize,
   onEdit,
@@ -180,7 +180,7 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -188,7 +188,7 @@ export const CustomWorkHourTable: React.FC<CustomWorkHourTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);

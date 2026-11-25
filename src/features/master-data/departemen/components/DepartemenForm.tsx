@@ -11,12 +11,18 @@ import { SaveButton, CancelButton } from '../../../../components/ui/ActionButton
 
 interface DepartemenFormProps {
   initialData?: Departemen | null;
+  draftValues?: DepartemenFormValues | null;
+  existingDepartemens?: Departemen[];
+  serverErrors?: Record<string, string[]> | null;
   onSubmit: (data: DepartemenFormValues) => void;
   onCancel: () => void;
 }
 
 export const DepartemenForm: React.FC<DepartemenFormProps> = ({
   initialData,
+  draftValues,
+  existingDepartemens = [],
+  serverErrors,
   onSubmit,
   onCancel,
 }) => {
@@ -27,6 +33,7 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
     handleSubmit,
     control,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<DepartemenFormValues>({
     resolver: zodResolver(departemenSchema),
@@ -38,15 +45,23 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
   });
 
   useEffect(() => {
+    if (draftValues) {
+      reset({
+        code: draftValues.code || '',
+        name: draftValues.name || '',
+        is_active: Boolean(draftValues.is_active ?? true),
+      });
+      return;
+    }
+
     if (initialData) {
-      // Konversi nilai number (1 / 0) atau string/boolean dari API menjadi boolean murni
       const rawActive = (initialData as any).is_active ?? (initialData as any).status;
       const isActiveBoolean = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
 
       reset({
-        code: initialData.code || (initialData as any).id || '',
+        code: initialData.code || String((initialData as any).id || ''),
         name: initialData.name || (initialData as any).departemen || '',
-        is_active: isActiveBoolean, // 👈 Nilai dijamin boolean murni (true/false)
+        is_active: isActiveBoolean,
       });
     } else {
       reset({
@@ -55,16 +70,73 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
         is_active: true,
       });
     }
-  }, [initialData, reset]);
+  }, [initialData, draftValues, reset]);
+
+  useEffect(() => {
+    if (!serverErrors) return;
+
+    Object.entries(serverErrors).forEach(([field, messages]) => {
+      if (
+        (field === 'code' || field === 'name' || field === 'is_active') &&
+        Array.isArray(messages) &&
+        messages[0]
+      ) {
+        setError(field, {
+          type: 'server',
+          message: messages[0],
+        });
+      }
+    });
+  }, [serverErrors, setError]);
+
+  const handleFormSubmit = (values: DepartemenFormValues) => {
+    const normalizedCode = values.code.trim().toUpperCase();
+    const normalizedName = values.name.replace(/\s+/g, ' ').trim();
+
+    if (!isEditMode) {
+      const isCodeDuplicate = existingDepartemens.some(
+        (item) => String(item.code || '').trim().toUpperCase() === normalizedCode
+      );
+      if (isCodeDuplicate) {
+        setError('code', {
+          type: 'manual',
+          message: `ID Departemen "${normalizedCode}" sudah digunakan, silakan gunakan ID lain.`,
+        });
+        return;
+      }
+    }
+
+    const isNameDuplicate = existingDepartemens.some(
+      (item) =>
+        item.id !== initialData?.id &&
+        String(item.name || '').replace(/\s+/g, ' ').trim().toLowerCase() ===
+          normalizedName.toLowerCase()
+    );
+
+    if (isNameDuplicate) {
+      setError('name', {
+        type: 'manual',
+        message: `Nama Departemen "${normalizedName}" sudah terdaftar, tidak boleh sama.`,
+      });
+      return;
+    }
+
+    onSubmit({
+      ...values,
+      code: normalizedCode,
+      name: normalizedName,
+    });
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* Field Kode / ID Departemen */}
       <div>
         <FormInput
           label="ID Departemen"
           {...register('code')}
           disabled={isEditMode}
+          maxLength={5}
           placeholder="Contoh: DP001"
           error={errors.code?.message}
         />
@@ -94,7 +166,7 @@ export const DepartemenForm: React.FC<DepartemenFormProps> = ({
               value={field.value ? 'true' : 'false'}
               onChange={(val) => field.onChange(val === 'true')}
               placeholder="Pilih Status"
-              showSearch={false} // Sembunyikan input pencarian khusus untuk pilihan status
+              showSearch={false}
               options={[
                 { id: 'true', label: 'Aktif' },
                 { id: 'false', label: 'Non Aktif' },

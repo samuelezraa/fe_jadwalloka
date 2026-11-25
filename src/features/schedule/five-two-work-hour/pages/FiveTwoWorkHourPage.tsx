@@ -26,7 +26,6 @@ const { departemens = [] } = useDepartemen('', 'true');
     meta,
     setPage,
     setPageSize,
-    isLoading,
     updateSchedule,
     refetch,
   } = useFiveTwoWorkHour(searchQuery, deptFilter, subDeptFilter, statusFilter);
@@ -74,17 +73,22 @@ const { departemens = [] } = useDepartemen('', 'true');
   };
 
   const handleExport = async () => {
-    try {
-      await fiveTwoWorkHourService.exportData();
-    } catch (err) {
-      setAlertConfig({
-        isOpen: true,
-        title: 'Export Gagal!',
-        description: 'Gagal mengunduh data jam kerja.',
-        variant: 'danger',
-      });
-    }
-  };
+      try {
+        await fiveTwoWorkHourService.exportData(undefined, {
+          search: searchQuery,
+          department_id: deptFilter,
+          sub_department_id: subDeptFilter,
+          status: statusFilter,
+        });
+      } catch (err) {
+        setAlertConfig({
+          isOpen: true,
+          title: 'Export Gagal!',
+          description: 'Gagal mengunduh data jam kerja.',
+          variant: 'danger',
+        });
+      }
+    };
 
   const handleDownloadSample = async () => {
     try {
@@ -159,13 +163,7 @@ const { departemens = [] } = useDepartemen('', 'true');
     }
   };
 
-  if (isLoading && (!schedules || schedules.length === 0)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 text-xs animate-pulse">Memuat data Jam Kerja (Skema 5-2)...</p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -188,7 +186,6 @@ const { departemens = [] } = useDepartemen('', 'true');
         onStatusFilterChange={setStatusFilter}
         departemenList={departemens}
         subDepartemenList={subDepartemens}
-  
       />
 
       <FiveTwoWorkHourDialog

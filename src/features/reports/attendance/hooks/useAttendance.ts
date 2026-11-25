@@ -25,7 +25,7 @@ export const useAttendance = () => {
     current_page: 1,
     last_page: 1,
     total: 0,
-    per_page: 10,
+    per_page: 25,
   });
 
   // State Server-Side Search & Filter
@@ -43,7 +43,7 @@ export const useAttendance = () => {
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const activeParams = { params: { status: 'true', per_page: 50 } };
+        const activeParams = { params: { status: 'true', per_page: 25 } };
         const [deptRes, subDeptRes, gradeRes] = await Promise.all([
           api.get('/departments', activeParams),
           api.get('/sub-departments', activeParams),

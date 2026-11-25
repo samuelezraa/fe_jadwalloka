@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,7 +15,7 @@ import { TableFilterPopover } from '@/components/ui/TableFilterPopover';
 import { EditActionButton } from '@/components/ui/ActionButtons';
 import { DataTable } from '@/components/ui/data-table';
 import { FormSelectSearch } from '@/components/ui/FormSelectSearch';
-import { api } from '@/lib/axios'; // 👈 Import axios instance
+import { api } from '@/lib/axios';
 
 interface EmployeeAttendanceTableProps {
   data: HrManagementItem[];
@@ -51,64 +51,172 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
 }) => {
   const navigate = useNavigate();
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  
-  // State untuk menampung data master periode dari API (menyala/sesuai dengan halaman Periode)
- const [periodeList, setPeriodeList] = useState<{ id: string; label: string }[]>([]);
 
+  // Penanda agar fetch awal tidak terkena jeda debounce 400ms yang tidak perlu
+  const isInitialMount = useRef(true);
+
+  const [periodeSearchQuery, setPeriodeSearchQuery] = useState('');
+  const [periodeList, setPeriodeList] = useState<{ id: string; label: string }[]>([]);
+
+  const [deptSearchQuery, setDeptSearchQuery] = useState('');
+  const [deptOptions, setDeptOptions] = useState<any[]>([]);
+
+  const [subDeptSearchQuery, setSubDeptSearchQuery] = useState('');
+  const [subDeptOptions, setSubDeptOptions] = useState<any[]>([]);
+
+  const filterActive = (arr: any[]) =>
+    (arr || []).filter(
+      (item: any) =>
+        (item.isActive ?? item.is_active) === undefined ||
+        (item.isActive ?? item.is_active) === true ||
+        (item.isActive ?? item.is_active) === 1 ||
+        (item.isActive ?? item.is_active) === '1'
+    );
+
+  // 1. Fetch Periode (Langsung jalan di awal tanpa delay 400ms, debounce hanya saat mengetik)
   useEffect(() => {
     const fetchPeriods = async () => {
       try {
-        const res = await api.get('/periods', { params: { status: 'true', per_page: 50 } });
+        const res = await api.get('/periods', {
+          params: {
+            search: periodeSearchQuery,
+            status: 'true',
+            per_page: 50,
+          },
+        });
         const items = res.data?.data || res.data || [];
 
-        const mapped = (Array.isArray(items) ? items : [])
-          .filter((p: any) => (p.isActive ?? p.is_active) !== false)
-          .map((p: any) => {
-            // 🟢 Ambil tanggal awal atau kode periode lalu ambil substring 'YYYY-MM' nya
-            // agar nilainya menjadi '2026-10' yang sesuai dengan database employee_attendances
-            const rawDate = p.tanggalAwal ?? p.start_date ?? p.code ?? '';
-            let periodCode = String(p.code ?? p.idPeriode ?? '');
-            
-            if (rawDate && rawDate.length >= 7) {
-              // Jika format tanggal YYYY-MM-DD atau DD-MM-YYYY, ubah ke YYYY-MM
-              if (rawDate.includes('-')) {
-                const parts = rawDate.split('-');
-                if (parts[0].length === 4) {
-                  periodCode = `${parts[0]}-${parts[1]}`; // YYYY-MM
-                } else if (parts[2]?.length === 4) {
-                  periodCode = `${parts[2]}-${parts[1]}`; // YYYY-MM dari DD-MM-YYYY
-                }
-              }
-            }
+       const mapped = filterActive(Array.isArray(items) ? items : []).map((p: any) => {
+          const periodCode = String(p.code ?? p.idPeriode ?? p.id ?? '').trim();
+          const name = p.periode ?? p.name ?? periodCode;
+          const startDate = p.tanggalAwal ?? p.start_date ?? '';
+          const endDate = p.tanggalAkhir ?? p.end_date ?? '';
 
-            const name = p.periode ?? p.name ?? periodCode;
-            const startDate = p.tanggalAwal ?? p.start_date ?? '';
-            const endDate = p.tanggalAkhir ?? p.end_date ?? '';
+          const dateRange =
+            startDate && endDate && startDate !== '-' && endDate !== '-'
+              ? ` (${startDate} — ${endDate})`
+              : '';
 
-            const dateRange =
-              startDate && endDate && startDate !== '-' && endDate !== '-'
-                ? ` (${startDate} — ${endDate})`
-                : '';
-
-            return {
-              id: periodCode.trim() !== '' ? periodCode : String(p.idPeriode ?? p.id ?? ''),
-              label: `${name}${dateRange}`,
-            };
-          });
+          return {
+            id: periodCode,
+            label: `${name}${dateRange}`,
+          };
+        });
 
         setPeriodeList(mapped);
+
+        // Jika nilai tersimpan di sessionStorage sudah tidak valid (misal masih '2026-10'), reset ke kosong
+        if (
+          !periodeSearchQuery &&
+          selectedPeriode &&
+          mapped.length > 0 &&
+          !mapped.some((item) => item.id === selectedPeriode)
+        ) {
+          onPeriodeChange('');
+        }
       } catch (err) {
         console.error('Gagal memuat master periode:', err);
       }
     };
-    fetchPeriods();
-  }, []);
+
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      fetchPeriods();
+      return;
+    }
+
+    const timer = setTimeout(fetchPeriods, 400);
+    return () => clearTimeout(timer);
+  }, [periodeSearchQuery]);
+
+  // Ambil objek Departemen terpilih agar bisa mengirim code/id ke endpoint /sub-departments
+  const selectedDeptObj = useMemo(() => {
+    if (!filterDept) return null;
+    return (deptOptions || []).find(
+      (d) =>
+        String(d.name || d).toLowerCase() === String(filterDept).toLowerCase() ||
+        String(d.code || '') === String(filterDept) ||
+        String(d.id || '') === String(filterDept)
+    );
+  }, [filterDept, deptOptions]);
+
+  // 2. LAZY FETCH Departemen: Hanya dipanggil saat popover filter dibuka
+  useEffect(() => {
+    if (!showFilterDropdown) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/departments', {
+          params: {
+            search: deptSearchQuery,
+            per_page: 50,
+          },
+        });
+        setDeptOptions(filterActive(res.data?.data || res.data));
+      } catch (err) {
+        console.error('Gagal memuat master departemen:', err);
+      }
+    }, deptSearchQuery ? 400 : 0);
+
+    return () => clearTimeout(timer);
+  }, [showFilterDropdown, deptSearchQuery]);
+
+  // 3. LAZY FETCH Sub Departemen: Hanya dipanggil saat popover filter dibuka
+  useEffect(() => {
+    if (!showFilterDropdown) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const deptParam = selectedDeptObj?.code || selectedDeptObj?.id || filterDept;
+        const res = await api.get('/sub-departments', {
+          params: {
+            search: subDeptSearchQuery,
+            department: deptParam,
+            department_code: selectedDeptObj?.code || '',
+            department_id: selectedDeptObj?.id || '',
+            per_page: 50,
+          },
+        });
+        setSubDeptOptions(filterActive(res.data?.data || res.data));
+      } catch (err) {
+        console.error('Gagal memuat master sub departemen:', err);
+      }
+    }, subDeptSearchQuery ? 400 : 0);
+
+    return () => clearTimeout(timer);
+  }, [showFilterDropdown, subDeptSearchQuery, filterDept, selectedDeptObj]);
+
+  // Fallback filter Sub Departemen agar sesuai Departemen terpilih
+  const displayedSubDeptOptions = useMemo(() => {
+    if (!filterDept) return subDeptOptions || [];
+    return (subDeptOptions || []).filter((sub) => {
+      if (selectedDeptObj?.code && sub.department_code) {
+        return (
+          String(sub.department_code).toLowerCase() ===
+          String(selectedDeptObj.code).toLowerCase()
+        );
+      }
+      if (selectedDeptObj?.id !== undefined && sub.department_id !== undefined) {
+        return String(sub.department_id) === String(selectedDeptObj.id);
+      }
+      const parentName = sub.department?.name || sub.department_name;
+      if (parentName) {
+        return String(parentName).toLowerCase() === String(filterDept).toLowerCase();
+      }
+      return true;
+    });
+  }, [subDeptOptions, filterDept, selectedDeptObj]);
 
   const handleResetFilters = () => {
     onDeptChange('');
     onSubDeptChange('');
     onSearchChange('');
+    setDeptSearchQuery('');
+    setSubDeptSearchQuery('');
+    setPage(1);
   };
+
+  const isFiltered = Boolean(filterDept || filterSubDept);
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     employeeId: true,
@@ -174,7 +282,7 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
     ],
     [navigate]
   );
-  
+
   const table = useReactTable({
     data,
     columns,
@@ -185,14 +293,14 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
       columnVisibility,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
     },
     onPaginationChange: (updater) => {
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);
@@ -213,10 +321,11 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
             Pilih Periode HR:
           </span>
         </div>
-      <div className="w-full md:w-80">
+        <div className="w-full md:w-80">
           <FormSelectSearch
             value={selectedPeriode}
             onChange={(val) => onPeriodeChange(val)}
+            onSearchChange={(query) => setPeriodeSearchQuery(query)}
             placeholder="-- Pilih Periode Berjalan --"
             options={[
               { id: '', label: '-- Pilih Periode Berjalan --' },
@@ -238,10 +347,12 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
           }}
           showFilterDropdown={showFilterDropdown}
           onToggleFilterDropdown={() => setShowFilterDropdown(!showFilterDropdown)}
+          isFiltered={isFiltered}
           filterDropdownContent={
             <TableFilterPopover
               isOpen={showFilterDropdown}
               onClose={() => setShowFilterDropdown(false)}
+              isFiltered={isFiltered}
               onReset={handleResetFilters}
               fields={[
                 {
@@ -253,13 +364,17 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
                       onChange={(val) => {
                         onDeptChange(val);
                         onSubDeptChange('');
+                        setSubDeptSearchQuery('');
+                        setPage(1);
                       }}
+                      onSearchChange={(query) => setDeptSearchQuery(query)}
                       placeholder="Semua Departemen"
                       options={[
                         { id: '', label: 'Semua Departemen' },
-                        { id: 'IT', label: 'IT' },
-                        { id: 'HRD', label: 'HRD' },
-                        { id: 'Operasional', label: 'Operasional' },
+                        ...(deptOptions || []).map((d) => ({
+                          id: String(d.name || d),
+                          label: String(d.name || d),
+                        })),
                       ]}
                     />
                   ),
@@ -267,36 +382,24 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
                 {
                   key: 'subDepartemen',
                   label: 'Sub Departemen',
-                  render: () => {
-                    let availableSubDepts = [
-                      { id: 'Frontend Engineering', label: 'Frontend Engineering' },
-                      { id: 'Backend Engineering', label: 'Backend Engineering' },
-                    ];
-
-                    if (filterDept === 'HRD') {
-                      availableSubDepts = [
-                        { id: 'Recruiting & Talent Acquisition', label: 'Recruiting & Talent Acquisition' },
-                        { id: 'Payroll & Benefits', label: 'Payroll & Benefits' },
-                      ];
-                    } else if (filterDept === 'Operasional') {
-                      availableSubDepts = [
-                        { id: 'Logistik & Gudang', label: 'Logistik & Gudang' },
-                        { id: 'Customer Service', label: 'Customer Service' },
-                      ];
-                    }
-
-                    return (
-                      <FormSelectSearch
-                        value={filterSubDept}
-                        onChange={(val) => onSubDeptChange(val)}
-                        placeholder="Semua Sub Departemen"
-                        options={[
-                          { id: '', label: 'Semua Sub Departemen' },
-                          ...availableSubDepts,
-                        ]}
-                      />
-                    );
-                  },
+                  render: () => (
+                    <FormSelectSearch
+                      value={filterSubDept}
+                      onChange={(val) => {
+                        onSubDeptChange(val);
+                        setPage(1);
+                      }}
+                      onSearchChange={(query) => setSubDeptSearchQuery(query)}
+                      placeholder="Semua Sub Departemen"
+                      options={[
+                        { id: '', label: 'Semua Sub Departemen' },
+                        ...(displayedSubDeptOptions || []).map((sd) => ({
+                          id: String(sd.name || sd),
+                          label: String(sd.name || sd),
+                        })),
+                      ]}
+                    />
+                  ),
                 },
               ]}
             />

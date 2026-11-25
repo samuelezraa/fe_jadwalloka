@@ -155,10 +155,11 @@ export const AnnualEventPage: React.FC = () => {
         }}
       />
 
-      <AnnualEventDialog
+     <AnnualEventDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         initialData={selectedItem}
+        existingEvents={Array.isArray(events) ? events : []}
         onSubmit={handleSubmitForm}
       />
 

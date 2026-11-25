@@ -10,12 +10,14 @@ import { SaveButton, CancelButton } from '../../../../components/ui/ActionButton
 
 interface AnnualEventFormProps {
   initialData?: AnnualEvent | null;
+  existingEvents?: AnnualEvent[];
   onSubmit: (data: any) => void;
   onCancel: () => void;
 }
 
 export const AnnualEventForm: React.FC<AnnualEventFormProps> = ({
   initialData,
+  existingEvents = [],
   onSubmit,
   onCancel,
 }) => {
@@ -25,6 +27,7 @@ export const AnnualEventForm: React.FC<AnnualEventFormProps> = ({
     register,
     control,
     handleSubmit,
+    setError,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<any>({
@@ -37,6 +40,45 @@ export const AnnualEventForm: React.FC<AnnualEventFormProps> = ({
     },
   });
 
+  const normalizeToIsoDate = (raw?: string): string => {
+    if (!raw) return '';
+    const clean = raw.trim().split('T')[0].split(' ')[0];
+    const dmyMatch = clean.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+    if (dmyMatch) {
+      const [, dd, mm, yyyy] = dmyMatch;
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return clean;
+  };
+
+  const parseDateRange = (rangeStr?: string) => {
+    if (!rangeStr) return { startDate: '', endDate: '' };
+    const parts = rangeStr.split(/\s*(?:~|\s-\s|s\/d)\s*/i).filter(Boolean);
+    const startDate = parts[0] ? normalizeToIsoDate(parts[0]) : '';
+    const endDate = parts[1] ? normalizeToIsoDate(parts[1]) : startDate;
+    return { startDate, endDate };
+  };
+
+  const toComparableNum = (isoDate: string): number => {
+    return Number(isoDate.replaceAll('-', ''));
+  };
+
+  const hasOverlap = (startA: string, endA: string, startB: string, endB: string): boolean => {
+    const normStartA = normalizeToIsoDate(startA);
+    const normEndA = normalizeToIsoDate(endA || startA);
+    const normStartB = normalizeToIsoDate(startB);
+    const normEndB = normalizeToIsoDate(endB || startB);
+
+    if (!normStartA || !normStartB) return false;
+
+    const s1 = toComparableNum(normStartA);
+    const e1 = toComparableNum(normEndA);
+    const s2 = toComparableNum(normStartB);
+    const e2 = toComparableNum(normEndB);
+
+    return s1 <= e2 && e1 >= s2;
+  };
+
   useEffect(() => {
     if (initialData) {
       const rawActive = (initialData as any).is_active ?? (initialData as any).status;
@@ -45,11 +87,10 @@ export const AnnualEventForm: React.FC<AnnualEventFormProps> = ({
       );
       const rawHoliday = (initialData as any).is_national_holiday ?? true;
 
-      let start = initialData.start_date || (initialData as any).event_date || (initialData as any).tanggal || '';
-      let end = initialData.end_date || '';
-
-      if (start.includes('T')) start = start.split('T')[0];
-      if (end && end.includes('T')) end = end.split('T')[0];
+      const start = normalizeToIsoDate(
+        initialData.start_date || (initialData as any).event_date || (initialData as any).tanggal || ''
+      );
+      const end = normalizeToIsoDate(initialData.end_date || '');
 
       const dateRangeStr = end && end !== start ? `${start} - ${end}` : start;
 
@@ -72,9 +113,28 @@ export const AnnualEventForm: React.FC<AnnualEventFormProps> = ({
   }, [initialData, reset]);
 
   const handleFormSubmit = (values: any) => {
-    const dates = values.date_range ? values.date_range.split(' - ') : ['', ''];
-    const startDate = dates[0] ? dates[0].trim() : '';
-    const endDate = dates[1] ? dates[1].trim() : startDate;
+    const { startDate, endDate } = parseDateRange(values.date_range);
+
+    const isDuplicate = existingEvents.some((ev) => {
+      if (initialData?.id !== undefined && String(ev.id) === String(initialData.id)) {
+        return false;
+      }
+
+      const evStart = normalizeToIsoDate(
+        ev.start_date || (ev as any).event_date || (ev as any).tanggal || ''
+      );
+      const evEnd = normalizeToIsoDate(ev.end_date || evStart);
+
+      return hasOverlap(startDate, endDate, evStart, evEnd);
+    });
+
+    if (isDuplicate) {
+      setError('date_range', {
+        type: 'manual',
+        message: 'Tanggal event bentrok dengan event tahunan yang sudah ada.',
+      });
+      return;
+    }
 
     const payload = {
       title: values.title,
@@ -106,16 +166,18 @@ export const AnnualEventForm: React.FC<AnnualEventFormProps> = ({
           control={control}
           rules={{ required: 'Rentang tanggal wajib diisi' }}
           render={({ field }) => {
-            const dates = field.value ? field.value.split(' - ') : ['', ''];
+            const { startDate, endDate } = parseDateRange(field.value);
             return (
               <DateRangePicker
-                startDate={dates[0] || ''}
-                endDate={dates[1] || dates[0] || ''}
+                startDate={startDate}
+                endDate={endDate}
                 onChange={(start, end) => {
-                  if (start && end && end !== start) {
-                    field.onChange(`${start} - ${end}`);
-                  } else if (start) {
-                    field.onChange(start);
+                  const normStart = normalizeToIsoDate(start);
+                  const normEnd = normalizeToIsoDate(end);
+                  if (normStart && normEnd && normEnd !== normStart) {
+                    field.onChange(`${normStart} - ${normEnd}`);
+                  } else if (normStart) {
+                    field.onChange(normStart);
                   } else {
                     field.onChange('');
                   }

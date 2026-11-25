@@ -25,7 +25,7 @@ export interface DetailKehadiranHarian {
   no: number;
   day: string;               // 👈 hari -> day
   date: string;              // 👈 tanggal -> date
-  attendanceStatus: 'Berangkat' | 'Libur' | 'PH' | 'Alfa' | 'Cuti'; // 👈 kehadiran -> attendanceStatus
+ attendanceStatus: 'Berangkat' | 'Libur' | 'PH' | 'Izin' | 'Alfa' | 'Cuti';
   scheduledCheckIn: string;  // 👈 jamDatang -> scheduledCheckIn
   scheduledCheckOut: string; // 👈 jamPulang -> scheduledCheckOut
   actualCheckIn: string;     // 👈 absenDatang -> actualCheckIn

@@ -8,6 +8,7 @@ import {
 import type { EmployeePresence } from '../types/employee-presence.type';
 import { DataPagination } from '@/components/DataPagination';
 import { Users } from 'lucide-react';
+import { api } from '@/lib/axios'; // 👈 Import instance axios
 
 // Reusable UI Components
 import { TableToolbar } from '@/components/ui/TableToolbar';
@@ -63,6 +64,46 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({
 }) => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const filterWrapperRef = useRef<HTMLDivElement>(null);
+
+  // State untuk menampung opsi periode dinamis dari backend
+  const [periodOptions, setPeriodOptions] = useState<{ id: string; label: string }[]>([]);
+
+  // Fungsi fetch master periode dengan dukungan search dari backend (Server-Side Search)
+  const fetchPeriods = async (query = '') => {
+    try {
+      const res = await api.get('/periods', {
+        params: { search: query, status: 'true', per_page: 50 },
+      });
+      const items = res.data?.data || res.data || [];
+
+      const mapped = (Array.isArray(items) ? items : [])
+        .filter((p: any) => (p.isActive ?? p.is_active) !== false)
+        .map((p: any) => {
+          const code = String(p.code ?? p.idPeriode ?? p.id ?? '');
+          const name = p.periode ?? p.name ?? code;
+          const startDateVal = p.tanggalAwal ?? p.start_date ?? '';
+          const endDateVal = p.tanggalAkhir ?? p.end_date ?? '';
+
+          const dateRange =
+            startDateVal && endDateVal && startDateVal !== '-' && endDateVal !== '-'
+              ? ` (${startDateVal} — ${endDateVal})`
+              : '';
+
+          return {
+            id: code,
+            label: `${name}${dateRange}`,
+          };
+        });
+
+      setPeriodOptions(mapped);
+    } catch (err) {
+      console.error('Gagal memuat master periode:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPeriods();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -129,14 +170,14 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
     },
     onPaginationChange: (updater) => {
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);
@@ -182,11 +223,11 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({
                       <FormSelectSearch
                         value={selectedPeriode}
                         onChange={onPeriodeChange}
+                        onSearchChange={(query) => fetchPeriods(query)} // 👈 Pencarian periode terhubung ke backend
                         placeholder="Pilih Periode..."
                         options={[
                           { id: '', label: 'Semua Periode' },
-                          { id: '2026-09', label: 'September 2026' },
-                          { id: '2026-10', label: 'Oktober 2026' },
+                          ...periodOptions,
                         ]}
                       />
                     ),

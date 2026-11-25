@@ -37,7 +37,7 @@ interface GradeTableProps {
 
 export const GradeTable: React.FC<GradeTableProps> = ({
   data = [],
-  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 25, from: null, to: null },
   setPage,
   setPageSize,
   onEdit,
@@ -59,7 +59,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
         header: '#',
         cell: (info) => (
           <span className="font-medium text-gray-500 dark:text-gray-400">
-            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 10)}
+            {info.row.index + 1 + ((meta?.current_page ?? 1) - 1) * (meta?.per_page ?? 25)}
           </span>
         ),
       },
@@ -82,6 +82,23 @@ export const GradeTable: React.FC<GradeTableProps> = ({
           const val = info.getValue() || (info.row.original as any).grade || (info.row.original as any).nama_grade;
           return (
             <span className="font-semibold text-gray-800 dark:text-gray-100">
+              {String(val || '-')}
+            </span>
+          );
+        },
+      },
+      // 👇 Kolom Baru: Keterangan Level (di sebelah kanan Nama Grade)
+      {
+        accessorKey: 'level_description',
+        header: 'Level',
+        cell: (info) => {
+          const val =
+            info.getValue() ||
+            (info.row.original as any).description ||
+            (info.row.original as any).keterangan_level ||
+            (info.row.original as any).level;
+          return (
+            <span className="text-gray-600 dark:text-gray-300 text-xs">
               {String(val || '-')}
             </span>
           );
@@ -131,7 +148,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -139,7 +156,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);
@@ -199,7 +216,7 @@ export const GradeTable: React.FC<GradeTableProps> = ({
           <DataPagination table={table} />
         </div>
 
-        {/* Mobile View */}
+       {/* Mobile View */}
         <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
           {rows.length > 0 ? (
             rows.map((row) => {
@@ -208,6 +225,12 @@ export const GradeTable: React.FC<GradeTableProps> = ({
               const isAktif = Boolean(rawActive === true || rawActive === 1 || rawActive === 'Aktif');
               const codeVal = item.code || (item as any).id || (item as any).kode_grade;
               const nameVal = item.name || (item as any).grade || (item as any).nama_grade;
+              const descVal =
+                (item as any).level_description ||
+                (item as any).description ||
+                (item as any).keterangan_level ||
+                (item as any).level ||
+                '-';
 
               return (
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-3">
@@ -226,9 +249,15 @@ export const GradeTable: React.FC<GradeTableProps> = ({
                       {isAktif ? 'Aktif' : 'Non Aktif'}
                     </Badge>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Nama Grade</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{nameVal}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Nama Grade</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{nameVal}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Keterangan Level</p>
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">{descVal}</p>
+                    </div>
                   </div>
                   <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
                     <EditActionButton onClick={() => onEdit(item)} />

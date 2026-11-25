@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom'; // 🟢 Tambahkan useLocation
-import { ArrowLeft, Clock } from 'lucide-react';
+import { ArrowLeft} from 'lucide-react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -22,7 +22,7 @@ interface DailyScheduleDetail {
   no: number;
   dayName: string;
   date: string;
-  attendanceStatus: 'Berangkat' | 'Libur' | 'PH' | 'Cuti';
+  attendanceStatus: 'Berangkat' | 'Libur' | 'PH' | 'Izin' | 'Cuti';
   scheduledCheckIn: string;
   scheduledCheckOut: string;
   actualCheckIn: string;
@@ -35,6 +35,24 @@ export const EditEmployeeSchedulePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation(); // 🟢 Ambil informasi URL location
+
+
+  const getAttendanceStatusColorClass = (status: DailyScheduleDetail['attendanceStatus']) => {
+  switch (status) {
+    case 'Berangkat':
+      return 'text-emerald-600 dark:text-emerald-400 font-semibold';
+    case 'Libur':
+      return 'text-amber-600 dark:text-amber-400 font-semibold';
+    case 'PH':
+      return 'text-purple-600 dark:text-purple-400 font-semibold';
+    case 'Izin':
+      return 'text-sky-600 dark:text-sky-400 font-semibold';
+    case 'Cuti':
+      return 'text-indigo-600 dark:text-indigo-400 font-semibold';
+    default:
+      return 'text-gray-700 dark:text-gray-300';
+  }
+};
 
   // 🟢 Deteksi apakah mode readonly aktif berdasarkan query parameter (?readonly=true)
   const searchParams = new URLSearchParams(location.search);
@@ -158,34 +176,41 @@ export const EditEmployeeSchedulePage: React.FC = () => {
     {
       accessorKey: 'attendanceStatus',
       header: 'Kehadiran',
-      cell: ({ row }) => (
-        <div className="w-32">
-          {/* 🟢 Disable FormSelect jika dalam mode readonly */}
-          <FormSelect
-            value={row.original.attendanceStatus}
-            onValueChange={(val) => handleFieldChange(row.original.id, 'attendanceStatus', val)}
-            options={[
-              { value: 'Berangkat', label: 'Berangkat' },
-              { value: 'Libur', label: 'Libur' },
-              { value: 'PH', label: 'PH' },
-              { value: 'Cuti', label: 'Cuti' },
-            ]}
-            disabled={isReadonly} 
-          />
-        </div>
-      ),
+      cell: ({ row }) => {
+        const statusColor = getAttendanceStatusColorClass(row.original.attendanceStatus);
+        return (
+          <div className={`w-32 ${statusColor} [&_button]:${statusColor.split(' ').join(' [&_button]:')}`}>
+            <FormSelect
+              value={row.original.attendanceStatus}
+              onValueChange={(val) => handleFieldChange(row.original.id, 'attendanceStatus', val)}
+              options={[
+                { value: 'Berangkat', label: 'Berangkat' },
+                { value: 'Libur', label: 'Libur' },
+                { value: 'PH', label: 'PH' },
+                { value: 'Izin', label: 'Izin' },
+                { value: 'Cuti', label: 'Cuti' },
+              ]}
+              disabled={isReadonly}
+              className={statusColor}
+            />
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'scheduledCheckIn',
       header: () => <div className="text-center">Jam Datang Jadwal</div>,
       cell: ({ row }) => (
-        <div className={`w-28 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 ${isReadonly ? 'opacity-70 cursor-not-allowed' : ''}`}>
-          <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0 mr-1 pointer-events-none" />
+        <div
+          className={`w-32 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 ${
+            isReadonly ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+        >
           <FormTimeInput
             value={row.original.scheduledCheckIn}
             onChange={(newVal) => handleFieldChange(row.original.id, 'scheduledCheckIn', newVal)}
-            className="text-center font-mono font-medium tracking-wide w-full"
-            disabled={isReadonly} // 🟢 Disable input jam jika readonly
+            className="text-center font-mono font-medium tracking-wide w-full px-1"
+            disabled={isReadonly}
           />
         </div>
       ),
@@ -194,13 +219,16 @@ export const EditEmployeeSchedulePage: React.FC = () => {
       accessorKey: 'scheduledCheckOut',
       header: () => <div className="text-center">Jam Pulang Jadwal</div>,
       cell: ({ row }) => (
-        <div className={`w-28 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 ${isReadonly ? 'opacity-70 cursor-not-allowed' : ''}`}>
-          <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0 mr-1 pointer-events-none" />
+        <div
+          className={`w-32 mx-auto flex items-center px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800 ${
+            isReadonly ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+        >
           <FormTimeInput
             value={row.original.scheduledCheckOut}
             onChange={(newVal) => handleFieldChange(row.original.id, 'scheduledCheckOut', newVal)}
-            className="text-center font-mono font-medium tracking-wide w-full"
-            disabled={isReadonly} // 🟢 Disable input jam jika readonly
+            className="text-center font-mono font-medium tracking-wide w-full px-1"
+            disabled={isReadonly}
           />
         </div>
       ),
@@ -270,11 +298,17 @@ export const EditEmployeeSchedulePage: React.FC = () => {
           showOnMobile={true} 
         />
 
-        {/* 🟢 Sembunyikan footer tombol Simpan jika mode readonly aktif */}
+        {/* Sembunyikan footer tombol Simpan jika mode readonly aktif */}
         {!isReadonly && (
-          <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-            <CancelButton onClick={() => navigate(-1)} />
-            <SaveButton onClick={() => setIsConfirmOpen(true)} />
+          <div className="flex items-center justify-center sm:justify-end gap-3 p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+            <CancelButton
+              onClick={() => navigate(-1)}
+              className="w-24 sm:w-auto justify-center"
+            />
+            <SaveButton
+              onClick={() => setIsConfirmOpen(true)}
+              className="w-24 sm:w-auto justify-center"
+            />
           </div>
         )}
       </div>

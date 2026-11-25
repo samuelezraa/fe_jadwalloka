@@ -34,7 +34,7 @@ export const useInputSchedule = (
     current_page: 1,
     last_page: 1,
     total: 0,
-    per_page: 10,
+    per_page: 25,
   });
 
   const [page, setPage] = useState<number>(1);

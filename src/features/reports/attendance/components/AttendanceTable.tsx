@@ -106,7 +106,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
   ) => {
     try {
       const res = await api.get(`/${endpoint}`, {
-        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+        params: { search: query, per_page: 25, status: 'true', ...extraParams },
       });
       const items = res.data?.data || res.data || [];
       setter(Array.isArray(items) ? items : []);
@@ -160,14 +160,18 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
         ),
       },
       {
-        accessorKey: 'nip',
-        header: 'NIP',
+        id: 'employee_id',
+        header: 'ID',
         size: 110,
-        cell: (info) => (
-          <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold">
-            {String(info.getValue() || '-')}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const item = row.original as any;
+          const empId = item.employee_id || item.nip || '-';
+          return (
+            <span className="font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 text-xs font-semibold">
+              {String(empId)}
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'name',
@@ -202,7 +206,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -210,7 +214,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);
@@ -436,7 +440,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
                 <div key={row.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                      NIP: {item.nip}
+                      ID: {(item as any).employee_id || item.nip}
                     </span>
                     <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                       {item.attendanceTime}

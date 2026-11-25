@@ -206,19 +206,21 @@ export const PosForm: React.FC<PosFormProps> = ({
       />
 
       {/* 3. Field ID POS */}
+      {/* 3. Field ID POS */}
       <div>
         <FormInput
           label="ID POS"
           {...register('code')}
           disabled={isEditMode}
+          maxLength={7}
           placeholder="Contoh: POS01"
           error={errors.code?.message}
         />
-        {isEditMode && (
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-            ID POS tidak dapat diubah.
-          </p>
-        )}
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          {isEditMode
+            ? 'ID POS tidak dapat diubah.'
+            : 'Format: POS diikuti 1 sampai 4 digit angka (contoh: POS1, POS01, POS8888).'}
+        </p>
       </div>
 
       {/* 4. Field Pos */}

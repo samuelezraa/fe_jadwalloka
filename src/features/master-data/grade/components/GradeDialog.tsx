@@ -8,6 +8,8 @@ interface GradeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: Grade | null;
+  existingGrades?: Grade[];
+  serverCodeError?: string | null;
   onSubmit: (data: GradeFormValues) => void;
 }
 
@@ -15,6 +17,8 @@ export const GradeDialog: React.FC<GradeDialogProps> = ({
   isOpen,
   onClose,
   initialData,
+  existingGrades = [],
+  serverCodeError = null,
   onSubmit,
 }) => {
   const isEditMode = !!initialData;
@@ -28,6 +32,8 @@ export const GradeDialog: React.FC<GradeDialogProps> = ({
     >
       <GradeForm
         initialData={initialData}
+        existingGrades={existingGrades}
+        serverCodeError={serverCodeError}
         onSubmit={onSubmit}
         onCancel={onClose}
       />

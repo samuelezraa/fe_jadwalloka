@@ -41,6 +41,25 @@ const KeteranganCell: React.FC<KeteranganCellProps> = ({ value, onChange }) => {
   );
 };
 
+const getAttendanceStatusColorClass = (status: string) => {
+  switch (status) {
+    case 'Berangkat':
+      return 'text-emerald-600 dark:text-emerald-400 font-semibold';
+    case 'Libur':
+      return 'text-amber-600 dark:text-amber-400 font-semibold';
+    case 'PH':
+      return 'text-purple-600 dark:text-purple-400 font-semibold';
+    case 'Izin':
+      return 'text-sky-600 dark:text-sky-400 font-semibold';
+    case 'Alfa':
+      return 'text-rose-600 dark:text-rose-400 font-semibold';
+    case 'Cuti':
+      return 'text-indigo-600 dark:text-indigo-400 font-semibold';
+    default:
+      return 'text-gray-700 dark:text-gray-300';
+  }
+};
+
 export const EditEmployeeAttendancePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -111,28 +130,33 @@ export const EditEmployeeAttendancePage: React.FC = () => {
     }
   };
 
-const columns: ColumnDef<DetailKehadiranHarian>[] = [
+  const columns: ColumnDef<DetailKehadiranHarian>[] = [
     { accessorKey: 'no', header: 'No.' },
     { accessorKey: 'day', header: 'Hari' },
     { accessorKey: 'date', header: 'Tanggal' },
     {
       accessorKey: 'attendanceStatus',
       header: 'Kehadiran',
-      cell: ({ row }) => (
-        <div className="w-32">
-          <FormSelect
-            value={row.original.attendanceStatus}
-            onValueChange={(val) => handleFieldChange(row.original.id, 'attendanceStatus', val)}
-            options={[
-              { value: 'Berangkat', label: 'Berangkat' },
-              { value: 'Libur', label: 'Libur' },
-              { value: 'PH', label: 'PH' },
-              { value: 'Alfa', label: 'Alfa' },
-              { value: 'Cuti', label: 'Cuti' },
-            ]}
-          />
-        </div>
-      ),
+      cell: ({ row }) => {
+        const statusColor = getAttendanceStatusColorClass(row.original.attendanceStatus);
+        return (
+          <div className={`w-32 ${statusColor}`}>
+            <FormSelect
+              value={row.original.attendanceStatus}
+              onValueChange={(val) => handleFieldChange(row.original.id, 'attendanceStatus', val)}
+              options={[
+                { value: 'Berangkat', label: 'Berangkat' },
+                { value: 'Libur', label: 'Libur' },
+                { value: 'PH', label: 'PH' },
+                { value: 'Izin', label: 'Izin' },
+                { value: 'Alfa', label: 'Alfa' },
+                { value: 'Cuti', label: 'Cuti' },
+              ]}
+              className={statusColor}
+            />
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'scheduledCheckIn',
@@ -195,6 +219,7 @@ const columns: ColumnDef<DetailKehadiranHarian>[] = [
     },
     { accessorKey: 'ref', header: 'Ref' },
   ];
+
   const table = useReactTable({
     data: jadwalList,
     columns,
@@ -297,9 +322,9 @@ const columns: ColumnDef<DetailKehadiranHarian>[] = [
         <DataTable table={table} columnsLength={columns.length} showOnMobile={true} />
 
         <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-          <CancelButton 
-            onClick={() => navigate('/hr-management/employee-attendance')} 
-            disabled={isSubmitting} 
+          <CancelButton
+            onClick={() => navigate('/hr-management/employee-attendance')}
+            disabled={isSubmitting}
           />
           <SaveButton onClick={() => setIsConfirmOpen(true)} isLoading={isSubmitting} />
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface SettingDropdownItem {
   key: string;
@@ -51,17 +52,18 @@ export const SettingDropdown: React.FC<SettingDropdownProps> = ({
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
-      <button
+      <Button
         type="button"
+        variant="default"
         onClick={() => setIsOpen(!isOpen)}
         className={
           buttonClassName ||
-          'flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition-all shadow-sm'
+          'flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 font-semibold rounded-full text-xs px-4 py-2 shadow-sm active:scale-95 transition-all'
         }
       >
         <Settings className="w-4 h-4" />
         <span>{label}</span>
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">

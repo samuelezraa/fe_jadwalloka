@@ -10,7 +10,6 @@ export const DepartemenPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusQuery, setStatusQuery] = useState('');
 
-  // 🌟 Ambil meta, page, dan setter pagination dari hook
   const { 
     departemens = [], 
     meta,
@@ -23,6 +22,7 @@ export const DepartemenPage: React.FC = () => {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDepartemen, setSelectedDepartemen] = useState<Departemen | null>(null);
+  const [serverErrors, setServerErrors] = useState<Record<string, string[]> | null>(null);
 
   const [pendingFormData, setPendingFormData] = useState<DepartemenFormValues | null>(null);
   const [isSubmittingApi, setIsSubmittingApi] = useState(false);
@@ -53,15 +53,20 @@ export const DepartemenPage: React.FC = () => {
 
   const handleOpenAdd = () => {
     setSelectedDepartemen(null);
+    setPendingFormData(null);
+    setServerErrors(null);
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (item: Departemen) => {
     setSelectedDepartemen(item);
+    setPendingFormData(null);
+    setServerErrors(null);
     setIsDialogOpen(true);
   };
 
   const handleSubmitForm = (formData: DepartemenFormValues) => {
+    setServerErrors(null);
     setPendingFormData(formData);
     setIsDialogOpen(false);
     setIsConfirmOpen(true);
@@ -75,13 +80,13 @@ export const DepartemenPage: React.FC = () => {
   const handleConfirmSave = async () => {
     if (!pendingFormData) return;
 
-    setIsDialogOpen(false);
     setIsConfirmOpen(false);
     setIsSubmittingApi(true);
 
     try {
       if (selectedDepartemen) {
         await editDepartemen(selectedDepartemen.id, pendingFormData);
+        setIsDialogOpen(false);
         setAlertConfig({
           isOpen: true,
           title: 'Berhasil Diperbarui!',
@@ -90,6 +95,7 @@ export const DepartemenPage: React.FC = () => {
         });
       } else {
         await addDepartemen(pendingFormData);
+        setIsDialogOpen(false);
         setAlertConfig({
           isOpen: true,
           title: 'Berhasil Ditambahkan!',
@@ -100,16 +106,11 @@ export const DepartemenPage: React.FC = () => {
 
       setPendingFormData(null);
       setSelectedDepartemen(null);
+      setServerErrors(null);
     } catch (error: any) {
-      const errorMessage = error?.message || 'Gagal menyimpan data departemen. Silakan coba lagi.';
-      
-      setIsDialogOpen(true); 
-      setAlertConfig({
-        isOpen: true,
-        title: 'Gagal Menyimpan!',
-        description: errorMessage,
-        variant: 'danger',
-      });
+      const apiErrors = error?.response?.data?.errors || null;
+      setServerErrors(apiErrors);
+      setIsDialogOpen(true);
     } finally {
       setIsSubmittingApi(false);
     }
@@ -125,7 +126,6 @@ export const DepartemenPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 🌟 Kirimkan props pagination lengkap ke DepartemenTable */}
       <DepartemenTable
         data={Array.isArray(departemens) ? departemens : []}
         meta={meta}
@@ -141,8 +141,15 @@ export const DepartemenPage: React.FC = () => {
 
       <DepartemenDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setPendingFormData(null);
+          setServerErrors(null);
+        }}
         initialData={selectedDepartemen}
+        draftValues={pendingFormData}
+        existingDepartemens={Array.isArray(departemens) ? departemens : []}
+        serverErrors={serverErrors}
         onSubmit={handleSubmitForm}
       />
 

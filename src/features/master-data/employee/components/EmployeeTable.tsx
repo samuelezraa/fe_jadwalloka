@@ -65,7 +65,7 @@ interface EmployeeTableProps {
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   data,
-  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 25, from: null, to: null },
   setPage,
   setPageSize,
   onEdit,
@@ -108,7 +108,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   const fetchFilterOptions = async (endpoint: string, query: string, setter: Function, extraParams = {}) => {
     try {
-      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 20, ...extraParams } });
+      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 25, ...extraParams } });
       const items = res.data.data || res.data || [];
       setter(items);
     } catch (err) {
@@ -348,7 +348,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -356,7 +356,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);

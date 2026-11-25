@@ -3,15 +3,18 @@ import type { Departemen } from '../types/departemen.type';
 import type { DepartemenFormValues } from '../schemas/departemen.schema';
 
 export const departemenService = {
-  getAll: async (search?: string, status?: string, page = 1, perPage = 10) => {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (status !== undefined && status !== '') params.append('status', status);
-    params.append('page', page.toString());
-    params.append('per_page', perPage.toString());
+  getAll: async (search?: string, status?: string, page = 1, perPage = 10, withSub = true) => {
+    const params: Record<string, string | number | boolean> = {
+      page,
+      per_page: perPage,
+    };
 
-    const response = await api.get(`/departments?${params.toString()}`);
-    
+    if (search?.trim()) params.search = search.trim();
+    if (status !== undefined && status !== '') params.status = status;
+    if (!withSub) params.with_sub = 0;
+
+    const response = await api.get('/departments', { params });
+
     return {
       data: response.data.data,
       meta: response.data.meta,

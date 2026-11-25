@@ -16,6 +16,19 @@ interface DateRangePickerProps {
 
 type ViewMode = 'calendar' | 'month' | 'year';
 
+const parseIsoParts = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const clean = dateStr.trim().split('T')[0].split(' ')[0];
+  const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]) - 1, // 0-indexed untuk state bulan
+    day: Number(match[3]),
+    iso: clean,
+  };
+};
+
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   startDate,
   endDate,
@@ -26,15 +39,17 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const initialDate = startDate ? new Date(startDate) : new Date();
+  const parsedInitial = parseIsoParts(startDate);
+  const now = new Date();
+
   const [currentMonth, setCurrentMonth] = useState(
-    !isNaN(initialDate.getTime()) ? initialDate.getMonth() : new Date().getMonth()
+    parsedInitial ? parsedInitial.month : now.getMonth()
   );
   const [currentYear, setCurrentYear] = useState(
-    !isNaN(initialDate.getTime()) ? initialDate.getFullYear() : new Date().getFullYear()
+    parsedInitial ? parsedInitial.year : now.getFullYear()
   );
   const [yearRangeStart, setYearRangeStart] = useState(
-    Math.floor(currentYear / 12) * 12
+    Math.floor((parsedInitial ? parsedInitial.year : now.getFullYear()) / 12) * 12
   );
   const [selectingStep, setSelectingStep] = useState<'start' | 'end'>('start');
 
@@ -78,15 +93,17 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       setCurrentYear(year);
     }
 
+    const cleanStart = parseIsoParts(startDate)?.iso || '';
+
     if (selectingStep === 'start') {
       onChange(clickedDate, '');
       setSelectingStep('end');
     } else {
-      if (new Date(clickedDate) < new Date(startDate)) {
+      if (cleanStart && clickedDate < cleanStart) {
         onChange(clickedDate, '');
         setSelectingStep('end');
       } else {
-        onChange(startDate, clickedDate);
+        onChange(cleanStart || clickedDate, clickedDate);
         setSelectingStep('start');
         setIsOpen(false);
       }
@@ -94,18 +111,21 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   };
 
   const formatDateForDisplay = (dateString: string) => {
-    if (!dateString) return '';
-    const [y, m, d] = dateString.split('-');
-    return `${d}-${m}-${y}`;
+    const parsed = parseIsoParts(dateString);
+    if (!parsed) return '';
+    return `${String(parsed.day).padStart(2, '0')}-${String(parsed.month + 1).padStart(2, '0')}-${parsed.year}`;
   };
 
-  const displayValue = startDate
-    ? `${formatDateForDisplay(startDate)} ~ ${endDate ? formatDateForDisplay(endDate) : 'DD-MM-YYYY'}`
+  const cleanStartIso = parseIsoParts(startDate)?.iso || '';
+  const cleanEndIso = parseIsoParts(endDate)?.iso || '';
+
+  const displayValue = cleanStartIso
+    ? `${formatDateForDisplay(cleanStartIso)} ~ ${cleanEndIso ? formatDateForDisplay(cleanEndIso) : 'DD-MM-YYYY'}`
     : '';
 
   const totalDays = getDaysInMonth(currentMonth, currentYear);
   const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
-  
+
   const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
   const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
   const daysInPrevMonth = getDaysInMonth(prevMonth, prevYear);
@@ -129,6 +149,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const allDays = [...prevDays, ...currDays, ...nextDays];
   const yearGrid = Array.from({ length: 12 }, (_, i) => yearRangeStart + i);
 
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+
   return (
     <div className="relative w-full text-left" ref={popoverRef}>
       {/* Input Trigger */}
@@ -136,13 +159,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         onClick={() => {
           if (!isOpen) {
             setViewMode('calendar');
-            if (startDate) {
-              const d = new Date(startDate);
-              if (!isNaN(d.getTime())) {
-                setCurrentMonth(d.getMonth());
-                setCurrentYear(d.getFullYear());
-                setYearRangeStart(Math.floor(d.getFullYear() / 12) * 12);
-              }
+            const parsed = parseIsoParts(startDate);
+            if (parsed) {
+              setCurrentMonth(parsed.month);
+              setCurrentYear(parsed.year);
+              setYearRangeStart(Math.floor(parsed.year / 12) * 12);
             }
           }
           setIsOpen(!isOpen);
@@ -279,11 +300,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               <div className="grid grid-cols-7 gap-y-0.5 text-center mt-1.5">
                 {allDays.map((dateObj, index) => {
                   const currentStr = `${dateObj.year}-${String(dateObj.month + 1).padStart(2, '0')}-${String(dateObj.day).padStart(2, '0')}`;
-                  const isStart = currentStr === startDate;
-                  const isEnd = currentStr === endDate;
-                  const isBetween = startDate && endDate && currentStr > startDate && currentStr < endDate;
-
-                  const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+                  const isStart = currentStr === cleanStartIso;
+                  const isEnd = currentStr === cleanEndIso;
+                  const isBetween = cleanStartIso && cleanEndIso && currentStr > cleanStartIso && currentStr < cleanEndIso;
                   const isToday = currentStr === todayStr;
 
                   let textClass = dateObj.isCurrentMonth
@@ -297,10 +316,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                   let bgClass = '';
                   if (isStart || isEnd) {
                     bgClass = 'bg-emerald-500 text-white font-bold shadow-sm hover:bg-emerald-600';
-                    textClass = ''; 
+                    textClass = '';
                   } else if (isBetween) {
                     bgClass = 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
-                    textClass = ''; 
+                    textClass = '';
                   }
 
                   return (

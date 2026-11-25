@@ -1,107 +1,117 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { HrRoute } from './components/HrRoute';
+import { ProtectedPageRoute } from './components/ProtectedPageRoute';
 
-// ==========================================
+const lazyLoad = (importer: () => Promise<any>, exportName: string) =>
+  lazy(() => importer().then((m) => ({ default: m[exportName] || m.default })));
+
 // 1. AUTHENTICATION
-// ==========================================
-import { LoginPage } from './features/auth/pages/LoginPage';
+const LoginPage = lazyLoad(() => import('./features/auth/pages/LoginPage'), 'LoginPage');
 
-// ==========================================
 // 2. DASHBOARD
-// ==========================================
-import { DashboardPage } from './features/dashboard/pages/DashboardPage';
+const DashboardPage = lazyLoad(() => import('./features/dashboard/pages/DashboardPage'), 'DashboardPage');
 
-// ==========================================
 // 3. MASTER DATA
-// ==========================================
-import { DepartemenPage } from './features/master-data/departemen/pages/DepartemenPage';
-import { SubDepartemenPage } from './features/master-data/sub-departemen/pages/SubDepartemenPage';
-import { PosPage } from './features/master-data/pos/pages/PosPage';
-import { GradePage } from './features/master-data/grade/pages/GradePage';
-import { ScheduleSchemePage } from './features/master-data/schedule-scheme/pages/ScheduleSchemePage';
-import { AnnualEventPage } from './features/master-data/annual-event/pages/AnnualEventPage';
-import { EmployeePage } from './features/master-data/employee/pages/EmployeePage';
-import { CustomWorkHourPage } from './features/master-data/custom-work-hours/pages/CustomWorkHourPage';
+const DepartemenPage = lazyLoad(() => import('./features/master-data/departemen/pages/DepartemenPage'), 'DepartemenPage');
+const SubDepartemenPage = lazyLoad(() => import('./features/master-data/sub-departemen/pages/SubDepartemenPage'), 'SubDepartemenPage');
+const PosPage = lazyLoad(() => import('./features/master-data/pos/pages/PosPage'), 'PosPage');
+const GradePage = lazyLoad(() => import('./features/master-data/grade/pages/GradePage'), 'GradePage');
+const ScheduleSchemePage = lazyLoad(() => import('./features/master-data/schedule-scheme/pages/ScheduleSchemePage'), 'ScheduleSchemePage');
+const AnnualEventPage = lazyLoad(() => import('./features/master-data/annual-event/pages/AnnualEventPage'), 'AnnualEventPage');
+const EmployeePage = lazyLoad(() => import('./features/master-data/employee/pages/EmployeePage'), 'EmployeePage');
+const CustomWorkHourPage = lazyLoad(() => import('./features/master-data/custom-work-hours/pages/CustomWorkHourPage'), 'CustomWorkHourPage');
 
-// ==========================================
 // 4. JADWAL
-// ==========================================
-import { FiveTwoWorkHourPage } from './features/schedule/five-two-work-hour/pages/FiveTwoWorkHourPage';
-import { InputSchedulePage } from './features/schedule/input-schedule/pages/InputSchedulePage';
-import { EditEmployeeSchedulePage } from './features/schedule/input-schedule/pages/EditEmployeeSchedulePage';
-import { MySchedulePage } from './features/schedule/my-schedule/pages/MySchedulePage';
+const FiveTwoWorkHourPage = lazyLoad(() => import('./features/schedule/five-two-work-hour/pages/FiveTwoWorkHourPage'), 'FiveTwoWorkHourPage');
+const InputSchedulePage = lazyLoad(() => import('./features/schedule/input-schedule/pages/InputSchedulePage'), 'InputSchedulePage');
+const EditEmployeeSchedulePage = lazyLoad(() => import('./features/schedule/input-schedule/pages/EditEmployeeSchedulePage'), 'EditEmployeeSchedulePage');
+const MySchedulePage = lazyLoad(() => import('./features/schedule/my-schedule/pages/MySchedulePage'), 'MySchedulePage');
 
-// ==========================================
-// 5. HR MANAGEMENT 🌟
-// ==========================================
-import { SchedulePeriodPage } from './features/hr-management/period/pages/SchedulePeriodPage';
-import { EmployeeAttendancePage } from './features/hr-management/employee-attendance/pages/EmployeeAttendancePage';
-import { EditEmployeeAttendancePage } from './features/hr-management/employee-attendance/pages/EditEmployeeAttendancePage';
+// 5. HR MANAGEMENT
+const SchedulePeriodPage = lazyLoad(() => import('./features/hr-management/period/pages/SchedulePeriodPage'), 'SchedulePeriodPage');
+const EmployeeAttendancePage = lazyLoad(() => import('./features/hr-management/employee-attendance/pages/EmployeeAttendancePage'), 'EmployeeAttendancePage');
+const EditEmployeeAttendancePage = lazyLoad(() => import('./features/hr-management/employee-attendance/pages/EditEmployeeAttendancePage'), 'EditEmployeeAttendancePage');
 
-// ==========================================
 // 6. LAPORAN
-// ==========================================
-import { AttendancePage } from './features/reports/attendance/pages/AttendancePage';
-import { PivotPage } from './features/reports/pivot/pages/PivotPage';
-import { KomplimenPage } from './features/reports/komplimen/pages/KomplimenPage';
-import { EmployeePresencePage } from './features/reports/employee-presence/pages/EmployeePresencePage';
+const AttendancePage = lazyLoad(() => import('./features/reports/attendance/pages/AttendancePage'), 'AttendancePage');
+const PivotPage = lazyLoad(() => import('./features/reports/pivot/pages/PivotPage'), 'PivotPage');
+const KomplimenPage = lazyLoad(() => import('./features/reports/komplimen/pages/KomplimenPage'), 'KomplimenPage');
+const EmployeePresencePage = lazyLoad(() => import('./features/reports/employee-presence/pages/EmployeePresencePage'), 'EmployeePresencePage');
 
-// ==========================================
 // 7. LOG HISTORY
-// ==========================================
-import { LogHistoryPage } from './features/log-history/pages/LogHistoryPage';
+const LogHistoryPage = lazyLoad(() => import('./features/log-history/pages/LogHistoryPage'), 'LogHistoryPage');
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 animate-pulse">
+      Memuat halaman...
+    </p>
+  </div>
+);
+
+const RESTRICTED_DEPT_ADMIN_ROLES = ['SALES', 'MANAGEMENT'];
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Route Khusus Login */}
-        <Route path="/login" element={<LoginPage />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Route Utama dengan MainLayout */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* DASHBOARD */}
-          <Route path="/dashboard" element={<DashboardPage />} />
+            {/* HALAMAN YANG BOLEH DIAKSES SEMUA ROLE TERMASUK SALES & MANAGEMENT */}
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
+            <Route path="/schedule/my-schedule" element={<MySchedulePage />} />
 
-          {/* MASTER DATA */}
-          <Route path="/master-data/departemen" element={<DepartemenPage />} />
-          <Route path="/master-data/sub-departemen" element={<SubDepartemenPage />} />
-          <Route path="/master-data/pos" element={<PosPage />} />
-          <Route path="/master-data/grade" element={<GradePage />} />
-          <Route path="/master-data/schedule-scheme" element={<ScheduleSchemePage />} />
-          <Route path="/master-data/annual-event" element={<AnnualEventPage />} />
-          <Route path="/master-data/employee" element={<EmployeePage />} />
-          <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
+            {/* HALAMAN LAINNYA (TIDAK BOLEH DIAKSES OLEH SALES & MANAGEMENT) */}
+            <Route
+              element={
+                <ProtectedPageRoute
+                  allowedRoles={['IT', 'HR', 'ADMIN']}
+                  redirectTo="/dashboard"
+                />
+              }
+            >
+              {/* MASTER DATA */}
+              <Route path="/master-data/departemen" element={<DepartemenPage />} />
+              <Route path="/master-data/sub-departemen" element={<SubDepartemenPage />} />
+              <Route path="/master-data/pos" element={<PosPage />} />
+              <Route path="/master-data/grade" element={<GradePage />} />
+              <Route path="/master-data/schedule-scheme" element={<ScheduleSchemePage />} />
+              <Route path="/master-data/annual-event" element={<AnnualEventPage />} />
+              <Route path="/master-data/employee" element={<EmployeePage />} />
+              <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
 
-          {/* JADWAL */}
-          <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
-          <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
-          <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
-          <Route path="/schedule/my-schedule" element={<MySchedulePage />} />
+              {/* JADWAL LAINNYA */}
+              <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
+              <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
 
-          {/* HR MANAGEMENT 🌟 (Dilindungi oleh HrRoute) */}
-          <Route element={<HrRoute />}>
-            <Route path="/hr-management/period" element={<SchedulePeriodPage />} />
-            <Route path="/hr-management/employee-attendance" element={<EmployeeAttendancePage />} />
-            <Route path="/hr-management/employee-attendance/edit/:id" element={<EditEmployeeAttendancePage />} />
+              {/* HR MANAGEMENT */}
+              <Route element={<HrRoute />}>
+                <Route path="/hr-management/period" element={<SchedulePeriodPage />} />
+                <Route path="/hr-management/employee-attendance" element={<EmployeeAttendancePage />} />
+                <Route path="/hr-management/employee-attendance/edit/:id" element={<EditEmployeeAttendancePage />} />
+              </Route>
+
+              {/* LAPORAN */}
+              <Route path="/reports/attendance" element={<AttendancePage />} />
+              <Route path="/reports/pivot" element={<PivotPage />} />
+              <Route path="/reports/komplimen" element={<KomplimenPage />} />
+              <Route path="/reports/employee-presence" element={<EmployeePresencePage />} />
+
+              {/* LOG HISTORY */}
+              <Route path="/log-history" element={<LogHistoryPage />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
-
-          {/* LAPORAN */}
-          <Route path="/reports/attendance" element={<AttendancePage />} />
-          <Route path="/reports/pivot" element={<PivotPage />} />
-          <Route path="/reports/komplimen" element={<KomplimenPage />} />
-          <Route path="/reports/employee-presence" element={<EmployeePresencePage />} />
-
-          {/* LOG HISTORY */}
-          <Route path="/log-history" element={<LogHistoryPage />} />
-
-          {/* Catch-all 404 Route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

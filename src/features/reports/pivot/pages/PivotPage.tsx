@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { usePivot } from '../hooks/usePivot';
 import { PivotTable } from '../components/PivotTable';
 import { pivotService } from '../services/pivot.service';
-import { api } from '@/lib/axios';
 import toast from 'react-hot-toast';
 
 export const PivotPage: React.FC = () => {
@@ -30,29 +29,7 @@ export const PivotPage: React.FC = () => {
     setGradeFilter,
     skemaFilter,
     setSkemaFilter,
-    departemenList,
-    subDepartemenList,
-    posList,
-    gradeList,
-    skemaList,
   } = usePivot();
-
- // State untuk Master Data Periode Aktif
-  const [periodeList, setPeriodeList] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchPeriods = async () => {
-      try {
-        const res = await api.get('/periods', { params: { status: 'true', per_page: 50 } });
-        const rawPeriods = res.data?.data || res.data || [];
-        // 🟢 Hanya ambil periode yang aktif
-        setPeriodeList(rawPeriods.filter((p: any) => p.is_active !== false && p.is_active !== 0 && p.is_active !== '0'));
-      } catch (err) {
-        console.error('Gagal memuat master periode:', err);
-      }
-    };
-    fetchPeriods();
-  }, []);
 
   const handleExport = async () => {
     const toastId = toast.loading('Menyiapkan dan mengunduh file Excel...');
@@ -75,7 +52,7 @@ export const PivotPage: React.FC = () => {
       link.href = url;
       link.setAttribute(
         'download',
-        `Laporan_Pivot_${new Date().toISOString().slice(0, 10)}.xlsx`
+        `Laporan_Pivot_${new Date().toISOString().slice(0, 10)}.csv`
       );
       document.body.appendChild(link);
       link.click();
@@ -122,12 +99,6 @@ export const PivotPage: React.FC = () => {
         onGradeChange={setGradeFilter}
         skemaFilter={skemaFilter}
         onSkemaChange={setSkemaFilter}
-        departemenList={departemenList}
-        subDepartemenList={subDepartemenList}
-        posList={posList}
-        gradeList={gradeList}
-        skemaList={skemaList}
-        periodeList={periodeList} // 👈 Masukkan periodeList ke PivotTable
         onExport={handleExport}
       />
     </div>

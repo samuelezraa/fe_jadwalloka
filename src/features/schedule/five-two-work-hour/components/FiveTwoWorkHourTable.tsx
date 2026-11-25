@@ -51,9 +51,24 @@ interface FiveTwoWorkHourTableProps {
   subDepartemenList?: any[];
 }
 
+const LOCKED_ROLE_DEPT_MAP: Record<string, string> = {
+  SALES: 'Sales',
+  MANAGEMENT: 'Management',
+  IT: 'IT',
+};
+
+const getStoredUser = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   data = [],
-  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10, from: null, to: null },
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 25, from: null, to: null },
   setPage,
   setPageSize,
   onEdit,
@@ -79,6 +94,44 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
   const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
 
+  const currentUser = useMemo(() => getStoredUser(), []);
+  const roleUpper = String(currentUser?.role ?? '').trim().toUpperCase();
+  const isDepartmentLocked = roleUpper in LOCKED_ROLE_DEPT_MAP;
+
+  const lockedDeptId = useMemo(() => {
+    if (!isDepartmentLocked) return '';
+
+    const explicitDeptId =
+      currentUser?.department_id ??
+      (typeof currentUser?.department === 'object' ? currentUser?.department?.id : '');
+
+    if (explicitDeptId !== undefined && explicitDeptId !== null && String(explicitDeptId) !== '') {
+      return String(explicitDeptId);
+    }
+
+    const explicitDeptName =
+      typeof currentUser?.department === 'string'
+        ? currentUser.department.trim()
+        : String(currentUser?.department?.name ?? '').trim();
+
+    const targetName = (explicitDeptName || LOCKED_ROLE_DEPT_MAP[roleUpper] || '')
+      .trim()
+      .toLowerCase();
+
+    const matchedDept = asyncDeptOptions.find((d) => {
+      const dName = String(d.name || d.departemen || '').trim().toLowerCase();
+      return targetName !== '' && (dName === targetName || dName.includes(targetName));
+    });
+
+    return matchedDept ? String(matchedDept.id) : '';
+  }, [isDepartmentLocked, currentUser, roleUpper, asyncDeptOptions]);
+
+  useEffect(() => {
+    if (isDepartmentLocked && lockedDeptId && deptFilter !== lockedDeptId) {
+      onDeptFilterChange(lockedDeptId);
+    }
+  }, [isDepartmentLocked, lockedDeptId, deptFilter, onDeptFilterChange]);
+
   useEffect(() => {
     setAsyncDeptOptions(departemenList);
   }, [departemenList]);
@@ -95,7 +148,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   ) => {
     try {
       const res = await api.get(`/${endpoint}`, {
-        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+        params: { search: query, per_page: 25, status: 'true', ...extraParams },
       });
       const items = res.data.data || res.data || [];
       setter(items);
@@ -125,7 +178,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
     };
   }, [showFilterDropdown]);
 
-  const isFiltered = Boolean(deptFilter || subDeptFilter || statusFilter);
+  const isFiltered = Boolean((!isDepartmentLocked && deptFilter) || subDeptFilter || statusFilter);
 
   const columns = useMemo<ColumnDef<FiveTwoWorkHourEmployee>[]>(
     () => [
@@ -227,8 +280,36 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
     [onEdit, meta]
   );
 
+  const uniqueData = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+    const seen = new Set<string>();
+
+    return data.filter((item: any) => {
+      const empKey =
+        item.employee_id_code ||
+        item.employee?.employee_id ||
+        item.employee_id ||
+        item.employee?.id ||
+        item.nip ||
+        item.id;
+
+      const fallbackKey = `${item.employee_name || item.name || ''}|${
+        item.department_name || item.department?.name || ''
+      }|${item.sub_department_name || item.sub_department?.name || ''}`;
+
+      const key =
+        empKey !== undefined && empKey !== null && String(empKey) !== ''
+          ? `emp:${String(empKey)}`
+          : `row:${fallbackKey}`;
+
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [data]);
+
   const table = useReactTable({
-    data: data,
+    data: uniqueData,
     columns,
     pageCount: meta.last_page,
     manualPagination: true,
@@ -236,7 +317,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -244,7 +325,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);
@@ -257,6 +338,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
   });
 
   const rows = table.getRowModel().rows;
+  const activeDeptValue = isDepartmentLocked ? lockedDeptId || deptFilter : deptFilter;
 
   return (
     <div className="relative" ref={filterWrapperRef}>
@@ -276,7 +358,9 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
               onClose={() => setShowFilterDropdown(false)}
               isFiltered={isFiltered}
               onReset={() => {
-                onDeptFilterChange('');
+                if (!isDepartmentLocked) {
+                  onDeptFilterChange('');
+                }
                 onSubDeptFilterChange('');
                 onStatusFilterChange('');
               }}
@@ -286,8 +370,10 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                   label: 'Departemen',
                   render: () => (
                     <FormSelectSearch
-                      value={deptFilter}
+                      value={activeDeptValue}
+                      disabled={isDepartmentLocked}
                       onChange={(val) => {
+                        if (isDepartmentLocked) return;
                         onDeptFilterChange(val);
                         onSubDeptFilterChange('');
                         fetchFilterOptions('sub-departments', '', setAsyncSubDeptOptions, {
@@ -319,11 +405,11 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                       onChange={(val) => onSubDeptFilterChange(val)}
                       onSearchChange={(query) =>
                         fetchFilterOptions('sub-departments', query, setAsyncSubDeptOptions, {
-                          department_id: deptFilter,
+                          department_id: activeDeptValue,
                         })
                       }
-                      placeholder={deptFilter ? 'Semua Sub Departemen' : 'Pilih Departemen dahulu'}
-                      disabled={!deptFilter}
+                      placeholder={activeDeptValue ? 'Semua Sub Departemen' : 'Pilih Departemen dahulu'}
+                      disabled={!activeDeptValue}
                       options={[
                         { id: '', label: 'Semua Sub Departemen' },
                         ...asyncSubDeptOptions
@@ -334,7 +420,7 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                               sub.is_active === true ||
                               sub.is_active === 1;
                             if (!isActive) return false;
-                            if (!deptFilter) return false;
+                            if (!activeDeptValue) return false;
 
                             const rawDeptId =
                               sub.department_id ??
@@ -347,14 +433,14 @@ export const FiveTwoWorkHourTable: React.FC<FiveTwoWorkHourTableProps> = ({
                             }
 
                             const selectedDept = asyncDeptOptions.find(
-                              (d) => String(d.id) === String(deptFilter)
+                              (d) => String(d.id) === String(activeDeptValue)
                             );
                             const selectedDeptCode = selectedDept?.code
                               ? String(selectedDept.code)
                               : '';
 
                             return (
-                              String(rawDeptId) === String(deptFilter) ||
+                              String(rawDeptId) === String(activeDeptValue) ||
                               (selectedDeptCode !== '' && String(rawDeptId) === selectedDeptCode)
                             );
                           })

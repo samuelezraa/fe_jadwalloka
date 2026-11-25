@@ -21,7 +21,7 @@ export const MySchedulePage: React.FC = () => {
   useEffect(() => {
     const fetchMasters = async () => {
       try {
-        const activeParams = { params: { status: 'true', per_page: 50 } };
+        const activeParams = { params: { status: 'true', per_page: 25 } };
         const [deptRes, subDeptRes, gradeRes] = await Promise.all([
           api.get('/departments', activeParams),
           api.get('/sub-departments', activeParams),
@@ -42,7 +42,7 @@ export const MySchedulePage: React.FC = () => {
     meta,
     setPage,
     setPageSize,
-    isLoading
+  
   } = useMySchedule(searchQuery, deptFilter, subDeptFilter, gradeFilter, selectedPeriod);
 
   const [alertConfig, setAlertConfig] = useState<{
@@ -69,7 +69,7 @@ export const MySchedulePage: React.FC = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `rekap-jadwalku-${period}.xlsx`);
+      link.setAttribute('download', `rekap-jadwalku-${period}.csv`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -91,15 +91,7 @@ export const MySchedulePage: React.FC = () => {
     setAlertConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
-  if (isLoading && (!data || data.length === 0)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
-          Memuat data Jadwal...
-        </p>
-      </div>
-    );
-  }
+ 
 
   return (
     <div className="space-y-6">

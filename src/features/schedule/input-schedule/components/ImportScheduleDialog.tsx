@@ -47,7 +47,7 @@ export const ImportScheduleDialog: React.FC<ImportScheduleDialogProps> = ({
       link.href = url;
       link.setAttribute(
         'download',
-        `sample-template-import-schedule${selectedPeriod ? `-${selectedPeriod}` : ''}.xlsx`
+        `sample-template-import-schedule${selectedPeriod ? `-${selectedPeriod}` : ''}.csv`
       );
       document.body.appendChild(link);
       link.click();

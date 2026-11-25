@@ -8,6 +8,7 @@ interface AnnualEventDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: AnnualEvent | null;
+  existingEvents?: AnnualEvent[];
   onSubmit: (data: AnnualEventFormValues) => void;
 }
 
@@ -15,6 +16,7 @@ export const AnnualEventDialog: React.FC<AnnualEventDialogProps> = ({
   isOpen,
   onClose,
   initialData,
+  existingEvents = [],
   onSubmit,
 }) => {
   const isEdit = !!initialData;
@@ -28,6 +30,7 @@ export const AnnualEventDialog: React.FC<AnnualEventDialogProps> = ({
     >
       <AnnualEventForm
         initialData={initialData}
+        existingEvents={existingEvents}
         onSubmit={onSubmit}
         onCancel={onClose}
       />

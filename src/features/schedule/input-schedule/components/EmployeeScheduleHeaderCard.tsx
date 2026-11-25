@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -9,7 +9,9 @@ import {
   Palmtree, 
   XCircle, 
   FileText, 
-  AlertTriangle 
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface EmployeeInfoProps {
@@ -38,60 +40,87 @@ interface EmployeeScheduleHeaderCardProps {
 export const EmployeeScheduleHeaderCard: React.FC<EmployeeScheduleHeaderCardProps> = ({
   employeeInfo,
 }) => {
+  // Default tertutup di mobile agar hanya menampilkan periode, terbuka saat diklik
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-xs space-y-4">
-      {/* Baris Atas: Profil Karyawan & Skema */}
-      <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-4">
-        
+      {/* Baris Atas: Profil Karyawan & Periode (Trigger Expand di Mobile) */}
+      <div
+        onClick={() => setIsMobileExpanded((prev) => !prev)}
+        className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 cursor-pointer lg:cursor-default select-none"
+      >
         {/* Section 1: Profil Karyawan & Periode */}
-        <div className="flex items-center gap-3 w-full lg:w-auto">
-          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
-            <User className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                {employeeInfo.name}
-              </h2>
-              <span className="font-mono text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
-                {employeeInfo.nip}
-              </span>
+        <div className="flex items-center justify-between gap-3 w-full lg:w-auto">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+              <User className="w-5 h-5" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>{employeeInfo.period}</span>
-              <span>•</span>
-              <span>{employeeInfo.dateRange}</span>
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                  {employeeInfo.name}
+                </h2>
+                <span className="font-mono text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                  {employeeInfo.nip}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="font-medium text-gray-700 dark:text-gray-300">{employeeInfo.period}</span>
+                <span>•</span>
+                <span>{employeeInfo.dateRange}</span>
+              </p>
+            </div>
           </div>
+
+          {/* Indikator Expand/Collapse khusus Mobile */}
+          <button
+            type="button"
+            aria-label={isMobileExpanded ? 'Sembunyikan detail' : 'Tampilkan detail'}
+            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shrink-0"
+          >
+            {isMobileExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
         </div>
 
-        {/* Section 2: Info Skema & Jam */}
-        <div className="flex items-center gap-4 shrink-0">
-          <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-            <Briefcase className="w-4 h-4 text-blue-500" />
+        {/* Section 2: Info Skema & Jam (Tersembunyi di Mobile sampai Card diklik) */}
+        <div
+          className={`${
+            isMobileExpanded ? 'flex' : 'hidden'
+          } lg:flex items-center gap-4 w-full lg:w-auto shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 dark:border-gray-800`}
+        >
+          <div className="flex-1 lg:flex-initial flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+            <Briefcase className="w-4 h-4 text-blue-500 shrink-0" />
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Skema</p>
               <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{employeeInfo.scheme}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-            <Clock className="w-4 h-4 text-amber-500" />
+          <div className="flex-1 lg:flex-initial flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
             <div>
               <p className="text-[10px] text-gray-400 uppercase font-semibold">Jam/Hari</p>
               <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{employeeInfo.hoursPerDay} Jam</p>
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* Baris Bawah: 8 Card Statistik Indikator Periode */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+      {/* Baris Bawah: 8 Card Statistik Indikator Periode (Tersembunyi di Mobile sampai Card diklik) */}
+      <div
+        className={`${
+          isMobileExpanded ? 'grid' : 'hidden'
+        } lg:grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-3 border-t border-gray-100 dark:border-gray-800`}
+      >
         <div className="bg-gray-50/70 dark:bg-gray-800/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 text-center space-y-0.5">
           <CalendarDays className="w-3.5 h-3.5 mx-auto text-blue-500" />
           <p className="text-[10px] text-gray-400 font-medium">Total Hari</p>
-          <p className="text-xs font-bold text-gray-800 dark:text-gray-100">{employeeInfo.summary.totalPeriodDays}</p>
+          <p className="text-xs font-bold text-blue-600 dark:text-blue-400">{employeeInfo.summary.totalPeriodDays}</p>
         </div>
 
         <div className="bg-gray-50/70 dark:bg-gray-800/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 text-center space-y-0.5">

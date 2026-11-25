@@ -8,6 +8,9 @@ interface DepartemenDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: Departemen | null;
+  draftValues?: DepartemenFormValues | null;
+  existingDepartemens?: Departemen[];
+  serverErrors?: Record<string, string[]> | null;
   onSubmit: (data: DepartemenFormValues) => void;
 }
 
@@ -15,6 +18,9 @@ export const DepartemenDialog: React.FC<DepartemenDialogProps> = ({
   isOpen,
   onClose,
   initialData,
+  draftValues = null,
+  existingDepartemens = [],
+  serverErrors = null,
   onSubmit,
 }) => {
   const isEditMode = !!initialData;
@@ -28,6 +34,9 @@ export const DepartemenDialog: React.FC<DepartemenDialogProps> = ({
     >
       <DepartemenForm
         initialData={initialData}
+        draftValues={draftValues}
+        existingDepartemens={existingDepartemens}
+        serverErrors={serverErrors}
         onSubmit={onSubmit}
         onCancel={onClose}
       />

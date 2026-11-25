@@ -38,7 +38,7 @@ export const EmployeePresencePage: React.FC = () => {
       link.href = url;
       link.setAttribute(
         'download',
-        `Laporan_Kehadiran_Karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`
+        `Laporan_Kehadiran_Karyawan_${new Date().toISOString().slice(0, 10)}.csv`
       );
       document.body.appendChild(link);
       link.click();

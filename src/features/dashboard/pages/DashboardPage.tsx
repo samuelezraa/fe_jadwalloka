@@ -37,15 +37,7 @@ export const DashboardPage: React.FC = () => {
 
 
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 animate-pulse">
-          Memuat ringkasan data kehadiran dashboard...
-        </p>
-      </div>
-    );
-  }
+ 
 
   const attendancePieData: PieChartDataItem[] = [
     { name: 'Masuk', value: stats?.present ?? 0, color: '#10b981' },

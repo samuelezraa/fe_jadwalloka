@@ -2,6 +2,13 @@ import { api } from '@/lib/axios';
 import type { FiveTwoWorkHourEmployee } from '../types/five-two-work-hour.type';
 import type { FiveTwoWorkHourFormValues } from '../schemas/five-two-work-hour.schema';
 
+export interface ScheduleExportFilters {
+  search?: string;
+  department_id?: string;
+  sub_department_id?: string;
+  status?: string;
+}
+
 export const fiveTwoWorkHourService = {
   getAll: async (
     search?: string,
@@ -49,11 +56,21 @@ export const fiveTwoWorkHourService = {
     return true;
   },
 
-  exportData: async (selectedIds?: (string | number)[]) => {
+  exportData: async (
+    selectedIds?: (string | number)[],
+    filters?: ScheduleExportFilters
+  ) => {
     const params = new URLSearchParams();
     if (selectedIds && selectedIds.length > 0) {
       params.append('selectedIds', selectedIds.join(','));
     }
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.department_id) params.append('department_id', filters.department_id);
+    if (filters?.sub_department_id) params.append('sub_department_id', filters.sub_department_id);
+    if (filters?.status !== undefined && filters?.status !== '') {
+      params.append('status', filters.status);
+    }
+
     const response = await api.get(`/schedules/export?${params.toString()}`, {
       responseType: 'blob',
     });
@@ -61,7 +78,7 @@ export const fiveTwoWorkHourService = {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Jam_Kerja_Skema_5-2_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    link.setAttribute('download', `Jam_Kerja_Skema_5-2_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -76,7 +93,6 @@ export const fiveTwoWorkHourService = {
     return response.data;
   },
 
-
   downloadSample: async () => {
     const response = await api.get('/schedules/download-sample', {
       responseType: 'blob',
@@ -85,7 +101,7 @@ export const fiveTwoWorkHourService = {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Sample_Import_Jam_Kerja_Skema_5-2.xlsx`);
+    link.setAttribute('download', `Sample_Import_Jam_Kerja_Skema_5-2.csv`);
     document.body.appendChild(link);
     link.click();
     link.remove();

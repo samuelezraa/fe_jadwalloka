@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 export const AttendancePage: React.FC = () => {
   const {
     data,
-    isLoading,
+
     meta,
     setPage,
     setPageSize,
@@ -44,7 +44,7 @@ export const AttendancePage: React.FC = () => {
       link.href = url;
       link.setAttribute(
         'download',
-        `Laporan_Absensi_${new Date().toISOString().slice(0, 10)}.xlsx`
+        `Laporan_Absensi_${new Date().toISOString().slice(0, 10)}.csv`
       );
       document.body.appendChild(link);
       link.click();
@@ -56,15 +56,7 @@ export const AttendancePage: React.FC = () => {
     }
   };
 
-  if (isLoading && (!data || data.length === 0)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400 text-xs animate-pulse">
-          Memuat data Laporan Absensi...
-        </p>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="space-y-6">

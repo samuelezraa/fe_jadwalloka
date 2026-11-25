@@ -53,7 +53,7 @@ interface InputScheduleTableProps {
 
 export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
   data = [],
-  meta = { current_page: 1, last_page: 1, total: 0, per_page: 10 },
+  meta = { current_page: 1, last_page: 1, total: 0, per_page: 25 },
   setPage,
   setPageSize,
   selectedPeriod,
@@ -84,7 +84,7 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
   const fetchPeriods = async (query = '') => {
     try {
       const res = await api.get('/periods', {
-        params: { search: query, per_page: 50 },
+        params: { search: query, per_page: 25 },
       });
       const items = res.data?.data || res.data || [];
 
@@ -133,7 +133,7 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
   ) => {
     try {
       const res = await api.get(`/${endpoint}`, {
-        params: { search: query, per_page: 20, status: 'true', ...extraParams },
+        params: { search: query, per_page: 25, status: 'true', ...extraParams },
       });
       const items = res.data.data || res.data || [];
       setter(items);
@@ -252,7 +252,7 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
       globalFilter: searchQuery,
       pagination: {
         pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 10,
+        pageSize: meta.per_page ?? 25,
       },
       columnVisibility,
     },
@@ -260,7 +260,7 @@ export const InputScheduleTable: React.FC<InputScheduleTableProps> = ({
       if (typeof updater === 'function') {
         const newState = updater({
           pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 10,
+          pageSize: meta.per_page ?? 25,
         });
         setPage(newState.pageIndex + 1);
         setPageSize(newState.pageSize);

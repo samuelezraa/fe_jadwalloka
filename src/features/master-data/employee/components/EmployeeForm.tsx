@@ -87,10 +87,10 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const selectedDeptId = useWatch({ control, name: 'department_id' });
   const selectedSubDeptId = useWatch({ control, name: 'sub_department_id' });
 
-const fetchFormPosOptions = (query: string) => {
+  const fetchFormPosOptions = (query: string) => {
     fetchFormOptions('positions', query, setAsyncPosOptions, {
       department_id: selectedDeptId,
-      sub_department_id: selectedSubDeptId
+      sub_department_id: selectedSubDeptId,
     });
   };
 
@@ -149,22 +149,20 @@ const fetchFormPosOptions = (query: string) => {
     });
   }, [asyncSubDeptOptions, selectedDeptId]);
 
-
-
   const handleFormSubmit = (values: EmployeeFormValues) => {
     const payload = {
-      employee_id: values.employee_id || null,
+      employee_id: values.employee_id,
       nip: values.nip,
       full_name: values.name,
       email: values.email || null,
-      phone: values.phone || null,
+      phone: values.phone,
       department_id: values.department_id ? Number(values.department_id) : null,
       sub_department_id: values.sub_department_id ? Number(values.sub_department_id) : null,
       position_id: values.position_id ? Number(values.position_id) : null,
       grade_id: values.grade_id ? Number(values.grade_id) : null,
       work_schedule_scheme_id: values.work_schedule_scheme_id ? Number(values.work_schedule_scheme_id) : null,
-      join_date: values.join_date || null,
-      birth_date: values.birth_date || null,
+      join_date: values.join_date,
+      birth_date: values.birth_date,
       is_active: values.is_active,
     };
     onSubmit(payload);
@@ -173,24 +171,50 @@ const fetchFormPosOptions = (query: string) => {
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 max-h-[75vh] overflow-y-auto px-1">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormInput
-          label="ID Karyawan (Opsional)"
-          {...register('employee_id')}
-          placeholder="Contoh: EMP-001"
-          error={errors.employee_id?.message}
+        <Controller
+          name="employee_id"
+          control={control}
+          render={({ field }) => (
+            <FormInput
+              label="ID Karyawan (4 Digit)"
+              type="text"
+              inputMode="numeric"
+              value={field.value || ''}
+              onChange={(e) => {
+                const numericValue = e.target.value.replace(/\D/g, '').slice(0, 4);
+                field.onChange(numericValue);
+              }}
+              placeholder="Contoh: 1001"
+              maxLength={4}
+              error={errors.employee_id?.message}
+            />
+          )}
         />
 
-        <FormInput
-          label="NIP"
-          {...register('nip')}
-          placeholder="Contoh: 1001"
-          error={errors.nip?.message}
+        <Controller
+          name="nip"
+          control={control}
+          render={({ field }) => (
+            <FormInput
+              label="NIP (9 Digit)"
+              type="text"
+              inputMode="numeric"
+              value={field.value || ''}
+              onChange={(e) => {
+                const numericValue = e.target.value.replace(/\D/g, '').slice(0, 9);
+                field.onChange(numericValue);
+              }}
+              placeholder="Contoh: 000001001"
+              maxLength={9}
+              error={errors.nip?.message}
+            />
+          )}
         />
 
         <FormInput
           label="Nama Lengkap"
           {...register('name')}
-          placeholder="Contoh: Antika Lorien"
+          placeholder="Contoh: Nova Hendriawan"
           error={errors.name?.message}
         />
       </div>
@@ -246,8 +270,7 @@ const fetchFormPosOptions = (query: string) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Select POS dengan Filter Mutlak di Frontend */}
-       {/* Select POS dengan Filter Mutlak dan Akurat */}
+        {/* Select POS dengan Filter Mutlak dan Akurat */}
         <Controller
           name="position_id"
           control={control}
@@ -263,19 +286,15 @@ const fetchFormPosOptions = (query: string) => {
                 ...asyncPosOptions
                   .filter((p) => {
                     if (p.is_active === false) return false;
-                    if (!selectedSubDeptId) return false; // Jangan tampilkan apa pun jika belum pilih sub-departemen
+                    if (!selectedSubDeptId) return false;
 
-                    // Ambil ID / Code sub-departemen dari data POS
                     const pSubId = String(p.sub_department_id ?? p.sub_departemen_id ?? p.sub_department?.id ?? p.sub_departemen?.id ?? '');
                     const pSubCode = String(p.sub_department_code ?? p.sub_departemen_code ?? '').toLowerCase();
-                    const currentSubText = 'frontend engineering'; // Sub departemen yang sedang dipilih
 
-                    // Wajib cocok secara presisi dengan ID atau nama sub-departemen
                     const isMatchId = pSubId === String(selectedSubDeptId);
                     const isMatchCode = pSubCode.includes('frontend') || pSubCode.includes('fe');
                     const pTitle = String(p.title || p.name || '').toLowerCase();
 
-                    // Jika ini Frontend Engineering, pastikan hanya POS seperti Programmer/Developer yang lolos
                     return isMatchId || isMatchCode || (pTitle.includes('programmer') || pTitle.includes('developer') || pTitle.includes('frontend'));
                   })
                   .map((p) => ({
@@ -318,6 +337,7 @@ const fetchFormPosOptions = (query: string) => {
             <FormInput
               label="Nomor Telepon (Maks 14 digit)"
               type="text"
+              inputMode="numeric"
               value={field.value || ''}
               onChange={(e) => {
                 const numericValue = e.target.value.replace(/\D/g, '').slice(0, 14);
@@ -331,7 +351,7 @@ const fetchFormPosOptions = (query: string) => {
         />
 
         <FormInput
-          label="Email"
+          label="Email (Opsional)"
           type="email"
           {...register('email')}
           placeholder="Contoh: email@lokahr.com"
