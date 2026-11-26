@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const employeeSchema = z.object({
+const PHONE_PREFIX_REGEX = /^(08|8|62)\d*$/;
+
+export const employeesSchema = z.object({
   employee_id: z
     .string()
     .trim()
@@ -21,7 +23,11 @@ export const employeeSchema = z.object({
     .trim()
     .min(1, 'Nomor telepon wajib diisi')
     .regex(/^\d+$/, 'Nomor telepon hanya boleh berisi angka')
-    .max(14, 'Nomor telepon maksimal 14 karakter'),
+    .max(14, 'Nomor telepon maksimal 14 digit')
+    .refine(
+      (val) => PHONE_PREFIX_REGEX.test(val),
+      'Nomor telepon harus diawali dengan 08, 8, atau 62'
+    ),
   department_id: z.string().min(1, 'Departemen wajib dipilih'),
   sub_department_id: z.string().min(1, 'Sub Departemen wajib dipilih'),
   position_id: z.string().min(1, 'POS wajib dipilih'),
@@ -32,4 +38,4 @@ export const employeeSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export type EmployeeFormValues = z.infer<typeof employeeSchema>;
+export type EmployeeFormValues = z.infer<typeof employeesSchema>;

@@ -156,6 +156,7 @@ export const SubDepartemenPage: React.FC = () => {
         onClose={() => setIsDialogOpen(false)}
         initialData={selectedItem}
         departemenList={Array.isArray(departemens) ? departemens : []}
+        existingList={Array.isArray(subDepartemens) ? subDepartemens : []}
         onSubmit={handleSubmitForm}
       />
 

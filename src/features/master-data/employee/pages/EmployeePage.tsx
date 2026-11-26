@@ -44,6 +44,7 @@ export const EmployeePage: React.FC = () => {
 
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
+  const [formServerErrors, setFormServerErrors] = useState<Record<string, string[] | string> | null>(null);
 
   const [successAlertConfig, setSuccessAlertConfig] = useState<{
     isOpen: boolean;
@@ -66,16 +67,27 @@ export const EmployeePage: React.FC = () => {
 
   const handleOpenAdd = () => {
     setSelectedItem(null);
+    setPendingFormData(null);
+    setFormServerErrors(null);
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (item: Employee) => {
     setSelectedItem(item);
+    setPendingFormData(null);
+    setFormServerErrors(null);
     setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setPendingFormData(null);
+    setFormServerErrors(null);
   };
 
   const handlePreSubmitForm = (formData: any) => {
     setPendingFormData(formData);
+    setFormServerErrors(null);
     setIsDialogOpen(false);
     setShowConfirmAlert(true);
   };
@@ -102,10 +114,19 @@ export const EmployeePage: React.FC = () => {
       }
       setPendingFormData(null);
       setSelectedItem(null);
+      setFormServerErrors(null);
     } catch (err: any) {
+      const apiErrors = err?.response?.data?.errors;
       setShowConfirmAlert(false);
       setIsDialogOpen(true);
-      toast.error(err?.response?.data?.message || 'Gagal menyimpan data karyawan.');
+
+      if (apiErrors && typeof apiErrors === 'object') {
+        setFormServerErrors({ ...apiErrors });
+      } else {
+        toast.error(err?.response?.data?.message || 'Gagal menyimpan data karyawan.', {
+          style: { zIndex: 10000 },
+        });
+      }
     }
   };
 
@@ -117,7 +138,7 @@ export const EmployeePage: React.FC = () => {
     await bulkResetPassword(ids);
   };
 
-const handleExportData = async (selectedIds?: (string | number)[]) => {
+  const handleExportData = async (selectedIds?: (string | number)[]) => {
     try {
       toast.loading('Mengunduh data karyawan...');
       const blobData = await employeeService.exportData(selectedIds, {
@@ -147,7 +168,7 @@ const handleExportData = async (selectedIds?: (string | number)[]) => {
   const handleDownloadSample = async () => {
     try {
       toast.loading('Mengunduh templat sample...');
-      const blobData = await employeeService.downloadSample(); 
+      const blobData = await employeeService.downloadSample();
       const blob = new Blob([blobData], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -171,6 +192,14 @@ const handleExportData = async (selectedIds?: (string | number)[]) => {
       </div>
     );
   }
+
+  const dialogInitialData = pendingFormData
+    ? {
+        ...selectedItem,
+        ...pendingFormData,
+        name: pendingFormData.full_name ?? pendingFormData.name ?? selectedItem?.full_name ?? selectedItem?.name ?? '',
+      }
+    : selectedItem;
 
   return (
     <div className="space-y-6">
@@ -202,19 +231,19 @@ const handleExportData = async (selectedIds?: (string | number)[]) => {
         onGradeFilterChange={setGradeFilter}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
-   
       />
 
       <EmployeeDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        initialData={selectedItem}
+        onClose={handleCloseDialog}
+        initialData={dialogInitialData}
         onSubmit={handlePreSubmitForm}
         departemenList={departemens}
         subDepartemenList={subDepartemens}
         posList={posList}
         gradeList={grades}
         schemeList={schemes}
+        serverErrors={formServerErrors}
       />
 
       <ImportEmployeeDialog
@@ -244,9 +273,9 @@ const handleExportData = async (selectedIds?: (string | number)[]) => {
           setIsDialogOpen(true);
         }}
         onConfirm={handleConfirmSave}
-        title={selectedItem ? 'Simpan Perubahan?' : 'Tambah Karyawan Baru?'}
+        title={selectedItem?.id ? 'Simpan Perubahan?' : 'Tambah Karyawan Baru?'}
         description={
-          selectedItem
+          selectedItem?.id
             ? `Apakah Anda yakin ingin memperbarui data karyawan "${selectedItem.full_name || selectedItem.name}"?`
             : 'Apakah Anda yakin ingin menyimpan data karyawan baru ini?'
         }

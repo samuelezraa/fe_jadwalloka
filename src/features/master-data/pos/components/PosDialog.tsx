@@ -12,7 +12,8 @@ interface PosDialogProps {
   initialData?: Pos | null;
   departemenList?: Departemen[];
   subDepartemenList?: SubDepartemen[];
-  onSubmit: (data: PosFormValues) => void;
+  existingList?: Pos[];
+  onSubmit: (data: PosFormValues) => Promise<void> | void;
 }
 
 export const PosDialog: React.FC<PosDialogProps> = ({
@@ -21,6 +22,7 @@ export const PosDialog: React.FC<PosDialogProps> = ({
   initialData,
   departemenList = [],
   subDepartemenList = [],
+  existingList = [],
   onSubmit,
 }) => {
   const isEditMode = !!initialData;
@@ -36,6 +38,7 @@ export const PosDialog: React.FC<PosDialogProps> = ({
         initialData={initialData}
         departemenList={departemenList}
         subDepartemenList={subDepartemenList}
+        existingList={existingList}
         onSubmit={onSubmit}
         onCancel={onClose}
       />

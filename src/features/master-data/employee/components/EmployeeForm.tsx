@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  employeeSchema,
+  employeesSchema,
   type EmployeeFormValues,
 } from '../schemas/employee.schema';
 import type { Employee } from '../types/employee.type';
@@ -16,14 +16,31 @@ import { DatePicker } from '../../../../components/ui/DatePicker';
 
 interface EmployeeFormProps {
   initialData?: Employee | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void> | void;
   onCancel: () => void;
   departemenList?: any[];
   subDepartemenList?: any[];
   posList?: any[];
   gradeList?: any[];
   schemeList?: any[];
+  serverErrors?: Record<string, string[] | string> | null;
 }
+
+const FIELD_MAP: Record<string, keyof EmployeeFormValues> = {
+  employee_id: 'employee_id',
+  nip: 'nip',
+  full_name: 'name',
+  name: 'name',
+  email: 'email',
+  phone: 'phone',
+  department_id: 'department_id',
+  sub_department_id: 'sub_department_id',
+  position_id: 'position_id',
+  grade_id: 'grade_id',
+  work_schedule_scheme_id: 'work_schedule_scheme_id',
+  join_date: 'join_date',
+  birth_date: 'birth_date',
+};
 
 export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   initialData,
@@ -34,8 +51,9 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   posList = [],
   gradeList = [],
   schemeList = [],
+  serverErrors = null,
 }) => {
-  const isEditMode = !!initialData;
+  const isEditMode = !!initialData?.id;
 
   const [asyncDeptOptions, setAsyncDeptOptions] = useState<any[]>(departemenList);
   const [asyncSubDeptOptions, setAsyncSubDeptOptions] = useState<any[]>(subDepartemenList);
@@ -51,7 +69,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
   const fetchFormOptions = async (endpoint: string, query: string, setter: Function, extraParams = {}) => {
     try {
-      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 20, ...extraParams } });
+      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 50, ...extraParams } });
       setter(res.data.data || res.data || []);
     } catch (err) {
       console.error(`Gagal memuat opsi form ${endpoint}`, err);
@@ -63,10 +81,12 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     handleSubmit,
     control,
     setValue,
+    setError,
+    clearErrors,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema) as any,
+    resolver: zodResolver(employeesSchema) as any,
     defaultValues: {
       employee_id: '',
       nip: '',
@@ -87,14 +107,28 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
   const selectedDeptId = useWatch({ control, name: 'department_id' });
   const selectedSubDeptId = useWatch({ control, name: 'sub_department_id' });
 
-  const fetchFormPosOptions = (query: string) => {
-    fetchFormOptions('positions', query, setAsyncPosOptions, {
-      department_id: selectedDeptId,
-      sub_department_id: selectedSubDeptId,
-    });
-  };
+  const lastResetKeyRef = useRef<string | null>(null);
+
+const isValidPhonePrefix = (value: string): boolean => {
+  if (!value) return true;
+  if (value === '0' || value === '6') return true;
+  return /^(08|8|62)\d*$/.test(value);
+};
+
+const hasCompleteValidPrefix = (value: string): boolean => {
+  if (!value) return false;
+  return /^(08|8|62)\d*$/.test(value);
+};
+
 
   useEffect(() => {
+    const resetKey = initialData
+      ? `${initialData.id ?? 'new'}-${initialData.employee_id ?? ''}-${initialData.nip ?? ''}-${initialData.phone ?? ''}`
+      : 'empty-new';
+
+    if (lastResetKeyRef.current === resetKey) return;
+    lastResetKeyRef.current = resetKey;
+
     if (initialData) {
       const formatDate = (dateStr?: string) => {
         if (!dateStr) return '';
@@ -111,11 +145,21 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
         name: String(initialData.full_name || initialData.name || ''),
         email: String(initialData.email || ''),
         phone: String(initialData.phone || ''),
-        department_id: initialData.department_id ? String(initialData.department_id) : (initialData.department?.id ? String(initialData.department.id) : ''),
-        sub_department_id: initialData.sub_department_id ? String(initialData.sub_department_id) : (initialData.sub_department?.id ? String(initialData.sub_department.id) : ''),
-        position_id: initialData.position_id ? String(initialData.position_id) : (initialData.position?.id ? String(initialData.position.id) : ''),
-        grade_id: initialData.grade_id ? String(initialData.grade_id) : (initialData.grade?.id ? String(initialData.grade.id) : ''),
-        work_schedule_scheme_id: initialData.work_schedule_scheme_id ? String(initialData.work_schedule_scheme_id) : (initialData.work_schedule_scheme?.id ? String(initialData.work_schedule_scheme.id) : ''),
+        department_id: initialData.department_id
+          ? String(initialData.department_id)
+          : (initialData.department?.id ? String(initialData.department.id) : ''),
+        sub_department_id: initialData.sub_department_id
+          ? String(initialData.sub_department_id)
+          : (initialData.sub_department?.id ? String(initialData.sub_department.id) : ''),
+        position_id: initialData.position_id
+          ? String(initialData.position_id)
+          : (initialData.position?.id ? String(initialData.position.id) : ''),
+        grade_id: initialData.grade_id
+          ? String(initialData.grade_id)
+          : (initialData.grade?.id ? String(initialData.grade.id) : ''),
+        work_schedule_scheme_id: initialData.work_schedule_scheme_id
+          ? String(initialData.work_schedule_scheme_id)
+          : (initialData.work_schedule_scheme?.id ? String(initialData.work_schedule_scheme.id) : ''),
         join_date: formatDate(initialData.join_date),
         birth_date: formatDate(initialData.birth_date),
         is_active: Boolean(initialData.is_active ?? true),
@@ -139,17 +183,103 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }
   }, [initialData, reset]);
 
+  useEffect(() => {
+    if (!serverErrors) return;
+
+    Object.entries(serverErrors).forEach(([key, messages]) => {
+      const targetField = FIELD_MAP[key];
+      const message = Array.isArray(messages) ? messages[0] : String(messages);
+      if (targetField && message) {
+        setError(targetField, { type: 'server', message });
+      }
+    });
+  }, [serverErrors, setError]);
+
+  useEffect(() => {
+    if (!selectedSubDeptId) return;
+
+    const selectedSub = asyncSubDeptOptions.find(
+      (s) => String(s.id) === String(selectedSubDeptId)
+    );
+    const subCode = selectedSub?.code || selectedSubDeptId;
+
+    const selectedDept = asyncDeptOptions.find(
+      (d) => String(d.id) === String(selectedDeptId)
+    );
+    const deptCode = selectedDept?.code || selectedDeptId;
+
+    fetchFormOptions('positions', '', setAsyncPosOptions, {
+      department_id: deptCode,
+      sub_department_id: subCode,
+    });
+  }, [selectedDeptId, selectedSubDeptId]);
+
+
+  
+  const fetchFormPosOptions = (query: string) => {
+    const selectedSub = asyncSubDeptOptions.find(
+      (s) => String(s.id) === String(selectedSubDeptId)
+    );
+    const subCode = selectedSub?.code || selectedSubDeptId;
+
+    const selectedDept = asyncDeptOptions.find(
+      (d) => String(d.id) === String(selectedDeptId)
+    );
+    const deptCode = selectedDept?.code || selectedDeptId;
+
+    fetchFormOptions('positions', query, setAsyncPosOptions, {
+      department_id: deptCode,
+      sub_department_id: subCode,
+    });
+  };
+
   const filteredSubDepts = useMemo(() => {
     if (!Array.isArray(asyncSubDeptOptions)) return [];
+    const selectedDept = asyncDeptOptions.find((d) => String(d.id) === String(selectedDeptId));
+    const selectedDeptCode = selectedDept?.code ? String(selectedDept.code) : '';
+
     return asyncSubDeptOptions.filter((sub) => {
       const isAktif = sub.is_active === true || sub.is_active === 1 || sub.is_active === 'Aktif';
-      const parentId = sub.department_id || sub.department?.id;
-      const matchDept = !selectedDeptId || String(parentId) === String(selectedDeptId);
+      if (!selectedDeptId) return false;
+
+      const parentId = String(sub.department_id ?? sub.department?.id ?? '');
+      const parentCode = String(sub.department_code ?? sub.department?.code ?? '');
+
+      const matchDept =
+        parentId === String(selectedDeptId) ||
+        (selectedDeptCode !== '' && parentCode === selectedDeptCode);
+
       return isAktif && matchDept;
     });
-  }, [asyncSubDeptOptions, selectedDeptId]);
+  }, [asyncSubDeptOptions, asyncDeptOptions, selectedDeptId]);
 
-  const handleFormSubmit = (values: EmployeeFormValues) => {
+  const filteredPositions = useMemo(() => {
+    if (!selectedSubDeptId || !Array.isArray(asyncPosOptions)) return [];
+
+    const selectedSub = asyncSubDeptOptions.find(
+      (s) => String(s.id) === String(selectedSubDeptId)
+    );
+    const selectedSubCode = selectedSub?.code ? String(selectedSub.code) : '';
+
+    return asyncPosOptions.filter((p) => {
+      if (p.is_active === false || p.is_active === 0) return false;
+
+      const pSubId = String(
+        p.sub_department_id ?? p.sub_departemen_id ?? p.sub_department?.id ?? p.sub_departemen?.id ?? ''
+      );
+      const pSubCode = String(
+        p.sub_department_code ?? p.sub_departemen_code ?? p.sub_department?.code ?? ''
+      );
+
+      const isMatchId = pSubId !== '' && pSubId === String(selectedSubDeptId);
+      const isMatchCode = selectedSubCode !== '' && pSubCode === selectedSubCode;
+
+      return isMatchId || isMatchCode;
+    });
+  }, [asyncPosOptions, asyncSubDeptOptions, selectedSubDeptId]);
+
+  const handleFormSubmit = async (values: EmployeeFormValues) => {
+    clearErrors();
     const payload = {
       employee_id: values.employee_id,
       nip: values.nip,
@@ -165,11 +295,29 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       birth_date: values.birth_date,
       is_active: values.is_active,
     };
-    onSubmit(payload);
+
+    try {
+      await onSubmit(payload);
+    } catch (err: any) {
+      const apiErrors = err?.response?.data?.errors;
+      if (apiErrors && typeof apiErrors === 'object') {
+        Object.entries(apiErrors).forEach(([key, messages]) => {
+          const targetField = FIELD_MAP[key];
+          const message = Array.isArray(messages) ? messages[0] : String(messages);
+          if (targetField && message) {
+            setError(targetField, { type: 'server', message });
+          }
+        });
+      }
+    }
+  };
+
+  const handleInvalidSubmit = (formErrors: any) => {
+    console.warn('Validasi form gagal:', formErrors);
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 max-h-[75vh] overflow-y-auto px-1">
+    <form onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)} className="space-y-4 max-h-[75vh] overflow-y-auto px-1">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Controller
           name="employee_id"
@@ -183,6 +331,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
               onChange={(e) => {
                 const numericValue = e.target.value.replace(/\D/g, '').slice(0, 4);
                 field.onChange(numericValue);
+                clearErrors('employee_id');
               }}
               placeholder="Contoh: 1001"
               maxLength={4}
@@ -203,6 +352,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
               onChange={(e) => {
                 const numericValue = e.target.value.replace(/\D/g, '').slice(0, 9);
                 field.onChange(numericValue);
+                clearErrors('nip');
               }}
               placeholder="Contoh: 000001001"
               maxLength={9}
@@ -220,7 +370,6 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Select Departemen */}
         <Controller
           name="department_id"
           control={control}
@@ -244,7 +393,6 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
           )}
         />
 
-        {/* Select Sub Departemen */}
         <Controller
           name="sub_department_id"
           control={control}
@@ -270,7 +418,6 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Select POS dengan Filter Mutlak dan Akurat */}
         <Controller
           name="position_id"
           control={control}
@@ -280,35 +427,17 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
               value={field.value ? String(field.value) : ''}
               onChange={(val) => field.onChange(val)}
               onSearchChange={fetchFormPosOptions}
-              placeholder="Pilih POS"
-              options={[
-                { id: '', label: 'Pilih POS' },
-                ...asyncPosOptions
-                  .filter((p) => {
-                    if (p.is_active === false) return false;
-                    if (!selectedSubDeptId) return false;
-
-                    const pSubId = String(p.sub_department_id ?? p.sub_departemen_id ?? p.sub_department?.id ?? p.sub_departemen?.id ?? '');
-                    const pSubCode = String(p.sub_department_code ?? p.sub_departemen_code ?? '').toLowerCase();
-
-                    const isMatchId = pSubId === String(selectedSubDeptId);
-                    const isMatchCode = pSubCode.includes('frontend') || pSubCode.includes('fe');
-                    const pTitle = String(p.title || p.name || '').toLowerCase();
-
-                    return isMatchId || isMatchCode || (pTitle.includes('programmer') || pTitle.includes('developer') || pTitle.includes('frontend'));
-                  })
-                  .map((p) => ({
-                    id: String(p.id),
-                    label: p.title || p.name || p.pos || 'Tanpa Nama',
-                  }))
-              ]}
+              placeholder={selectedSubDeptId ? 'Pilih POS' : 'Pilih Sub Departemen dahulu'}
+              options={filteredPositions.map((p) => ({
+                id: String(p.id),
+                label: p.title || p.name || p.pos || 'Tanpa Nama',
+              }))}
               disabled={!selectedSubDeptId}
               error={errors.position_id?.message}
             />
           )}
         />
 
-        {/* Select Grade */}
         <Controller
           name="grade_id"
           control={control}
@@ -330,25 +459,42 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Controller
-          name="phone"
-          control={control}
-          render={({ field }) => (
-            <FormInput
-              label="Nomor Telepon (Maks 14 digit)"
-              type="text"
-              inputMode="numeric"
-              value={field.value || ''}
-              onChange={(e) => {
-                const numericValue = e.target.value.replace(/\D/g, '').slice(0, 14);
-                field.onChange(numericValue);
-              }}
-              placeholder="Contoh: 081234567890"
-              maxLength={14}
-              error={errors.phone?.message}
-            />
-          )}
-        />
+       <Controller
+        name="phone"
+        control={control}
+        render={({ field }) => (
+          <FormInput
+            label="Nomor Telepon (Maks 14 digit)"
+            type="text"
+            inputMode="numeric"
+            value={field.value || ''}
+            onChange={(e) => {
+              const numericValue = e.target.value.replace(/\D/g, '').slice(0, 14);
+
+              if (!isValidPhonePrefix(numericValue)) {
+                setError('phone', {
+                  type: 'manual',
+                  message: 'Nomor telepon harus diawali dengan 08, 8, atau 62.',
+                });
+                return;
+              }
+
+              field.onChange(numericValue);
+              clearErrors('phone');
+
+              if (numericValue.length >= 2 && !hasCompleteValidPrefix(numericValue)) {
+                setError('phone', {
+                  type: 'manual',
+                  message: 'Nomor telepon harus diawali dengan 08, 8, atau 62.',
+                });
+              }
+            }}
+            placeholder="Contoh: 081234567890"
+            maxLength={14}
+            error={errors.phone?.message}
+          />
+        )}
+      />
 
         <FormInput
           label="Email (Opsional)"

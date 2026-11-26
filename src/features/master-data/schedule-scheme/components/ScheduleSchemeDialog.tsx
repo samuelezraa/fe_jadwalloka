@@ -8,13 +8,15 @@ interface ScheduleSchemeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: ScheduleScheme | null;
-  onSubmit: (data: ScheduleSchemeFormValues) => void;
+  existingList?: ScheduleScheme[];
+  onSubmit: (data: ScheduleSchemeFormValues) => Promise<void> | void;
 }
 
 export const ScheduleSchemeDialog: React.FC<ScheduleSchemeDialogProps> = ({
   isOpen,
   onClose,
   initialData,
+  existingList = [],
   onSubmit,
 }) => {
   const isEdit = !!initialData;
@@ -28,6 +30,7 @@ export const ScheduleSchemeDialog: React.FC<ScheduleSchemeDialogProps> = ({
     >
       <ScheduleSchemeForm
         initialData={initialData}
+        existingList={existingList}
         onSubmit={onSubmit}
         onCancel={onClose}
       />

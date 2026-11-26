@@ -11,12 +11,13 @@ interface EmployeeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: Employee | null;
-  onSubmit: (data: EmployeeFormValues) => void;
+  onSubmit: (data: EmployeeFormValues) => Promise<void> | void;
   departemenList?: any[];
   subDepartemenList?: any[];
   posList?: any[];
   gradeList?: any[];
   schemeList?: any[];
+  serverErrors?: Record<string, string[] | string> | null;
 }
 
 export const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
@@ -29,6 +30,7 @@ export const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
   posList,
   gradeList,
   schemeList,
+  serverErrors,
 }) => {
   const isEditMode = !!initialData;
 
@@ -48,6 +50,7 @@ export const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
         posList={posList}
         gradeList={gradeList}
         schemeList={schemeList}
+        serverErrors={serverErrors}
       />
     </AppDialog>
   );
@@ -113,7 +116,7 @@ export const ImportEmployeeDialog: React.FC<ImportEmployeeDialogProps> = ({
         <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
-            onClick={onDownloadSample} // 👈 Terhubung ke handler downloadSample
+            onClick={onDownloadSample}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />

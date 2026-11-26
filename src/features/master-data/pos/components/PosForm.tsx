@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { posSchema, type PosFormValues } from '../schemas/pos.schema';
 import type { Pos } from '../types/pos.type';
+import { posService } from '../services/pos.service';
 import type { Departemen } from '../../departemen/types/departemen.type';
 import type { SubDepartemen } from '../../sub-departemen/types/sub-departemen.type';
 import { departemenService } from '../../departemen/services/departemen.service';
@@ -17,14 +18,39 @@ interface PosFormProps {
   initialData?: Pos | null;
   departemenList?: Departemen[];
   subDepartemenList?: SubDepartemen[];
-  onSubmit: (data: PosFormValues) => void;
+  existingList?: Pos[];
+  onSubmit: (data: PosFormValues) => Promise<void> | void;
   onCancel: () => void;
 }
+
+const POS_CODE_PATTERN = /^POS\d{1,4}$/;
+
+const sanitizePosCodeInput = (rawValue: string): string => {
+  const cleaned = rawValue.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!cleaned) return '';
+
+  if (cleaned.startsWith('POS')) {
+    const digits = cleaned.slice(3).replace(/\D/g, '').slice(0, 4);
+    return `POS${digits}`;
+  }
+  if (cleaned.startsWith('PO')) {
+    const digits = cleaned.slice(2).replace(/\D/g, '').slice(0, 4);
+    return digits ? `POS${digits}` : 'POS';
+  }
+  if (cleaned.startsWith('P')) {
+    const digits = cleaned.slice(1).replace(/\D/g, '').slice(0, 4);
+    return digits ? `POS${digits}` : 'POS';
+  }
+
+  const digits = cleaned.replace(/\D/g, '').slice(0, 4);
+  return digits ? `POS${digits}` : '';
+};
 
 export const PosForm: React.FC<PosFormProps> = ({
   initialData,
   departemenList = [],
   subDepartemenList = [],
+  existingList = [],
   onSubmit,
   onCancel,
 }) => {
@@ -37,6 +63,8 @@ export const PosForm: React.FC<PosFormProps> = ({
     control,
     watch,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<PosFormValues>({
     resolver: zodResolver(posSchema),
@@ -51,12 +79,46 @@ export const PosForm: React.FC<PosFormProps> = ({
 
   const selectedDepartmentCode = watch('department_code');
 
-  // 🟢 State untuk Backend Search Debounce pada Form
+  // State untuk Backend Search Debounce pada Form
   const [formDeptSearchQuery, setFormDeptSearchQuery] = useState('');
   const [formDeptOptions, setFormDeptOptions] = useState<Departemen[]>(departemenList);
 
   const [formSubDeptSearchQuery, setFormSubDeptSearchQuery] = useState('');
   const [formSubDeptOptions, setFormSubDeptOptions] = useState<SubDepartemen[]>(subDepartemenList);
+
+  const [allPosList, setAllPosList] = useState<Pos[]>(existingList);
+
+  useEffect(() => {
+    setAllPosList(existingList);
+  }, [existingList]);
+
+  useEffect(() => {
+    let active = true;
+    const loadExistingPos = async () => {
+      try {
+        if (typeof posService?.getAll === 'function') {
+          const res = await posService.getAll('', '', '', '', 1, 500);
+          if (active && Array.isArray(res?.data)) {
+            setAllPosList((prev) => {
+              const merged = [...prev, ...res.data];
+              const seen = new Map<string, Pos>();
+              merged.forEach((item, idx) => {
+                const key = String(item.id ?? item.code ?? idx);
+                seen.set(key, item);
+              });
+              return Array.from(seen.values());
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadExistingPos();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDept = async () => {
@@ -123,7 +185,6 @@ export const PosForm: React.FC<PosFormProps> = ({
     }
   }, [initialData, reset]);
 
-  // Options Departemen dengan format ID(Departemen) -> DP001(IT)
   const departmentOptions = useMemo(() => {
     if (!Array.isArray(formDeptOptions)) return [];
 
@@ -139,7 +200,6 @@ export const PosForm: React.FC<PosFormProps> = ({
       .filter((opt) => opt.id !== '');
   }, [formDeptOptions]);
 
-  // Filter Sub Departemen Berdasarkan Departemen yang Terpilih & Backend Search
   const filteredSubDepartmentList = useMemo(() => {
     if (!selectedDepartmentCode || !Array.isArray(formSubDeptOptions)) return [];
     return formSubDeptOptions.filter((sub) => {
@@ -149,7 +209,6 @@ export const PosForm: React.FC<PosFormProps> = ({
     });
   }, [formSubDeptOptions, selectedDepartmentCode]);
 
-  // Options Sub Departemen dengan format ID(Sub Departemen) -> SUB001(Aplikasi & System)
   const subDepartmentOptions = useMemo(() => {
     if (!Array.isArray(filteredSubDepartmentList)) return [];
 
@@ -165,8 +224,130 @@ export const PosForm: React.FC<PosFormProps> = ({
       .filter((opt) => opt.id !== '');
   }, [filteredSubDepartmentList]);
 
+  const isDuplicateCode = (rawCode: string): boolean => {
+    if (isEditMode) return false;
+    const normalized = rawCode.trim().toLowerCase();
+    if (!normalized) return false;
+
+    return allPosList.some((item) => {
+      const itemCode = String(item.code || '').trim().toLowerCase();
+      return itemCode !== '' && itemCode === normalized;
+    });
+  };
+
+  const isDuplicateTitle = (rawTitle: string): boolean => {
+    const normalized = rawTitle.trim().toLowerCase();
+    if (!normalized) return false;
+
+    const currentId = initialData?.id !== undefined ? String(initialData.id) : null;
+    const currentCode = String(initialData?.code || '').trim().toLowerCase();
+
+    return allPosList.some((item) => {
+      const itemId = item.id !== undefined ? String(item.id) : null;
+      const itemCode = String(item.code || '').trim().toLowerCase();
+
+      if (isEditMode) {
+        if (currentId && itemId === currentId) return false;
+        if (!currentId && currentCode && itemCode === currentCode) return false;
+      }
+
+      const itemTitle = String(item.title || (item as any).pos || '').trim().toLowerCase();
+      return itemTitle !== '' && itemTitle === normalized;
+    });
+  };
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = sanitizePosCodeInput(e.target.value);
+    setValue('code', formatted, { shouldValidate: false });
+    clearErrors('code');
+
+    if (!isEditMode && formatted && isDuplicateCode(formatted)) {
+      setError('code', {
+        type: 'manual',
+        message: 'ID POS sudah digunakan. Gunakan ID lain yang belum terdaftar.',
+      });
+    }
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    clearErrors('title');
+
+    if (val.trim() && isDuplicateTitle(val)) {
+      setError('title', {
+        type: 'manual',
+        message: 'Nama POS sudah digunakan. Gunakan nama lain yang belum terdaftar.',
+      });
+    }
+  };
+
+  const handleFormSubmit = async (values: PosFormValues) => {
+    clearErrors(['code', 'title']);
+
+    const formattedCode = isEditMode ? values.code.trim().toUpperCase() : sanitizePosCodeInput(values.code);
+    const trimmedTitle = values.title.trim();
+    let hasError = false;
+
+    if (!isEditMode) {
+      if (!formattedCode) {
+        setError('code', {
+          type: 'manual',
+          message: 'ID POS wajib diisi.',
+        });
+        hasError = true;
+      } else if (!POS_CODE_PATTERN.test(formattedCode)) {
+        setError('code', {
+          type: 'manual',
+          message: 'Format ID POS harus diawali POS dan diikuti 1 sampai 4 digit angka (contoh: POS01).',
+        });
+        hasError = true;
+      } else if (isDuplicateCode(formattedCode)) {
+        setError('code', {
+          type: 'manual',
+          message: 'ID POS sudah digunakan. Gunakan ID lain yang belum terdaftar.',
+        });
+        hasError = true;
+      }
+    }
+
+    if (!trimmedTitle) {
+      setError('title', {
+        type: 'manual',
+        message: 'Nama POS wajib diisi.',
+      });
+      hasError = true;
+    } else if (isDuplicateTitle(trimmedTitle)) {
+      setError('title', {
+        type: 'manual',
+        message: 'Nama POS sudah digunakan. Gunakan nama lain yang belum terdaftar.',
+      });
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    try {
+      await onSubmit({
+        ...values,
+        code: formattedCode,
+        title: trimmedTitle,
+      });
+    } catch (err: any) {
+      const serverErrors = err?.response?.data?.errors;
+      if (serverErrors?.code?.[0]) {
+        setError('code', { type: 'server', message: serverErrors.code[0] });
+      }
+      if (serverErrors?.title?.[0]) {
+        setError('title', { type: 'server', message: serverErrors.title[0] });
+      }
+    }
+  };
+
+  const codeRegistration = register('code');
+  const titleRegistration = register('title');
+
   return (
-    <form onSubmit={handleSubmit((values) => onSubmit(values))} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* 1. Select Departemen */}
       <Controller
         name="department_code"
@@ -177,7 +358,7 @@ export const PosForm: React.FC<PosFormProps> = ({
             value={field.value}
             onChange={(val) => {
               field.onChange(val);
-              setValue('sub_department_code', ''); // Reset sub departemen saat departemen diubah
+              setValue('sub_department_code', '');
             }}
             placeholder="-- Pilih Departemen --"
             onSearchChange={(query) => setFormDeptSearchQuery(query)}
@@ -197,7 +378,7 @@ export const PosForm: React.FC<PosFormProps> = ({
             value={field.value}
             onChange={field.onChange}
             placeholder={selectedDepartmentCode ? '-- Pilih Sub Departemen --' : '-- Pilih Departemen Terlebih Dahulu --'}
-            disabled={!selectedDepartmentCode} // 👈 Dinonaktifkan jika departemen kosong
+            disabled={!selectedDepartmentCode}
             onSearchChange={(query) => setFormSubDeptSearchQuery(query)}
             options={subDepartmentOptions}
             error={errors.sub_department_code?.message}
@@ -206,13 +387,16 @@ export const PosForm: React.FC<PosFormProps> = ({
       />
 
       {/* 3. Field ID POS */}
-      {/* 3. Field ID POS */}
       <div>
         <FormInput
           label="ID POS"
-          {...register('code')}
+          {...codeRegistration}
           disabled={isEditMode}
           maxLength={7}
+          onChange={(e) => {
+            codeRegistration.onChange(e);
+            handleCodeChange(e);
+          }}
           placeholder="Contoh: POS01"
           error={errors.code?.message}
         />
@@ -226,7 +410,11 @@ export const PosForm: React.FC<PosFormProps> = ({
       {/* 4. Field Pos */}
       <FormInput
         label="Pos"
-        {...register('title')}
+        {...titleRegistration}
+        onChange={(e) => {
+          titleRegistration.onChange(e);
+          handleTitleChange(e);
+        }}
         placeholder="Contoh: Programmer Officer"
         error={errors.title?.message}
       />

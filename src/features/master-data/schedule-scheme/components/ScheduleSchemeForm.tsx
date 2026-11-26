@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -6,6 +6,7 @@ import {
   type ScheduleSchemeFormValues,
 } from '../schemas/schedule-scheme.schema';
 import type { ScheduleScheme } from '../types/schedule-scheme.type';
+import { scheduleSchemeService } from '../services/schedule-scheme.service';
 
 // Reusable UI Components
 import { FormInput } from '../../../../components/ui/FormInput';
@@ -14,12 +15,33 @@ import { SaveButton, CancelButton } from '../../../../components/ui/ActionButton
 
 interface ScheduleSchemeFormProps {
   initialData?: ScheduleScheme | null;
-  onSubmit: (data: ScheduleSchemeFormValues) => void;
+  existingList?: ScheduleScheme[];
+  onSubmit: (data: ScheduleSchemeFormValues) => Promise<void> | void;
   onCancel: () => void;
 }
 
+const SK_PATTERN = /^SK\d{3}$/;
+
+const sanitizeSkInput = (rawValue: string): string => {
+  const upper = rawValue.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!upper) return '';
+
+  if (upper.startsWith('SK')) {
+    const digits = upper.slice(2).replace(/\D/g, '').slice(0, 3);
+    return `SK${digits}`;
+  }
+  if (upper.startsWith('S')) {
+    const digits = upper.slice(1).replace(/\D/g, '').slice(0, 3);
+    return digits ? `SK${digits}` : 'SK';
+  }
+
+  const digits = upper.replace(/\D/g, '').slice(0, 3);
+  return digits ? `SK${digits}` : '';
+};
+
 export const ScheduleSchemeForm: React.FC<ScheduleSchemeFormProps> = ({
   initialData,
+  existingList = [],
   onSubmit,
   onCancel,
 }) => {
@@ -30,6 +52,9 @@ export const ScheduleSchemeForm: React.FC<ScheduleSchemeFormProps> = ({
     handleSubmit,
     reset,
     control,
+    setValue,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<ScheduleSchemeFormValues>({
     resolver: zodResolver(scheduleSchemeSchema),
@@ -40,6 +65,40 @@ export const ScheduleSchemeForm: React.FC<ScheduleSchemeFormProps> = ({
       is_active: true,
     },
   });
+
+  const [allSchemes, setAllSchemes] = useState<ScheduleScheme[]>(existingList);
+
+  useEffect(() => {
+    setAllSchemes(existingList);
+  }, [existingList]);
+
+  useEffect(() => {
+    let active = true;
+    const loadSchemes = async () => {
+      try {
+        if (typeof scheduleSchemeService?.getAll === 'function') {
+          const res = await scheduleSchemeService.getAll('', '', 1, 500);
+          if (active && Array.isArray(res?.data)) {
+            setAllSchemes((prev) => {
+              const merged = [...prev, ...res.data];
+              const seen = new Map<string, ScheduleScheme>();
+              merged.forEach((item, idx) => {
+                const key = String(item.id ?? item.code ?? idx);
+                seen.set(key, item);
+              });
+              return Array.from(seen.values());
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadSchemes();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -64,14 +123,150 @@ export const ScheduleSchemeForm: React.FC<ScheduleSchemeFormProps> = ({
     }
   }, [initialData, reset]);
 
+  const isDuplicateCode = (rawCode: string): boolean => {
+    if (isEditMode) return false;
+    const normalized = rawCode.trim().toLowerCase();
+    if (!normalized) return false;
+
+    return allSchemes.some((item) => {
+      const itemCode = String(item.code || '').trim().toLowerCase();
+      return itemCode !== '' && itemCode === normalized;
+    });
+  };
+
+  const isDuplicateName = (rawName: string): boolean => {
+    const normalized = rawName.trim().toLowerCase();
+    if (!normalized) return false;
+
+    const currentId = initialData?.id !== undefined ? String(initialData.id) : null;
+    const currentCode = String(initialData?.code || '').trim().toLowerCase();
+
+    return allSchemes.some((item) => {
+      const itemId = item.id !== undefined ? String(item.id) : null;
+      const itemCode = String(item.code || '').trim().toLowerCase();
+
+      if (isEditMode) {
+        if (currentId && itemId === currentId) return false;
+        if (!currentId && currentCode && itemCode === currentCode) return false;
+      }
+
+      const itemName = String(item.name || (item as any).skema || '').trim().toLowerCase();
+      return itemName !== '' && itemName === normalized;
+    });
+  };
+
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedCode = sanitizeSkInput(e.target.value);
+    setValue('code', formattedCode, { shouldValidate: false });
+    clearErrors('code');
+
+    if (!isEditMode && formattedCode && !SK_PATTERN.test(formattedCode)) {
+      setError('code', {
+        type: 'manual',
+        message: 'Format ID harus SK diikuti 3 angka (contoh: SK001).',
+      });
+      return;
+    }
+
+    if (!isEditMode && formattedCode && isDuplicateCode(formattedCode)) {
+      setError('code', {
+        type: 'manual',
+        message: 'ID Skema sudah digunakan. Gunakan ID lain yang belum terdaftar.',
+      });
+    }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    clearErrors('name');
+
+    if (val.trim() && isDuplicateName(val)) {
+      setError('name', {
+        type: 'manual',
+        message: 'Nama Skema sudah digunakan. Gunakan nama lain yang belum terdaftar.',
+      });
+    }
+  };
+
+  const handleFormSubmit = async (values: ScheduleSchemeFormValues) => {
+    clearErrors(['code', 'name']);
+
+    const formattedCode = isEditMode ? values.code.trim().toUpperCase() : sanitizeSkInput(values.code);
+    const trimmedName = values.name.trim();
+    let hasError = false;
+
+    if (!isEditMode) {
+      if (!formattedCode) {
+        setError('code', {
+          type: 'manual',
+          message: 'ID Skema wajib diisi.',
+        });
+        hasError = true;
+      } else if (!SK_PATTERN.test(formattedCode)) {
+        setError('code', {
+          type: 'manual',
+          message: 'Format ID harus SK diikuti 3 angka (contoh: SK001).',
+        });
+        hasError = true;
+      } else if (isDuplicateCode(formattedCode)) {
+        setError('code', {
+          type: 'manual',
+          message: 'ID Skema sudah digunakan. Gunakan ID lain yang belum terdaftar.',
+        });
+        hasError = true;
+      }
+    }
+
+    if (!trimmedName) {
+      setError('name', {
+        type: 'manual',
+        message: 'Nama Skema wajib diisi.',
+      });
+      hasError = true;
+    } else if (isDuplicateName(trimmedName)) {
+      setError('name', {
+        type: 'manual',
+        message: 'Nama Skema sudah digunakan. Gunakan nama lain yang belum terdaftar.',
+      });
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    try {
+      await onSubmit({
+        ...values,
+        code: formattedCode,
+        name: trimmedName,
+        description: values.description?.trim() || '',
+      });
+    } catch (err: any) {
+      const serverErrors = err?.response?.data?.errors;
+      if (serverErrors?.code?.[0]) {
+        setError('code', { type: 'server', message: serverErrors.code[0] });
+      }
+      if (serverErrors?.name?.[0]) {
+        setError('name', { type: 'server', message: serverErrors.name[0] });
+      }
+    }
+  };
+
+  const codeRegistration = register('code');
+  const nameRegistration = register('name');
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       {/* 1. ID Skema */}
       <div>
         <FormInput
           label="ID Skema"
-          {...register('code')}
+          {...codeRegistration}
           disabled={isEditMode}
+          maxLength={5}
+          onChange={(e) => {
+            codeRegistration.onChange(e);
+            handleCodeChange(e);
+          }}
           placeholder="Contoh: SK001"
           error={errors.code?.message}
         />
@@ -85,7 +280,11 @@ export const ScheduleSchemeForm: React.FC<ScheduleSchemeFormProps> = ({
       {/* 2. Nama Skema Hari Kerja */}
       <FormInput
         label="Nama Skema Hari Kerja"
-        {...register('name')}
+        {...nameRegistration}
+        onChange={(e) => {
+          nameRegistration.onChange(e);
+          handleNameChange(e);
+        }}
         placeholder="Contoh: Skema 5-2"
         error={errors.name?.message}
       />
