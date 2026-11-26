@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InputScheduleTable } from '../components/InputScheduleTable';
 import { ImportScheduleDialog } from '../components/ImportScheduleDialog';
@@ -6,19 +6,47 @@ import { WeeklyWorkHourSettingDialog } from '../components/WeeklyWorkHourSetting
 import { useInputSchedule } from '../hooks/useInputSchedule';
 import { inputScheduleService, type WeeklyWorkHourPayload } from '../services/input-schedule.service';
 import type { InputSchedulePeriodItem } from '../types/input-schedule.type';
+import { canAccessHrManagement, getStoredUser } from '@/utils/departmentAccess';
 import { api } from '@/lib/axios';
-import toast from 'react-hot-toast'; // 👈 Tambahkan Toast Alert
+import toast from 'react-hot-toast';
 
 export const InputSchedulePage: React.FC = () => {
   const navigate = useNavigate();
 
+  const currentUser = useMemo(() => getStoredUser(), []);
+  const isHrUser = useMemo(() => canAccessHrManagement(currentUser), [currentUser]);
+
+  const initialLockedDeptId = useMemo(() => {
+    if (isHrUser) return '';
+    if (
+      currentUser?.department_id !== undefined &&
+      currentUser?.department_id !== null &&
+      String(currentUser.department_id) !== ''
+    ) {
+      return String(currentUser.department_id);
+    }
+    const deptObj =
+      typeof currentUser?.department === 'object' && currentUser?.department !== null
+        ? currentUser.department
+        : null;
+    return deptObj?.id !== undefined && deptObj?.id !== null ? String(deptObj.id) : '';
+  }, [isHrUser, currentUser]);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [deptFilter, setDeptFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState(initialLockedDeptId);
   const [subDeptFilter, setSubDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   const [departemens, setDepartemens] = useState<any[]>([]);
   const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
+
+  const handleDeptFilterChange = (val: string) => {
+    if (!isHrUser) {
+      setDeptFilter(initialLockedDeptId);
+      return;
+    }
+    setDeptFilter(val);
+  };
 
   const {
     selectedPeriod,
@@ -38,17 +66,49 @@ export const InputSchedulePage: React.FC = () => {
     const fetchMasterData = async () => {
       try {
         const [deptRes, subDeptRes] = await Promise.all([
-          api.get('/departments'),
-          api.get('/sub-departments'),
+          api.get('/departments', { params: { per_page: 25 } }),
+          api.get('/sub-departments', { params: { per_page: 25 } }),
         ]);
-        setDepartemens(deptRes.data.data || deptRes.data || []);
-        setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
+        const deptItems = deptRes.data?.data || deptRes.data || [];
+        const subDeptItems = subDeptRes.data?.data || subDeptRes.data || [];
+
+        setDepartemens(Array.isArray(deptItems) ? deptItems : []);
+        setSubDepartemens(Array.isArray(subDeptItems) ? subDeptItems : []);
+
+        if (!isHrUser && !initialLockedDeptId && Array.isArray(deptItems)) {
+          const deptObj =
+            typeof currentUser?.department === 'object' && currentUser?.department !== null
+              ? currentUser.department
+              : null;
+          const targetCode = String(
+            currentUser?.department_code ?? deptObj?.code ?? currentUser?.department_info?.code ?? ''
+          )
+            .trim()
+            .toUpperCase();
+          const targetName = String(
+            typeof currentUser?.department === 'string'
+              ? currentUser.department
+              : deptObj?.name ?? currentUser?.department_info?.name ?? ''
+          )
+            .trim()
+            .toLowerCase();
+
+          const matched = deptItems.find((d: any) => {
+            const dCode = String(d.code || '').trim().toUpperCase();
+            const dName = String(d.name || d.departemen || '').trim().toLowerCase();
+            return (targetCode !== '' && dCode === targetCode) || (targetName !== '' && dName === targetName);
+          });
+
+          if (matched?.id) {
+            setDeptFilter(String(matched.id));
+          }
+        }
       } catch (err) {
         console.error('Gagal memuat master departemen:', err);
       }
     };
     fetchMasterData();
-  }, []);
+  }, [isHrUser, initialLockedDeptId, currentUser]);
 
   const handleNavigateEdit = (item: InputSchedulePeriodItem) => {
     navigate(`/schedule/input-schedule/edit/${item.id}`);
@@ -67,7 +127,7 @@ export const InputSchedulePage: React.FC = () => {
     }
   };
 
- const handleExport = async () => {
+  const handleExport = async () => {
     if (!selectedPeriod) return;
     const toastId = toast.loading('Menyiapkan file ekspor...');
     try {
@@ -92,7 +152,6 @@ export const InputSchedulePage: React.FC = () => {
     }
   };
 
-  // 💡 Pembaruan Jam Kerja Mingguan dengan Alert & Refetch
   const handleSaveWeeklyHours = async (payload: WeeklyWorkHourPayload) => {
     const toastId = toast.loading('Menyimpan jam kerja mingguan...');
     try {
@@ -104,8 +163,6 @@ export const InputSchedulePage: React.FC = () => {
       toast.error(error?.response?.data?.message || 'Gagal menyimpan jam kerja mingguan.', { id: toastId });
     }
   };
-
-  
 
   return (
     <div className="space-y-6">
@@ -124,7 +181,7 @@ export const InputSchedulePage: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         deptFilter={deptFilter}
-        onDeptFilterChange={setDeptFilter}
+        onDeptFilterChange={handleDeptFilterChange}
         subDeptFilter={subDeptFilter}
         onSubDeptFilterChange={setSubDeptFilter}
         statusFilter={statusFilter}
@@ -133,7 +190,7 @@ export const InputSchedulePage: React.FC = () => {
         subDepartemenList={subDepartemens}
       />
 
-     <ImportScheduleDialog
+      <ImportScheduleDialog
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImport={handleExecuteImport}

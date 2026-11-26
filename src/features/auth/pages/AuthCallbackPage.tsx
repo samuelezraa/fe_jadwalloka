@@ -9,7 +9,7 @@ export const AuthCallbackPage: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const idkaryawan = searchParams.get('idkaryawan') || '';
+    const idkaryawan = searchParams.get('idkaryawan') || searchParams.get('idkaryawanl') || '';
     const password = searchParams.get('password') || '';
     const id_departemen = searchParams.get('id_departemen') || '';
     const departemen = searchParams.get('departemen') || '';

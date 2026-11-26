@@ -12,8 +12,6 @@ const lazyLoad = (importer: () => Promise<any>, exportName: string) =>
 const LoginPage = lazyLoad(() => import('./features/auth/pages/LoginPage'), 'LoginPage');
 const AuthCallbackPage = lazyLoad(() => import('./features/auth/pages/AuthCallbackPage'), 'AuthCallbackPage');
 
-
-
 // 2. DASHBOARD
 const DashboardPage = lazyLoad(() => import('./features/dashboard/pages/DashboardPage'), 'DashboardPage');
 
@@ -71,8 +69,8 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth" element={<AuthCallbackPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth" element={<AuthCallbackPage />} />
 
           <Route element={<ProtectedPageRoute requireAdminDepartment={false} />}>
             <Route element={<MainLayout />}>
@@ -80,12 +78,13 @@ export default function App() {
 
               {/* HALAMAN YANG BOLEH DIAKSES SEMUA DEPARTEMEN LOGIN */}
               <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
+              <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
+              <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
               <Route path="/schedule/my-schedule" element={<MySchedulePage />} />
 
               {/* DASHBOARD: HANYA UNTUK HR & IT (DEPARTEMEN LAIN TIDAK BISA AKSES) */}
               <Route element={<ProtectedPageRoute requireAdminDepartment={true} />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
-                
 
                 {/* MASTER DATA */}
                 <Route path="/master-data/departemen" element={<DepartemenPage />} />
@@ -96,10 +95,6 @@ export default function App() {
                 <Route path="/master-data/annual-event" element={<AnnualEventPage />} />
                 <Route path="/master-data/employee" element={<EmployeePage />} />
                 <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
-
-                {/* JADWAL LAINNYA */}
-                <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
-                <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
 
                 {/* HR MANAGEMENT (HANYA HR) */}
                 <Route element={<HrRoute />}>
