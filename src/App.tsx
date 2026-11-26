@@ -3,12 +3,16 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { HrRoute } from './components/HrRoute';
 import { ProtectedPageRoute } from './components/ProtectedPageRoute';
+import { getDefaultHomeRoute, getStoredUser } from './utils/departmentAccess';
 
 const lazyLoad = (importer: () => Promise<any>, exportName: string) =>
   lazy(() => importer().then((m) => ({ default: m[exportName] || m.default })));
 
 // 1. AUTHENTICATION
 const LoginPage = lazyLoad(() => import('./features/auth/pages/LoginPage'), 'LoginPage');
+const AuthCallbackPage = lazyLoad(() => import('./features/auth/pages/AuthCallbackPage'), 'AuthCallbackPage');
+
+
 
 // 2. DASHBOARD
 const DashboardPage = lazyLoad(() => import('./features/dashboard/pages/DashboardPage'), 'DashboardPage');
@@ -51,64 +55,71 @@ const PageLoader = () => (
   </div>
 );
 
-const RESTRICTED_DEPT_ADMIN_ROLES = ['SALES', 'MANAGEMENT'];
+const SmartIndexRedirect = () => {
+  const token = localStorage.getItem('token');
+  const user = getStoredUser();
+
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={getDefaultHomeRoute(user)} replace />;
+};
 
 export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth" element={<AuthCallbackPage />} />
 
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route element={<ProtectedPageRoute requireAdminDepartment={false} />}>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<SmartIndexRedirect />} />
 
-            {/* HALAMAN YANG BOLEH DIAKSES SEMUA ROLE TERMASUK SALES & MANAGEMENT */}
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
-            <Route path="/schedule/my-schedule" element={<MySchedulePage />} />
+              {/* HALAMAN YANG BOLEH DIAKSES SEMUA DEPARTEMEN LOGIN */}
+              <Route path="/schedule/five-two-work-hour" element={<FiveTwoWorkHourPage />} />
+              <Route path="/schedule/my-schedule" element={<MySchedulePage />} />
 
-            {/* HALAMAN LAINNYA (TIDAK BOLEH DIAKSES OLEH SALES & MANAGEMENT) */}
-            <Route
-              element={
-                <ProtectedPageRoute
-                  allowedRoles={['IT', 'HR', 'ADMIN']}
-                  redirectTo="/dashboard"
-                />
-              }
-            >
-              {/* MASTER DATA */}
-              <Route path="/master-data/departemen" element={<DepartemenPage />} />
-              <Route path="/master-data/sub-departemen" element={<SubDepartemenPage />} />
-              <Route path="/master-data/pos" element={<PosPage />} />
-              <Route path="/master-data/grade" element={<GradePage />} />
-              <Route path="/master-data/schedule-scheme" element={<ScheduleSchemePage />} />
-              <Route path="/master-data/annual-event" element={<AnnualEventPage />} />
-              <Route path="/master-data/employee" element={<EmployeePage />} />
-              <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
+              {/* DASHBOARD: HANYA UNTUK HR & IT (DEPARTEMEN LAIN TIDAK BISA AKSES) */}
+              <Route element={<ProtectedPageRoute requireAdminDepartment={true} />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                
 
-              {/* JADWAL LAINNYA */}
-              <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
-              <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
+                {/* MASTER DATA */}
+                <Route path="/master-data/departemen" element={<DepartemenPage />} />
+                <Route path="/master-data/sub-departemen" element={<SubDepartemenPage />} />
+                <Route path="/master-data/pos" element={<PosPage />} />
+                <Route path="/master-data/grade" element={<GradePage />} />
+                <Route path="/master-data/schedule-scheme" element={<ScheduleSchemePage />} />
+                <Route path="/master-data/annual-event" element={<AnnualEventPage />} />
+                <Route path="/master-data/employee" element={<EmployeePage />} />
+                <Route path="/master-data/custom-work-hours" element={<CustomWorkHourPage />} />
 
-              {/* HR MANAGEMENT */}
-              <Route element={<HrRoute />}>
-                <Route path="/hr-management/period" element={<SchedulePeriodPage />} />
-                <Route path="/hr-management/employee-attendance" element={<EmployeeAttendancePage />} />
-                <Route path="/hr-management/employee-attendance/edit/:id" element={<EditEmployeeAttendancePage />} />
+                {/* JADWAL LAINNYA */}
+                <Route path="/schedule/input-schedule" element={<InputSchedulePage />} />
+                <Route path="/schedule/input-schedule/edit/:id" element={<EditEmployeeSchedulePage />} />
+
+                {/* HR MANAGEMENT (HANYA HR) */}
+                <Route element={<HrRoute />}>
+                  <Route path="/hr-management/period" element={<SchedulePeriodPage />} />
+                  <Route path="/hr-management/employee-attendance" element={<EmployeeAttendancePage />} />
+                  <Route path="/hr-management/employee-attendance/edit/:id" element={<EditEmployeeAttendancePage />} />
+                </Route>
+
+                {/* LAPORAN */}
+                <Route path="/reports/attendance" element={<AttendancePage />} />
+                <Route path="/reports/pivot" element={<PivotPage />} />
+                <Route path="/reports/komplimen" element={<KomplimenPage />} />
+                <Route path="/reports/employee-presence" element={<EmployeePresencePage />} />
+
+                {/* LOG HISTORY */}
+                <Route path="/log-history" element={<LogHistoryPage />} />
               </Route>
 
-              {/* LAPORAN */}
-              <Route path="/reports/attendance" element={<AttendancePage />} />
-              <Route path="/reports/pivot" element={<PivotPage />} />
-              <Route path="/reports/komplimen" element={<KomplimenPage />} />
-              <Route path="/reports/employee-presence" element={<EmployeePresencePage />} />
-
-              {/* LOG HISTORY */}
-              <Route path="/log-history" element={<LogHistoryPage />} />
+              <Route path="*" element={<SmartIndexRedirect />} />
             </Route>
-
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
       </Suspense>

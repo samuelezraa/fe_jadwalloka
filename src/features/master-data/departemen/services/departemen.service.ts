@@ -3,7 +3,7 @@ import type { Departemen } from '../types/departemen.type';
 import type { DepartemenFormValues } from '../schemas/departemen.schema';
 
 export const departemenService = {
-  getAll: async (search?: string, status?: string, page = 1, perPage = 10, withSub = true) => {
+  getAll: async (search?: string, status?: string, page = 1, perPage = 25, withSub = true) => {
     const params: Record<string, string | number | boolean> = {
       page,
       per_page: perPage,

@@ -19,7 +19,7 @@ export const useMySchedule = (
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(25);
 
   // Reset ke halaman 1 saat filter, search, atau periode berubah
   useEffect(() => {
@@ -27,6 +27,18 @@ export const useMySchedule = (
   }, [searchQuery, deptFilter, subDeptFilter, gradeFilter, period]);
 
   const fetchMySchedule = useCallback(async () => {
+    if (!period) {
+      setData([]);
+      setMeta((prev) => ({
+        ...prev,
+        current_page: 1,
+        last_page: 1,
+        total: 0,
+      }));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const result = await myScheduleService.getMyScheduleList(
@@ -38,9 +50,12 @@ export const useMySchedule = (
         subDeptFilter,
         gradeFilter
       );
-      setData(result.data);
-      setMeta(result.meta);
+      setData(Array.isArray(result?.data) ? result.data : []);
+      if (result?.meta) {
+        setMeta(result.meta);
+      }
     } catch (err: any) {
+      setData([]);
       const errorMessage = err?.response?.data?.message || 'Gagal memuat data jadwal.';
       toast.error(errorMessage);
     } finally {

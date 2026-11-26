@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Database, 
-  CalendarDays, 
+import {
+  LayoutDashboard,
+  Database,
+  CalendarDays,
   FileText,
   History,
   Users,
-  ChevronDown, 
+  ChevronDown,
   ChevronRight,
-  LogOut 
+  LogOut,
 } from 'lucide-react';
+import {
+  canAccessDashboard,
+  canAccessHrManagement,
+  getStoredUser,
+} from '@/utils/departmentAccess';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -18,32 +23,18 @@ interface SidebarProps {
   onCloseMobile: () => void;
 }
 
-const getUser = () => {
-  try {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
-  } catch {
-    return null;
-  }
-};
-
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
   const [openMaster, setOpenMaster] = useState(false);
   const [openJadwal, setOpenJadwal] = useState(false);
   const [openHrManagement, setOpenHrManagement] = useState(false);
   const [openLaporan, setOpenLaporan] = useState(false);
-  
+
   const location = useLocation();
   const navigate = useNavigate();
 
-  const user = getUser();
-  const roleUpper = String(user?.role ?? '').trim().toUpperCase();
-  const deptUpper = String(
-    typeof user?.department === 'string' ? user.department : user?.department?.name ?? ''
-  ).trim().toUpperCase();
-
-  const isHr = roleUpper === 'HR' || deptUpper === 'HR' || deptUpper === 'HRD' || user?.is_hr === true;
-  const isSalesOrManagement = roleUpper === 'SALES' || roleUpper === 'MANAGEMENT';
+  const user = getStoredUser();
+  const showDashboardAndAdminMenus = canAccessDashboard(user);
+  const isHr = canAccessHrManagement(user);
 
   const isMasterActive = location.pathname.startsWith('/master-data');
   const isJadwalActive = location.pathname.startsWith('/schedule') || location.pathname.startsWith('/jadwal');
@@ -61,13 +52,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
     <>
       {/* Backdrop Mobile */}
       {isMobileOpen && (
-        <div 
+        <div
           onClick={onCloseMobile}
           className="fixed inset-0 bg-black/50 dark:bg-black/70 z-[90] md:hidden"
         />
       )}
 
-      <aside 
+      <aside
         className={`fixed top-0 left-0 bottom-0 z-[100] bg-white dark:bg-gray-900 transition-all duration-300 flex flex-col ${
           isMobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
         } ${
@@ -76,9 +67,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
       >
         {/* Brand / Logo */}
         <div className="h-16 flex items-center px-4 justify-between md:justify-center">
-          <img 
-            src="/saloka-icon.png" 
-            alt="Saloka Logo" 
+          <img
+            src="/saloka-icon.png"
+            alt="Saloka Logo"
             className={`w-auto object-contain mx-auto transition-all duration-300 ${
               isCollapsed && !isMobileOpen ? 'h-6 max-w-[60px]' : 'h-8 max-w-[150px]'
             }`}
@@ -86,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
         </div>
 
         {/* Nav Menu */}
-        <nav 
+        <nav
           className={`flex-1 py-4 flex flex-col gap-1 ${
             isCollapsed && !isMobileOpen ? 'overflow-visible' : 'overflow-y-auto'
           }`}
@@ -100,28 +91,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
               display: none;
             }
           `}</style>
-          
-          {/* Dashboard */}
-          <NavLink
-            to="/dashboard"
-            onClick={onCloseMobile}
-            className={({ isActive }) =>
-              `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
-                isActive 
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500' 
-                  : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
-              } ${
-                isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
-              }`
-            }
-            title={isCollapsed && !isMobileOpen ? "Dashboard" : ""}
-          >
-            <LayoutDashboard className="w-5 h-5 shrink-0" />
-            {(!isCollapsed || isMobileOpen) && <span>Dashboard</span>}
-          </NavLink>
 
-          {/* Master Data Dropdown (Disembunyikan untuk SALES & MANAGEMENT) */}
-          {!isSalesOrManagement && (
+          {/* Dashboard (Hanya untuk HR & IT; departemen lain tidak bisa akses) */}
+          {showDashboardAndAdminMenus && (
+            <NavLink
+              to="/dashboard"
+              onClick={onCloseMobile}
+              className={({ isActive }) =>
+                `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
+                  isActive
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500'
+                    : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                } ${
+                  isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
+                }`
+              }
+              title={isCollapsed && !isMobileOpen ? 'Dashboard' : ''}
+            >
+              <LayoutDashboard className="w-5 h-5 shrink-0" />
+              {(!isCollapsed || isMobileOpen) && <span>Dashboard</span>}
+            </NavLink>
+          )}
+
+          {/* Master Data Dropdown (Hanya HR & IT) */}
+          {showDashboardAndAdminMenus && (
             <div className="relative group">
               <div
                 onClick={() => {
@@ -130,8 +123,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                   }
                 }}
                 className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                  isMasterActive 
-                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                  isMasterActive
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold'
                     : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                 } ${
                   isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
@@ -141,9 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                   <Database className="w-5 h-5 shrink-0" />
                   {(!isCollapsed || isMobileOpen) && <span>Master Data</span>}
                 </div>
-                {(!isCollapsed || isMobileOpen) && (
-                  openMaster ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-                )}
+                {(!isCollapsed || isMobileOpen) &&
+                  (openMaster ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
               </div>
 
               {openMaster && (!isCollapsed || isMobileOpen) && (
@@ -186,8 +178,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 }
               }}
               className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                isJadwalActive 
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                isJadwalActive
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold'
                   : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
               } ${
                 isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
@@ -197,9 +189,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <CalendarDays className="w-5 h-5 shrink-0" />
                 {(!isCollapsed || isMobileOpen) && <span>Jadwal</span>}
               </div>
-              {(!isCollapsed || isMobileOpen) && (
-                openJadwal ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-              )}
+              {(!isCollapsed || isMobileOpen) &&
+                (openJadwal ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
             </div>
 
             {openJadwal && (!isCollapsed || isMobileOpen) && (
@@ -207,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                 <NavLink to="/schedule/five-two-work-hour" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                   <span>Jam Kerja (Skema 52)</span>
                 </NavLink>
-                {!isSalesOrManagement && (
+                {showDashboardAndAdminMenus && (
                   <NavLink to="/schedule/input-schedule" onClick={onCloseMobile} className={({ isActive }) => `flex items-center pl-14 pr-4 py-2 text-sm transition-colors ${isActive ? 'text-amber-500 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                     <span>Input Jadwal</span>
                   </NavLink>
@@ -219,8 +210,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             )}
           </div>
 
-          {/* Laporan Dropdown (Disembunyikan untuk SALES & MANAGEMENT) */}
-          {!isSalesOrManagement && (
+          {/* Laporan Dropdown (Hanya HR & IT) */}
+          {showDashboardAndAdminMenus && (
             <div className="relative group">
               <div
                 onClick={() => {
@@ -229,8 +220,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                   }
                 }}
                 className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                  isLaporanActive 
-                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                  isLaporanActive
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold'
                     : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                 } ${
                   isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
@@ -240,9 +231,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                   <FileText className="w-5 h-5 shrink-0" />
                   {(!isCollapsed || isMobileOpen) && <span>Laporan</span>}
                 </div>
-                {(!isCollapsed || isMobileOpen) && (
-                  openLaporan ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-                )}
+                {(!isCollapsed || isMobileOpen) &&
+                  (openLaporan ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
               </div>
 
               {openLaporan && (!isCollapsed || isMobileOpen) && (
@@ -261,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             </div>
           )}
 
-          {/* HR Management Dropdown (Hanya tampil jika user adalah HR) */}
+          {/* HR Management Dropdown (Hanya HR) */}
           {isHr && (
             <div className="relative group">
               <div
@@ -271,8 +261,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                   }
                 }}
                 className={`w-full flex items-center py-3 text-sm font-medium transition-colors border-l-4 cursor-pointer ${
-                  isHrManagementActive 
-                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                  isHrManagementActive
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold'
                     : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                 } ${
                   isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-between px-6'
@@ -282,9 +272,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
                   <Users className="w-5 h-5 shrink-0" />
                   {(!isCollapsed || isMobileOpen) && <span>HR Management</span>}
                 </div>
-                {(!isCollapsed || isMobileOpen) && (
-                  openHrManagement ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
-                )}
+                {(!isCollapsed || isMobileOpen) &&
+                  (openHrManagement ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
               </div>
 
               {openHrManagement && (!isCollapsed || isMobileOpen) && (
@@ -300,27 +289,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             </div>
           )}
 
-          {/* Log History (Disembunyikan untuk SALES & MANAGEMENT) */}
-          {!isSalesOrManagement && (
+          {/* Log History (Hanya HR & IT) */}
+          {showDashboardAndAdminMenus && (
             <NavLink
               to="/log-history"
               onClick={onCloseMobile}
               className={({ isActive }) =>
                 `flex items-center py-3 text-sm font-medium transition-colors border-l-4 ${
-                  isActive 
-                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold' 
+                  isActive
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-500 border-amber-500 font-semibold'
                     : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                 } ${
                   isCollapsed && !isMobileOpen ? 'md:justify-center md:px-0' : 'justify-start px-6 gap-3'
                 }`
               }
-              title={isCollapsed && !isMobileOpen ? "Log History" : ""}
+              title={isCollapsed && !isMobileOpen ? 'Log History' : ''}
             >
               <History className="w-5 h-5 shrink-0" />
               {(!isCollapsed || isMobileOpen) && <span>Log History</span>}
             </NavLink>
           )}
-
         </nav>
 
         {/* Logout */}
@@ -331,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, isMobileOpen, onC
             className={`w-full flex items-center py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors ${
               isCollapsed && !isMobileOpen ? 'justify-center px-0' : 'px-4 gap-3'
             }`}
-            title={isCollapsed && !isMobileOpen ? "Logout" : ""}
+            title={isCollapsed && !isMobileOpen ? 'Logout' : ''}
           >
             <LogOut className="w-5 h-5 shrink-0" />
             {(!isCollapsed || isMobileOpen) && <span>Logout</span>}

@@ -1,18 +1,21 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
+
+import { LoginPage } from '@/features/auth/pages/LoginPage';
+
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 
 // Import Auth Page (sesuai posisi folder src/pages/LoginPage.tsx)
-import { LoginPage } from '@/features/auth/pages/LoginPage';
+
 
 // Import Master Data Pages
 import { DepartemenPage } from '@/features/master-data/departemen/pages/DepartemenPage';
 import { SubDepartemenPage } from '@/features/master-data/sub-departemen/pages/SubDepartemenPage';
 import { PosPage } from '@/features/master-data/pos/pages/PosPage'; 
 import { GradePage } from '@/features/master-data/grade/pages/GradePage';
-import { SkemaHariKerjaPage } from '@/features/master-data/skema-hari-kerja/pages/SkemaHariKerjaPage';
-import { EventTahunanPage } from '@/features/master-data/event-tahunan/pages/AnnualEventPage';
-import { DataKaryawanPage } from '@/features/master-data/data-karyawan/pages/EmployeePage';
+import { ScheduleSchemePage } from '@/features/master-data/schedule-scheme/pages/ScheduleSchemePage';
+import {AnnualEventPage } from '@/features/master-data/annual-event/pages/AnnualEventPage';
+import { DataKaryawanPage } from '@/features/master-data/EmployeePage/pages/EmployeePage';
 
 // Import Jadwal Pages
 import { JamKerjaPage } from '@/features/jadwal/jam-kerja/pages/FiveTwoWorkHourPage';
@@ -23,7 +26,7 @@ import { PeriodeJadwalPage } from '@/features/jadwal/periode-jadwal/pages/Period
 // 🌟 Import Laporan Pages
 import { AbsensiPage } from '@/features/laporan/absensi/pages/AbsensiPage';
 import { PivotPage } from '@/features/laporan/pivot/pages/PivotPage';
-import { KomplimenPage } from '@/features/laporan/komplimen/pages/KomplimenPage';
+
 
 import { LogHistoryPage } from '@/features/log-history/pages/LogHistoryPage';
 
@@ -63,12 +66,12 @@ export const router = createBrowserRouter([
         element: <GradePage />,
       },
       {
-        path: 'master-data/skema-hari-kerja',
-        element: <SkemaHariKerjaPage />,
+        path: 'master-data/schedule-scheme',
+        element: <ScheduleSchemePage />,
       },
       {
-        path: 'master-data/event-tahunan',
-        element: <EventTahunanPage />,
+        path: 'master-data/annual-event',
+        element: <AnnualEventPage />,
       },
       {
         path: 'master-data/data-karyawan',

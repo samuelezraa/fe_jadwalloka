@@ -10,7 +10,7 @@ export const useEmployeePresence = () => {
 
   // Pagination Server-Side
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [meta, setMeta] = useState<{
     current_page: number;
     last_page: number;

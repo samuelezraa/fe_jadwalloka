@@ -69,7 +69,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
   const fetchFormOptions = async (endpoint: string, query: string, setter: Function, extraParams = {}) => {
     try {
-      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 50, ...extraParams } });
+      const res = await api.get(`/${endpoint}`, { params: { search: query, per_page: 25, ...extraParams } });
       setter(res.data.data || res.data || []);
     } catch (err) {
       console.error(`Gagal memuat opsi form ${endpoint}`, err);

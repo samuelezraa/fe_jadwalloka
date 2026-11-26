@@ -16,7 +16,7 @@ export const fiveTwoWorkHourService = {
     subDeptId?: string,
     status?: string,
     page = 1,
-    perPage = 10
+    perPage = 25
   ) => {
     const params = new URLSearchParams();
     if (search) params.append('search', search);

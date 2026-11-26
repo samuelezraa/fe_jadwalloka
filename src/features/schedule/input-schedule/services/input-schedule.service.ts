@@ -33,7 +33,7 @@ export const inputScheduleService = {
     subDeptId?: string,
     status?: string,
     page = 1,
-    perPage = 10
+    perPage = 25
   ): Promise<ScheduleResponse> => {
     const params = new URLSearchParams();
     if (period) params.append('period', period);

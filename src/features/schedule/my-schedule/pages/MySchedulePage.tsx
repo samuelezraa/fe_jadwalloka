@@ -3,19 +3,30 @@ import { MyScheduleTable } from '../components/MyScheduleTable';
 import { useMySchedule } from '../hooks/useMySchedule';
 import { myScheduleService } from '../services/my-schedule.service';
 import { ConfirmAlertDialog } from '../../../../components/ui/ConfirmAlertDialog';
+import { canAccessHrManagement, getStoredUser } from '@/utils/departmentAccess';
 import { api } from '@/lib/axios';
 import toast from 'react-hot-toast';
 
 export const MySchedulePage: React.FC = () => {
+  const currentUser = getStoredUser();
+  const isHrUser = canAccessHrManagement(currentUser);
+  const lockedDeptId = !isHrUser && currentUser?.department_id ? String(currentUser.department_id) : '';
+
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [deptFilter, setDeptFilter] = useState<string>('');
+  const [deptFilter, setDeptFilter] = useState<string>(lockedDeptId);
   const [subDeptFilter, setSubDeptFilter] = useState<string>('');
   const [gradeFilter, setGradeFilter] = useState<string>('');
 
   const [departemens, setDepartemens] = useState<any[]>([]);
   const [subDepartemens, setSubDepartemens] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (lockedDeptId) {
+      setDeptFilter(lockedDeptId);
+    }
+  }, [lockedDeptId]);
 
   // Fetch Master Data Aktif untuk Filter Popover
   useEffect(() => {
@@ -27,7 +38,12 @@ export const MySchedulePage: React.FC = () => {
           api.get('/sub-departments', activeParams),
           api.get('/grades', activeParams),
         ]);
-        setDepartemens(deptRes.data.data || deptRes.data || []);
+        const allDepts = deptRes.data.data || deptRes.data || [];
+        setDepartemens(
+          lockedDeptId
+            ? allDepts.filter((d: any) => String(d.id) === lockedDeptId)
+            : allDepts
+        );
         setSubDepartemens(subDeptRes.data.data || subDeptRes.data || []);
         setGrades(gradeRes.data.data || gradeRes.data || []);
       } catch (err) {
@@ -35,15 +51,16 @@ export const MySchedulePage: React.FC = () => {
       }
     };
     fetchMasters();
-  }, []);
+  }, [lockedDeptId]);
 
-  const { 
+  const effectiveDeptFilter = lockedDeptId || deptFilter;
+
+  const {
     data,
     meta,
     setPage,
     setPageSize,
-  
-  } = useMySchedule(searchQuery, deptFilter, subDeptFilter, gradeFilter, selectedPeriod);
+  } = useMySchedule(searchQuery, effectiveDeptFilter, subDeptFilter, gradeFilter, selectedPeriod);
 
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
@@ -62,7 +79,7 @@ export const MySchedulePage: React.FC = () => {
     try {
       const blob = await myScheduleService.exportMySchedule(period, selectedIds, {
         search: searchQuery,
-        department_id: deptFilter,
+        department_id: effectiveDeptFilter,
         sub_department: subDeptFilter,
         grade: gradeFilter,
       });
@@ -91,11 +108,9 @@ export const MySchedulePage: React.FC = () => {
     setAlertConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
- 
-
   return (
     <div className="space-y-6">
-      <MyScheduleTable 
+      <MyScheduleTable
         data={data}
         meta={meta}
         setPage={setPage}
@@ -105,8 +120,12 @@ export const MySchedulePage: React.FC = () => {
         onExport={handleExport}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        deptFilter={deptFilter}
-        onDeptFilterChange={setDeptFilter}
+        deptFilter={effectiveDeptFilter}
+        onDeptFilterChange={(val) => {
+          if (!lockedDeptId) {
+            setDeptFilter(val);
+          }
+        }}
         subDeptFilter={subDeptFilter}
         onSubDeptFilterChange={setSubDeptFilter}
         gradeFilter={gradeFilter}

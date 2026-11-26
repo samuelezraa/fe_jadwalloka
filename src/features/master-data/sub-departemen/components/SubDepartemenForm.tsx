@@ -112,7 +112,7 @@ export const SubDepartemenForm: React.FC<SubDepartemenFormProps> = ({
   useEffect(() => {
     const fetchFormDeptSearch = async () => {
       try {
-        const res = await departemenService.getAll(formDeptSearchQuery, '', 1, 50);
+        const res = await departemenService.getAll(formDeptSearchQuery, '', 1, 25);
         setFormDeptOptions(res.data);
       } catch (err) {
         console.error(err);

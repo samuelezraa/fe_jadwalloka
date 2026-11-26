@@ -1,12 +1,22 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import {
+  canAccessHrManagement,
+  getDefaultHomeRoute,
+  getStoredUser,
+} from '@/utils/departmentAccess';
 
 export const HrRoute: React.FC = () => {
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  const token = localStorage.getItem('token');
+  const user = getStoredUser();
 
-  // Cek apakah user memiliki role HR atau department HR
-  const isHr = user?.role === 'HR' || user?.department === 'HR' || user?.is_hr === true;
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
 
-  return isHr ? <Outlet /> : <Navigate to="/dashboard" replace />;
+  return canAccessHrManagement(user) ? (
+    <Outlet />
+  ) : (
+    <Navigate to={getDefaultHomeRoute(user)} replace />
+  );
 };

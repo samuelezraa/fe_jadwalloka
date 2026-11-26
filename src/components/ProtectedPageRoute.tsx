@@ -1,33 +1,29 @@
-// src/components/ProtectedPageRoute.tsx
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import {
+  canAccessAdminPages,
+  getDefaultHomeRoute,
+  getStoredUser,
+} from '@/utils/departmentAccess';
 
 interface ProtectedPageRouteProps {
-  allowedRoles?: string[];
+  requireAdminDepartment?: boolean;
   redirectTo?: string;
 }
 
-const getStoredUser = () => {
-  try {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
-  } catch {
-    return null;
-  }
-};
-
 export const ProtectedPageRoute: React.FC<ProtectedPageRouteProps> = ({
-  allowedRoles,
-  redirectTo = '/dashboard',
+  requireAdminDepartment = true,
+  redirectTo,
 }) => {
+  const token = localStorage.getItem('token');
   const user = getStoredUser();
-  const role = String(user?.role ?? '').trim().toUpperCase();
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const normalizedAllowed = allowedRoles.map((r) => r.trim().toUpperCase());
-    if (!normalizedAllowed.includes(role)) {
-      return <Navigate to={redirectTo} replace />;
-    }
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requireAdminDepartment && !canAccessAdminPages(user)) {
+    return <Navigate to={redirectTo || getDefaultHomeRoute(user)} replace />;
   }
 
   return <Outlet />;

@@ -28,7 +28,7 @@ export const useDepartemen = (
   });
 
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [isLoading, setIsLoading] = useState<boolean>(enabled);
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

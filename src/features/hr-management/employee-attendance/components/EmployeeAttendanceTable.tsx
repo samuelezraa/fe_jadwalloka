@@ -81,7 +81,7 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
           params: {
             search: periodeSearchQuery,
             status: 'true',
-            per_page: 50,
+            per_page: 25,
           },
         });
         const items = res.data?.data || res.data || [];
@@ -149,7 +149,7 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
         const res = await api.get('/departments', {
           params: {
             search: deptSearchQuery,
-            per_page: 50,
+            per_page: 25,
           },
         });
         setDeptOptions(filterActive(res.data?.data || res.data));
@@ -174,7 +174,7 @@ export const EmployeeAttendanceTable: React.FC<EmployeeAttendanceTableProps> = (
             department: deptParam,
             department_code: selectedDeptObj?.code || '',
             department_id: selectedDeptObj?.id || '',
-            per_page: 50,
+            per_page: 25,
           },
         });
         setSubDeptOptions(filterActive(res.data?.data || res.data));

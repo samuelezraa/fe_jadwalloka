@@ -10,6 +10,7 @@ import { DataPagination } from '../../../../components/DataPagination';
 import { CalendarDays, Calendar, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../../../../lib/axios';
+import { canAccessHrManagement, getStoredUser } from '@/utils/departmentAccess';
 
 // Reusable UI Components
 import { TableToolbar } from '../../../../components/ui/TableToolbar';
@@ -44,24 +45,15 @@ interface MyScheduleTableProps {
   gradeList?: any[];
 }
 
-const LOCKED_ROLE_DEPT_MAP: Record<string, string> = {
-  SALES: 'Sales',
-  MANAGEMENT: 'Management',
-  IT: 'IT',
-};
-
-const getStoredUser = () => {
-  try {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
-  } catch {
-    return null;
-  }
-};
 
 export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
-  data,
-  meta,
+  data = [],
+  meta = {
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 25,
+  },
   setPage,
   setPageSize,
   selectedPeriod,
@@ -91,36 +83,49 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   const [asyncGradeOptions, setAsyncGradeOptions] = useState<any[]>(gradeList);
 
   const currentUser = useMemo(() => getStoredUser(), []);
-  const roleUpper = String(currentUser?.role ?? '').trim().toUpperCase();
-  const isDepartmentLocked = roleUpper in LOCKED_ROLE_DEPT_MAP;
+  const isHrUser = useMemo(() => canAccessHrManagement(currentUser), [currentUser]);
+  const isDepartmentLocked = !isHrUser;
 
   const lockedDeptId = useMemo(() => {
     if (!isDepartmentLocked) return '';
 
-    const explicitDeptId =
-      currentUser?.department_id ??
-      (typeof currentUser?.department === 'object' ? currentUser?.department?.id : '');
-
-    if (explicitDeptId !== undefined && explicitDeptId !== null && String(explicitDeptId) !== '') {
-      return String(explicitDeptId);
+    if (
+      currentUser?.department_id !== undefined &&
+      currentUser?.department_id !== null &&
+      String(currentUser.department_id) !== ''
+    ) {
+      return String(currentUser.department_id);
     }
 
-    const explicitDeptName =
-      typeof currentUser?.department === 'string'
-        ? currentUser.department.trim()
-        : String(currentUser?.department?.name ?? '').trim();
+    const deptObj =
+      typeof currentUser?.department === 'object' && currentUser?.department !== null
+        ? currentUser.department
+        : null;
+    if (deptObj?.id !== undefined && deptObj?.id !== null && String(deptObj.id) !== '') {
+      return String(deptObj.id);
+    }
 
-    const targetName = (explicitDeptName || LOCKED_ROLE_DEPT_MAP[roleUpper] || '')
+    const targetCode = String(
+      currentUser?.department_code ?? deptObj?.code ?? currentUser?.department_info?.code ?? ''
+    )
+      .trim()
+      .toUpperCase();
+    const targetName = String(
+      typeof currentUser?.department === 'string'
+        ? currentUser.department
+        : deptObj?.name ?? currentUser?.department_info?.name ?? ''
+    )
       .trim()
       .toLowerCase();
 
     const matchedDept = asyncDeptOptions.find((d) => {
+      const dCode = String(d.code || '').trim().toUpperCase();
       const dName = String(d.name || d.departemen || '').trim().toLowerCase();
-      return targetName !== '' && (dName === targetName || dName.includes(targetName));
+      return (targetCode !== '' && dCode === targetCode) || (targetName !== '' && dName === targetName);
     });
 
     return matchedDept ? String(matchedDept.id) : '';
-  }, [isDepartmentLocked, currentUser, roleUpper, asyncDeptOptions]);
+  }, [isDepartmentLocked, currentUser, asyncDeptOptions]);
 
   useEffect(() => {
     if (isDepartmentLocked && lockedDeptId && deptFilter !== lockedDeptId) {
@@ -218,8 +223,8 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
     return true;
   };
 
-  const isFiltered = Boolean((!isDepartmentLocked && deptFilter) || subDeptFilter || gradeFilter);
   const activeDeptValue = isDepartmentLocked ? lockedDeptId || deptFilter : deptFilter;
+  const isFiltered = Boolean((!isDepartmentLocked && deptFilter) || subDeptFilter || gradeFilter);
 
   const handleNumberClick = (id: string) => {
     checkPeriodeSelected(() => {
@@ -401,7 +406,6 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
           </button>
         ),
       },
-      // 👇 KOLOM PALING KANAN (AKSI)
       {
         id: 'actions',
         header: 'Aksi',
@@ -426,31 +430,31 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
   );
 
   const table = useReactTable({
-    data: data,
-    columns,
-    pageCount: meta.last_page,
-    manualPagination: true,
-    state: {
-      globalFilter: searchQuery,
-      pagination: {
-        pageIndex: (meta.current_page ?? 1) - 1,
-        pageSize: meta.per_page ?? 25,
+      data: Array.isArray(data) ? data : [],
+      columns,
+      pageCount: meta?.last_page ?? 1,
+      manualPagination: true,
+      state: {
+        globalFilter: searchQuery,
+        pagination: {
+          pageIndex: (meta?.current_page ?? 1) - 1,
+          pageSize: meta?.per_page ?? 25,
+        },
+        columnVisibility,
+        rowSelection,
       },
-      columnVisibility,
-      rowSelection,
-    },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange: (updater) => {
-      if (typeof updater === 'function') {
-        const newState = updater({
-          pageIndex: (meta.current_page ?? 1) - 1,
-          pageSize: meta.per_page ?? 25,
-        });
-        setPage(newState.pageIndex + 1);
-        setPageSize(newState.pageSize);
-      }
-    },
+      enableRowSelection: true,
+      onRowSelectionChange: setRowSelection,
+      onPaginationChange: (updater) => {
+        if (typeof updater === 'function') {
+          const newState = updater({
+            pageIndex: (meta?.current_page ?? 1) - 1,
+            pageSize: meta?.per_page ?? 25,
+          });
+          setPage(newState.pageIndex + 1);
+          setPageSize(newState.pageSize);
+        }
+      },
     onGlobalFilterChange: (val) => onSearchChange(typeof val === 'function' ? val(searchQuery) : val),
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
@@ -494,7 +498,6 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
 
       {/* TABLE DATA UTAMA */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-visible mb-16 md:mb-0 transition-colors duration-200">
-        
         <TableToolbar
           title="Jadwalku"
           subtitle="Ringkasan dan detail rekapitulasi jadwal kehadiran karyawan"
@@ -535,9 +538,9 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
                       onSearchChange={(query) =>
                         fetchFilterOptions('departments', query, setAsyncDeptOptions)
                       }
-                      placeholder="Semua Departemen"
+                      placeholder={isDepartmentLocked ? 'Departemen Terkunci' : 'Semua Departemen'}
                       options={[
-                        { id: '', label: 'Semua Departemen' },
+                        ...(!isDepartmentLocked ? [{ id: '', label: 'Semua Departemen' }] : []),
                         ...asyncDeptOptions
                           .filter((d) => d.is_active !== false)
                           .map((d) => ({
@@ -654,7 +657,7 @@ export const MyScheduleTable: React.FC<MyScheduleTableProps> = ({
               <DataPagination table={table} />
             </div>
 
-            {/* 📱 MOBILE VIEW: CARDS (Hanya Muncul di Layar Kecil) */}
+            {/* 📱 MOBILE VIEW: CARDS */}
             <div className="block md:hidden p-4 space-y-3 bg-gray-50/50 dark:bg-gray-950/50">
               {rows.length > 0 ? (
                 rows.map((row) => {

@@ -72,7 +72,7 @@ export const EmployeePresenceTable: React.FC<EmployeePresenceTableProps> = ({
   const fetchPeriods = async (query = '') => {
     try {
       const res = await api.get('/periods', {
-        params: { search: query, status: 'true', per_page: 50 },
+        params: { search: query, status: 'true', per_page: 25 },
       });
       const items = res.data?.data || res.data || [];
 

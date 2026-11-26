@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { authService } from '@/features/auth/services/auth.service';
+import { getDefaultHomeRoute, getStoredUser } from '@/utils/departmentAccess';
 
 export const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const existingToken = localStorage.getItem('token');
+  const existingUser = getStoredUser();
+
+  useEffect(() => {
+    // Pastikan tidak ada state error tertinggal
+    setErrorMessage('');
+  }, []);
+
+  if (existingToken && existingUser) {
+    return <Navigate to={getDefaultHomeRoute(existingUser)} replace />;
+  }
 
   const handleLogin = async (username: string, password: string) => {
     setErrorMessage('');
@@ -25,8 +38,8 @@ export const LoginPage: React.FC = () => {
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
         }
-        
-        navigate('/dashboard');
+
+        navigate(getDefaultHomeRoute(user), { replace: true });
       } else {
         setErrorMessage(response.message || 'Login gagal.');
       }
@@ -39,7 +52,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative font-sans"
       style={{ backgroundImage: "url('/background_login.jpg')" }}
     >

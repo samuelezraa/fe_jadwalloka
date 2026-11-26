@@ -2,7 +2,7 @@ import { api } from '@/lib/axios';
 import type { ScheduleScheme } from '../types/schedule-scheme.type';
 
 export const scheduleSchemeService = {
-  getAll: async (search?: string, status?: string, page = 1, perPage = 10) => {
+  getAll: async (search?: string, status?: string, page = 1, perPage = 25) => {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (status !== undefined && status !== '') params.append('status', status);

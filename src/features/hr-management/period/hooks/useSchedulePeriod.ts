@@ -10,7 +10,7 @@ export const useSchedulePeriod = () => {
 
   // Pagination Server-Side & Search State
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [meta, setMeta] = useState<{
     current_page: number;

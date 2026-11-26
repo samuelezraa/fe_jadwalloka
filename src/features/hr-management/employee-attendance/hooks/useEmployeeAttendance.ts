@@ -9,7 +9,7 @@ export const useEmployeeAttendance = () => {
 
   // Pagination & Filter States
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(25);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterDept, setFilterDept] = useState<string>('');
   const [filterSubDept, setFilterSubDept] = useState<string>('');
